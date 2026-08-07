@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Payroll extends Model
+{
+    protected $fillable = [
+        'employee_id', 'month', 'year', 'basic_salary', 'allowances', 'deductions',
+        'advance_deducted', 'overtime_amount', 'incentive', 'net_salary',
+        'status', 'paid_at', 'payslip_path', 'processed_by',
+    ];
+
+    protected function casts(): array
+    {
+        return ['paid_at' => 'datetime'];
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function processedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'processed_by');
+    }
+}
