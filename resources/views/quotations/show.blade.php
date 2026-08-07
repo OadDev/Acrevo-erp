@@ -98,15 +98,15 @@
             <p class="whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">{{ $quotation->terms }}</p>
         </x-card>
     @endif
-</x-app-layout>
 
-@push('scripts')
-<script>
-    function promptReject(event, form) {
-        const reason = prompt('Reason for rejection:');
-        if (!reason) { event.preventDefault(); return false; }
-        form.querySelector('input[name=rejected_reason]').value = reason;
-        return true;
-    }
-</script>
-@endpush
+    @push('scripts')
+    <script>
+        function promptReject(event, form) {
+            const reason = prompt('Reason for rejection:');
+            if (!reason) { event.preventDefault(); return false; }
+            form.querySelector('input[name=rejected_reason]').value = reason;
+            return true;
+        }
+    </script>
+    @endpush
+</x-app-layout>

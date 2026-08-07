@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Invoices &amp; Payments" />
+        <x-page-header title="Invoices & Payments" />
     </x-slot>
 
     <x-card :padded="false">

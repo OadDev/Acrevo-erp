@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Roles &amp; Permissions" subtitle="Admin can create unlimited roles with granular permissions.">
+        <x-page-header title="Roles & Permissions" subtitle="Admin can create unlimited roles with granular permissions.">
             <x-slot name="actions">
                 <x-link-button :href="route('admin.roles.create')"><x-icon name="plus" class="h-4 w-4" /> New Role</x-link-button>
             </x-slot>

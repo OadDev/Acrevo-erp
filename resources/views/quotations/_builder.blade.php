@@ -3,7 +3,7 @@
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
             <thead class="bg-gray-50 dark:bg-gray-800/50">
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    <th class="px-4 py-3 w-28">Type</th>
+                    <th class="px-4 py-3 w-32">Type</th>
                     <th class="px-4 py-3">Item</th>
                     <th class="px-4 py-3 w-24">Unit</th>
                     <th class="px-4 py-3 w-24">Qty</th>
@@ -61,7 +61,7 @@
         <h3 class="mb-4 text-sm font-semibold text-gray-500">Terms &amp; Validity</h3>
         <div class="space-y-4">
             <div>
-                <x-input-label value="Terms &amp; Conditions" />
+                <x-input-label value="Terms & Conditions" />
                 <x-textarea-input name="terms" rows="4" class="mt-1 block w-full">{{ old('terms', $quotation->terms ?? '') }}</x-textarea-input>
             </div>
             <div>

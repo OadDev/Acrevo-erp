@@ -7,7 +7,7 @@
 
 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
     <div>
-        <x-input-label for="scheduled_at" value="Scheduled Date &amp; Time" />
+        <x-input-label for="scheduled_at" value="Scheduled Date & Time" />
         <x-text-input id="scheduled_at" type="datetime-local" name="scheduled_at" class="mt-1 block w-full" value="{{ old('scheduled_at', isset($siteVisit) ? $siteVisit->scheduled_at->format('Y-m-d\TH:i') : '') }}" required />
         <x-input-error :messages="$errors->get('scheduled_at')" class="mt-1" />
     </div>

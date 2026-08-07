@@ -26,7 +26,7 @@
             </x-nav-group>
         @else
             @canany(['enquiries.view', 'site_visits.view', 'quotations.view', 'work_orders.view'])
-                <x-nav-group label="Sales &amp; Marketing">
+                <x-nav-group label="Sales & Marketing">
                     @can('enquiries.view')
                         <x-nav-link :href="route('enquiries.index')" :active="request()->routeIs('enquiries.*')" icon="inbox">Enquiries</x-nav-link>
                     @endcan

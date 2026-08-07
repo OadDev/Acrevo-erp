@@ -23,8 +23,8 @@
             </div>
         </form>
     </div>
-</x-app-layout>
 
-@push('scripts')
-    @include('quotations._builder-script')
-@endpush
+    @push('scripts')
+        @include('quotations._builder-script')
+    @endpush
+</x-app-layout>
