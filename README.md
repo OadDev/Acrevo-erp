@@ -1,59 +1,89 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# OrbitX ERP — Role-Based Work Order Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel 12 ERP that runs a service company's entire operation through a single
+centralized **Work Order** workflow: Enquiry → Site Visit → Quotation → Client
+Approval → Work Order → HR Assignment → Executive Team → Daily
+Checklist/Progress/Media/Materials/Labour/Measurement Book/Ledger → QC → Client
+Review → Ticket (if needed) → Re-Work → Final QC → Completion → Client
+Feedback → Next Work Order.
 
-## About Laravel
+Every department reads and writes the same Work Order record; role
+permissions decide which screens, buttons, and actions each user sees.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Laravel 12 / PHP 8.3+, Blade + Tailwind + AlpineJS (dark mode via `class` strategy)
+- Spatie Permission (RBAC), Spatie Activitylog, Spatie MediaLibrary
+- Laravel Sanctum (token API for the future Flutter app), Laravel Excel, DomPDF
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Setup
 
-## Learning Laravel
+```bash
+composer install
+npm install && npm run build   # or `npm run dev` while working on the UI
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan storage:link
+php artisan serve
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+`DB_CONNECTION` defaults to SQLite for local development. Switch it (and the
+commented `DB_HOST`/`DB_DATABASE`/etc. block) to MySQL for anything beyond a
+laptop — the schema, migrations, and queries are MySQL-clean.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+The seeder creates the 13 default roles (Admin, Sales, Marketing, HR,
+Executive Team Leader, Executive Team Member, QC Officer, Finance,
+Management, Legal, Auditor, Sub Contractor, Client) with a permission set
+scoped per role, and one admin login:
 
-## Laravel Sponsors
+```
+admin@orbitx.test / password
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Admin creates all other users from **Administration → Users**, which
+generates a temporary password shown once at creation time
+(`must_change_password` is set so this is ready to wire into a forced
+password-change flow).
 
-### Premium Partners
+## Architecture notes
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+- **`app/Models/WorkOrder.php`** is the workflow engine: `transitionTo()`
+  moves the status and writes a `work_order_status_logs` row; a
+  `WorkOrderStatusChanged` event + `NotifyWorkOrderStakeholders` listener
+  fan out notifications on the transitions that matter.
+- **`app/Models/Concerns/HasSequenceNumber.php`** generates the
+  human-readable document numbers (`WO-202608-0001`, `ENQ-...`, `QT-...`,
+  `TKT-...`, `EMP-...`, `CL-...`, `MB-...`, `INV-...`, `CC-...`).
+- **Permissions** are plain strings (`work_orders.view`, `qc.perform`, …)
+  seeded in `database/seeders/RolePermissionSeeder.php` and checked with
+  `@can` / `$user->can()` — Spatie registers these as gates automatically.
+  `app/Policies/WorkOrderPolicy.php` and `TicketPolicy.php` add
+  object-level scoping on top (an Executive Team member can only see work
+  orders their team is assigned to; a Client can only see their own).
+- **`routes/modules.php`** groups every module's routes behind its
+  permission middleware; `routes/api.php` + `routes/api_v1.php` hold the
+  Sanctum-protected REST API.
+- Work order execution (checklist, progress, media, material/labour
+  entries, measurement book, ledger) all live as tabs on one Work Order
+  detail page (`resources/views/work-orders/show.blade.php` +
+  `work-orders/tabs/*`) so every department is looking at the same record.
 
-## Contributing
+## What's built
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Sales & Marketing (Enquiry → Site Visit → Quotation → Work Order), HR
+(Workers, Attendance, Payroll, Executive Teams), Executive Team execution,
+QC, Tickets, Finance/Legal/Audit/Company Records, Reports (Excel export),
+Admin (Users, dynamic Role/Permission editor, Activity Logs), Global
+Search, and a scoped Client Portal. Verified end-to-end via a full
+workflow run (enquiry through completion, invoicing, client feedback) and
+an HTTP smoke test of every route.
 
-## Code of Conduct
+## Natural next steps
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Media Library browser UI, in-app/browser notification center, Company
+Settings screen, Masters management, Kanban/Calendar views, Chart.js /
+ApexCharts dashboards, WhatsApp/SMS notification channels, 2FA
+activation flow, session-timeout enforcement, ticket file attachments,
+quotation email delivery, and broader REST API coverage for the Flutter
+app beyond the current `work-orders` endpoints.
