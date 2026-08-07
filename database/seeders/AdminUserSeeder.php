@@ -14,7 +14,7 @@ class AdminUserSeeder extends Seeder
         $adminDepartment = Department::where('code', 'ADMIN')->first();
 
         $admin = User::firstOrCreate(
-            ['email' => 'admin@orbitx.test'],
+            ['email' => 'admin@acrevo.test'],
             [
                 'employee_code' => 'EMP-0001',
                 'name' => 'System Administrator',

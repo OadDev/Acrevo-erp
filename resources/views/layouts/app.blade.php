@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ isset($title) ? $title.' · ' : '' }}{{ config('app.name', 'OrbitX ERP') }}</title>
+        <title>{{ isset($title) ? $title.' · ' : '' }}{{ config('app.name', 'Acrevo ERP') }}</title>
 
         <script>
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

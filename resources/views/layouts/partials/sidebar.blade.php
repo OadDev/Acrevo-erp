@@ -9,8 +9,8 @@
     class="fixed inset-y-0 left-0 z-40 w-64 transform bg-white transition-transform duration-200 ease-in-out dark:bg-gray-900 dark:border-gray-800 border-r border-gray-200 lg:static lg:translate-x-0 flex flex-col"
 >
     <div class="flex h-16 items-center gap-2 border-b border-gray-200 px-5 dark:border-gray-800">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">OX</div>
-        <span class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">OrbitX ERP</span>
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">AC</div>
+        <span class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">Acrevo ERP</span>
     </div>
 
     <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-5">

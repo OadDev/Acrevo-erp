@@ -1,4 +1,4 @@
-# OrbitX ERP — Role-Based Work Order Management System
+# Acrevo ERP — Role-Based Work Order Management System
 
 A Laravel 12 ERP that runs a service company's entire operation through a single
 centralized **Work Order** workflow: Enquiry → Site Visit → Quotation → Client
@@ -38,7 +38,7 @@ Management, Legal, Auditor, Sub Contractor, Client) with a permission set
 scoped per role, and one admin login:
 
 ```
-admin@orbitx.test / password
+admin@acrevo.test / password
 ```
 
 Admin creates all other users from **Administration → Users**, which

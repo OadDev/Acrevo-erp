@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="New Enquiry" subtitle="Every Work Order in OrbitX starts here." />
+        <x-page-header title="New Enquiry" subtitle="Every Work Order in Acrevo starts here." />
     </x-slot>
 
     <x-card class="max-w-3xl">

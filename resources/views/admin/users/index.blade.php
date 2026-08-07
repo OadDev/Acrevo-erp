@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Users" subtitle="Every login to OrbitX ERP, with role assignment.">
+        <x-page-header title="Users" subtitle="Every login to Acrevo ERP, with role assignment.">
             <x-slot name="actions">
                 <x-link-button :href="route('admin.users.create')"><x-icon name="plus" class="h-4 w-4" /> New User</x-link-button>
             </x-slot>
