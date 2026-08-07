@@ -2,12 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MeasurementBook extends Model
 {
+    use HasSequenceNumber;
+
+    protected $sequencePrefix = 'MB';
+
+    protected $sequenceColumn = 'mb_no';
+
     protected $fillable = ['work_order_id', 'mb_no', 'description', 'date', 'recorded_by', 'status'];
 
     protected function casts(): array

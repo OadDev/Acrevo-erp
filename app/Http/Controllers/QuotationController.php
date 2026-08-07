@@ -1,0 +1,175 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\QuotationRequest;
+use App\Models\Enquiry;
+use App\Models\Quotation;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+
+class QuotationController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $quotations = Quotation::query()
+            ->with(['client', 'enquiry'])
+            ->when($request->get('status'), fn ($q, $status) => $q->where('status', $status))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('quotations.index', compact('quotations'));
+    }
+
+    public function create(Request $request): View
+    {
+        $enquiry = Enquiry::with('client')->findOrFail($request->get('enquiry_id'));
+
+        return view('quotations.create', compact('enquiry'));
+    }
+
+    public function store(QuotationRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $quotation = DB::transaction(function () use ($data, $request) {
+            $quotation = Quotation::create([
+                'enquiry_id' => $data['enquiry_id'],
+                'client_id' => $data['client_id'],
+                'discount_type' => $data['discount_type'],
+                'discount_value' => $data['discount_value'] ?? 0,
+                'tax_percent' => $data['tax_percent'],
+                'terms' => $data['terms'] ?? null,
+                'valid_until' => $data['valid_until'] ?? null,
+                'status' => 'draft',
+                'created_by' => $request->user()->id,
+            ]);
+
+            $this->syncItems($quotation, $data['items']);
+            $quotation->recalculateTotals();
+            $quotation->enquiry->update(['status' => 'quoted']);
+
+            return $quotation;
+        });
+
+        return redirect()->route('quotations.show', $quotation)->with('success', 'Quotation created successfully.');
+    }
+
+    public function show(Quotation $quotation): View
+    {
+        $quotation->load(['items', 'enquiry', 'client', 'revisions', 'workOrders']);
+
+        return view('quotations.show', compact('quotation'));
+    }
+
+    public function edit(Quotation $quotation): View
+    {
+        $quotation->load('items');
+        $enquiry = $quotation->enquiry;
+
+        return view('quotations.edit', compact('quotation', 'enquiry'));
+    }
+
+    public function update(QuotationRequest $request, Quotation $quotation): RedirectResponse
+    {
+        $data = $request->validated();
+
+        DB::transaction(function () use ($quotation, $data) {
+            $quotation->update([
+                'discount_type' => $data['discount_type'],
+                'discount_value' => $data['discount_value'] ?? 0,
+                'tax_percent' => $data['tax_percent'],
+                'terms' => $data['terms'] ?? null,
+                'valid_until' => $data['valid_until'] ?? null,
+            ]);
+
+            $quotation->items()->delete();
+            $this->syncItems($quotation, $data['items']);
+            $quotation->recalculateTotals();
+        });
+
+        return redirect()->route('quotations.show', $quotation)->with('success', 'Quotation updated successfully.');
+    }
+
+    public function send(Quotation $quotation): RedirectResponse
+    {
+        $quotation->update(['status' => 'sent']);
+
+        return back()->with('success', 'Quotation marked as sent to client.');
+    }
+
+    public function approve(Request $request, Quotation $quotation): RedirectResponse
+    {
+        $data = $request->validate(['approved_by' => ['nullable', 'string', 'max:255']]);
+
+        $quotation->update([
+            'status' => 'approved',
+            'approved_at' => now(),
+            'approved_by' => $data['approved_by'] ?? $quotation->client->name,
+        ]);
+
+        return back()->with('success', 'Quotation approved. You can now generate the Work Order.');
+    }
+
+    public function reject(Request $request, Quotation $quotation): RedirectResponse
+    {
+        $data = $request->validate(['rejected_reason' => ['required', 'string']]);
+
+        $quotation->update(['status' => 'rejected'] + $data);
+
+        return back()->with('success', 'Quotation marked as rejected.');
+    }
+
+    public function revise(Quotation $quotation): RedirectResponse
+    {
+        $revision = DB::transaction(function () use ($quotation) {
+            $new = $quotation->replicate(['status', 'approved_at', 'approved_by', 'rejected_reason', 'pdf_path']);
+            $new->version = $quotation->version + 1;
+            $new->parent_quotation_id = $quotation->id;
+            $new->status = 'draft';
+            $new->save();
+
+            foreach ($quotation->items as $item) {
+                $new->items()->create($item->only([
+                    'item_type', 'name', 'description', 'unit', 'quantity',
+                    'unit_price', 'discount', 'tax_percent', 'total', 'sort_order',
+                ]));
+            }
+
+            $new->recalculateTotals();
+
+            return $new;
+        });
+
+        return redirect()->route('quotations.edit', $revision)->with('success', 'New revision created. Update the details below.');
+    }
+
+    public function pdf(Quotation $quotation)
+    {
+        $quotation->load(['items', 'client', 'enquiry']);
+
+        $pdf = Pdf::loadView('quotations.pdf', compact('quotation'));
+
+        return $pdf->download("{$quotation->quotation_no}.pdf");
+    }
+
+    private function syncItems(Quotation $quotation, array $items): void
+    {
+        foreach ($items as $index => $item) {
+            $lineTotal = ($item['quantity'] * $item['unit_price']) - ($item['discount'] ?? 0);
+            $taxPercent = $item['tax_percent'] ?? $quotation->tax_percent;
+            $total = round($lineTotal + ($lineTotal * $taxPercent / 100), 2);
+
+            $quotation->items()->create($item + [
+                'discount' => $item['discount'] ?? 0,
+                'tax_percent' => $taxPercent,
+                'total' => $total,
+                'sort_order' => $index,
+            ]);
+        }
+    }
+}

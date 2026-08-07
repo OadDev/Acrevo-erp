@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,11 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 class Enquiry extends Model
 {
-    use HasFactory, HasUuids, LogsActivity, SoftDeletes;
+    use HasFactory, HasSequenceNumber, HasUuids, LogsActivity, SoftDeletes;
+
+    protected $sequencePrefix = 'ENQ';
+
+    protected $sequenceColumn = 'enquiry_no';
 
     protected $fillable = [
         'enquiry_no', 'client_id', 'contact_name', 'contact_phone', 'contact_email',

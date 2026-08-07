@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
-    use SoftDeletes;
+    use HasSequenceNumber, SoftDeletes;
+
+    protected $sequencePrefix = 'INV';
+
+    protected $sequenceColumn = 'invoice_no';
 
     protected $fillable = ['invoice_no', 'work_order_id', 'client_id', 'amount', 'tax_amount', 'total_amount', 'due_date', 'status', 'issued_by'];
 

@@ -1,0 +1,61 @@
+<x-app-layout>
+    <x-slot name="header">
+        <x-page-header :title="$ticket->ticket_no" :subtitle="$ticket->title">
+            <x-slot name="actions">
+                <x-badge :status="$ticket->status" class="text-sm" />
+                @can('tickets.manage')
+                    <x-link-button :href="route('tickets.edit', $ticket)" variant="secondary">Edit</x-link-button>
+                    <form method="POST" action="{{ route('tickets.status', $ticket) }}" class="flex items-center gap-2">
+                        @csrf
+                        <x-select-input name="status" onchange="this.form.submit()" class="text-sm">
+                            @foreach (['open', 'in_progress', 'resolved', 'closed'] as $status)
+                                <option value="{{ $status }}" @selected($ticket->status === $status)>{{ Str::title(str_replace('_',' ',$status)) }}</option>
+                            @endforeach
+                        </x-select-input>
+                    </form>
+                @endcan
+            </x-slot>
+        </x-page-header>
+    </x-slot>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="space-y-6 lg:col-span-2">
+            <x-card>
+                <dl class="grid grid-cols-2 gap-4 text-sm">
+                    <div><dt class="text-gray-400">Work Order</dt><dd><a href="{{ route('work-orders.show', $ticket->workOrder) }}" class="text-indigo-600 hover:underline">{{ $ticket->workOrder->work_order_no }}</a></dd></div>
+                    <div><dt class="text-gray-400">Type</dt><dd><x-badge color="indigo" :status="$ticket->type" /></dd></div>
+                    <div><dt class="text-gray-400">Priority</dt><dd><x-badge :status="$ticket->priority" /></dd></div>
+                    <div><dt class="text-gray-400">Department</dt><dd>{{ $ticket->department?->name ?? '—' }}</dd></div>
+                    <div><dt class="text-gray-400">Assigned To</dt><dd>{{ $ticket->assignedTo?->name ?? '—' }}</dd></div>
+                    <div><dt class="text-gray-400">Due Date</dt><dd>{{ optional($ticket->due_date)->format('d M Y') ?? '—' }}</dd></div>
+                    <div class="col-span-2"><dt class="text-gray-400">Description</dt><dd>{{ $ticket->description ?: '—' }}</dd></div>
+                </dl>
+            </x-card>
+
+            <x-card>
+                <h3 class="mb-4 text-sm font-semibold text-gray-500">Comments</h3>
+                <form method="POST" action="{{ route('tickets.comments.store', $ticket) }}" class="mb-4 flex gap-2">
+                    @csrf
+                    <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
+                    <x-primary-button>Post</x-primary-button>
+                </form>
+                <div class="space-y-3">
+                    @forelse ($ticket->comments as $comment)
+                        <div class="border-l-2 border-indigo-200 pl-3 text-sm dark:border-indigo-500/30">
+                            <p class="text-gray-700 dark:text-gray-300">{{ $comment->comment }}</p>
+                            <p class="text-xs text-gray-400">{{ $comment->user?->name ?? 'Client' }} · {{ $comment->created_at->diffForHumans() }}</p>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400">No comments yet.</p>
+                    @endforelse
+                </div>
+            </x-card>
+        </div>
+
+        <x-card>
+            <h3 class="mb-3 text-sm font-semibold text-gray-500">Raised By</h3>
+            <p class="text-sm text-gray-700 dark:text-gray-300">{{ $ticket->raisedBy?->name ?? 'Client' }}</p>
+            <p class="text-xs text-gray-400">{{ $ticket->created_at->diffForHumans() }}</p>
+        </x-card>
+    </div>
+</x-app-layout>

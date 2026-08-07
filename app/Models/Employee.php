@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,11 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Employee extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasSequenceNumber, InteractsWithMedia, SoftDeletes;
+
+    protected $sequencePrefix = 'EMP';
+
+    protected $sequenceColumn = 'employee_code';
 
     protected $fillable = [
         'employee_code', 'user_id', 'name', 'phone', 'email', 'designation',

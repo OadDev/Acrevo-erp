@@ -94,6 +94,7 @@ class RolePermissionSeeder extends Seeder
         ],
         'HR' => [
             'hr' => '*',
+            'sales' => ['work_orders.view'],
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
         ],

@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -64,13 +65,23 @@ class User extends Authenticatable
         return $this->belongsTo(Department::class);
     }
 
-    public function employee(): HasMany
+    public function employee(): HasOne
     {
-        return $this->hasMany(Employee::class);
+        return $this->hasOne(Employee::class);
     }
 
-    public function client(): HasMany
+    public function assignedClients(): HasMany
     {
         return $this->hasMany(Client::class, 'assigned_sales_user_id');
+    }
+
+    public function clientLogin(): HasOne
+    {
+        return $this->hasOne(ClientLogin::class);
+    }
+
+    public function client(): ?Client
+    {
+        return $this->clientLogin?->client;
     }
 }

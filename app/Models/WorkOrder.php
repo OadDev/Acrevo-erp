@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Events\WorkOrderStatusChanged;
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +19,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class WorkOrder extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia, LogsActivity, SoftDeletes;
+    use HasFactory, HasSequenceNumber, HasUuids, InteractsWithMedia, LogsActivity, SoftDeletes;
+
+    protected $sequencePrefix = 'WO';
+
+    protected $sequenceColumn = 'work_order_no';
 
     /**
      * The centralized workflow status pipeline. Every department reads and
@@ -87,6 +93,8 @@ class WorkOrder extends Model implements HasMedia
             'remarks' => $remarks,
             'changed_at' => now(),
         ]);
+
+        event(new WorkOrderStatusChanged($this, $from));
     }
 
     public function quotation(): BelongsTo
@@ -102,6 +110,11 @@ class WorkOrder extends Model implements HasMedia
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function parent(): BelongsTo

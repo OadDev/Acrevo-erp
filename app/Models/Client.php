@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,11 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 class Client extends Model
 {
-    use HasFactory, HasUuids, LogsActivity, SoftDeletes;
+    use HasFactory, HasSequenceNumber, HasUuids, LogsActivity, SoftDeletes;
+
+    protected $sequencePrefix = 'CL';
+
+    protected $sequenceColumn = 'client_code';
 
     protected $fillable = [
         'client_code', 'name', 'type', 'email', 'phone', 'alternate_phone',

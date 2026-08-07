@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,11 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Ticket extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia, LogsActivity, SoftDeletes;
+    use HasFactory, HasSequenceNumber, HasUuids, InteractsWithMedia, LogsActivity, SoftDeletes;
+
+    protected $sequencePrefix = 'TKT';
+
+    protected $sequenceColumn = 'ticket_no';
 
     protected $fillable = [
         'ticket_no', 'work_order_id', 'type', 'priority', 'title', 'description',

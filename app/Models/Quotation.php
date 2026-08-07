@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,11 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 class Quotation extends Model
 {
-    use HasFactory, HasUuids, LogsActivity, SoftDeletes;
+    use HasFactory, HasSequenceNumber, HasUuids, LogsActivity, SoftDeletes;
+
+    protected $sequencePrefix = 'QT';
+
+    protected $sequenceColumn = 'quotation_no';
 
     protected $fillable = [
         'quotation_no', 'enquiry_id', 'client_id', 'version', 'parent_quotation_id',

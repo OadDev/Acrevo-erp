@@ -1,0 +1,233 @@
+<?php
+
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CompanyRecordController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EnquiryController;
+use App\Http\Controllers\EnquiryFollowUpController;
+use App\Http\Controllers\ExecutiveTeamController;
+use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\LegalController;
+use App\Http\Controllers\AuditController;
+use App\Http\Controllers\MyWorkOrderController;
+use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\Portal\PortalInvoiceController;
+use App\Http\Controllers\Portal\PortalTicketController;
+use App\Http\Controllers\Portal\PortalWorkOrderController;
+use App\Http\Controllers\QcInspectionController;
+use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SiteVisitController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\WorkOrder\DailyChecklistController;
+use App\Http\Controllers\WorkOrder\DailyProgressController;
+use App\Http\Controllers\WorkOrder\LabourEntryController;
+use App\Http\Controllers\WorkOrder\LedgerController;
+use App\Http\Controllers\WorkOrder\MaterialEntryController;
+use App\Http\Controllers\WorkOrder\MeasurementBookController;
+use App\Http\Controllers\WorkOrder\WorkOrderMediaController;
+use App\Http\Controllers\WorkOrderController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Sales & Marketing
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:enquiries.view')->group(function () {
+    Route::resource('enquiries', EnquiryController::class);
+    Route::post('enquiries/{enquiry}/follow-ups', [EnquiryFollowUpController::class, 'store'])->name('enquiries.follow-ups.store');
+});
+
+Route::middleware('permission:site_visits.view')->group(function () {
+    Route::resource('site-visits', SiteVisitController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+    Route::post('site-visits/{siteVisit}/complete', [SiteVisitController::class, 'complete'])->name('site-visits.complete');
+});
+
+Route::middleware('permission:quotations.view')->group(function () {
+    Route::resource('quotations', QuotationController::class);
+    Route::post('quotations/{quotation}/send', [QuotationController::class, 'send'])->name('quotations.send');
+    Route::post('quotations/{quotation}/approve', [QuotationController::class, 'approve'])->name('quotations.approve');
+    Route::post('quotations/{quotation}/reject', [QuotationController::class, 'reject'])->name('quotations.reject');
+    Route::get('quotations/{quotation}/pdf', [QuotationController::class, 'pdf'])->name('quotations.pdf');
+    Route::post('quotations/{quotation}/revise', [QuotationController::class, 'revise'])->name('quotations.revise');
+});
+
+Route::middleware('permission:enquiries.view')->group(function () {
+    Route::resource('clients', ClientController::class);
+});
+
+Route::middleware('permission:work_orders.view')->group(function () {
+    Route::get('work-orders/completed', [WorkOrderController::class, 'completed'])->name('work-orders.completed');
+    Route::resource('work-orders', WorkOrderController::class)->except(['destroy', 'show']);
+    Route::post('work-orders/{workOrder}/cancel', [WorkOrderController::class, 'cancel'])->name('work-orders.cancel');
+    Route::post('work-orders/{workOrder}/rework', [WorkOrderController::class, 'createRework'])->name('work-orders.rework');
+    Route::post('work-orders/{workOrder}/next', [WorkOrderController::class, 'createNext'])->name('work-orders.next');
+    Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete'])->name('work-orders.complete');
+});
+
+// Feedback is submitted by the client who owns the work order, so it is
+// authorized via WorkOrderPolicy rather than the work_orders.view permission.
+Route::middleware('permission:work_orders.view|client_portal.access')->group(function () {
+    Route::post('work-orders/{workOrder}/feedback', [WorkOrderController::class, 'storeFeedback'])->name('work-orders.feedback');
+});
+
+// Viewing a single work order is authorized by WorkOrderPolicy (covers sales,
+// management, the assigned executive team, and the owning client), not by a
+// single module permission — so it stays outside the permission-gated group
+// above. Registered last so the static segments (create/completed/{id}/edit)
+// still win over this catch-all {workOrder} wildcard.
+Route::get('work-orders/{workOrder}', [WorkOrderController::class, 'show'])->name('work-orders.show');
+
+Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
+    Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');
+    Route::post('work-orders/{workOrder}/unassign-team/{assignment}', [WorkOrderController::class, 'unassignTeam'])->name('work-orders.unassign-team');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Executive Team execution (shared: sales can view, executive can edit)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function () {
+    Route::middleware('permission:daily_checklist.manage')->group(function () {
+        Route::get('checklists', [DailyChecklistController::class, 'index'])->name('checklists.index');
+        Route::post('checklists', [DailyChecklistController::class, 'store'])->name('checklists.store');
+    });
+    Route::middleware('permission:daily_progress.manage')->group(function () {
+        Route::get('progress', [DailyProgressController::class, 'index'])->name('progress.index');
+        Route::post('progress', [DailyProgressController::class, 'store'])->name('progress.store');
+    });
+    Route::middleware('permission:media.upload')->group(function () {
+        Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');
+        Route::delete('media/{media}', [WorkOrderMediaController::class, 'destroy'])->name('media.destroy');
+    });
+    Route::middleware('permission:site_records.manage')->group(function () {
+        Route::get('materials', [MaterialEntryController::class, 'index'])->name('materials.index');
+        Route::post('materials', [MaterialEntryController::class, 'store'])->name('materials.store');
+        Route::get('labour', [LabourEntryController::class, 'index'])->name('labour.index');
+        Route::post('labour', [LabourEntryController::class, 'store'])->name('labour.store');
+        Route::get('measurement-books', [MeasurementBookController::class, 'index'])->name('measurement-books.index');
+        Route::post('measurement-books', [MeasurementBookController::class, 'store'])->name('measurement-books.store');
+        Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
+        Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+    });
+});
+
+Route::middleware('permission:assigned_work.view')->group(function () {
+    Route::get('my-work-orders', [MyWorkOrderController::class, 'index'])->name('my-work-orders.index');
+    Route::get('my-work-orders/{workOrder}', [MyWorkOrderController::class, 'show'])->name('my-work-orders.show');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Human Resources
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:employees.view')->group(function () {
+    Route::resource('employees', EmployeeController::class);
+});
+Route::middleware('permission:attendance.view')->group(function () {
+    Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+});
+Route::middleware('permission:payroll.view')->group(function () {
+    Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
+    Route::post('payroll', [PayrollController::class, 'store'])->name('payroll.store');
+    Route::post('payroll/{payroll}/mark-paid', [PayrollController::class, 'markPaid'])->name('payroll.mark-paid');
+});
+Route::middleware('permission:executive_teams.view')->group(function () {
+    Route::resource('executive-teams', ExecutiveTeamController::class);
+    Route::post('executive-teams/{executiveTeam}/members', [ExecutiveTeamController::class, 'addMember'])->name('executive-teams.members.store');
+    Route::delete('executive-teams/{executiveTeam}/members/{member}', [ExecutiveTeamController::class, 'removeMember'])->name('executive-teams.members.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Quality Control
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:qc.view')->group(function () {
+    Route::resource('qc', QcInspectionController::class)->parameters(['qc' => 'qcInspection']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Tickets
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:tickets.view')->group(function () {
+    Route::resource('tickets', TicketController::class);
+    Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Management: Finance, Legal, Audit, Company Records
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:finance.view')->group(function () {
+    Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::post('finance/invoices', [FinanceController::class, 'storeInvoice'])->name('finance.invoices.store');
+    Route::post('finance/payments', [FinanceController::class, 'storePayment'])->name('finance.payments.store');
+    Route::post('finance/vendor-payments', [FinanceController::class, 'storeVendorPayment'])->name('finance.vendor-payments.store');
+    Route::post('finance/expenses', [FinanceController::class, 'storeExpense'])->name('finance.expenses.store');
+});
+
+Route::middleware('permission:legal.view')->group(function () {
+    Route::get('legal', [LegalController::class, 'index'])->name('legal.index');
+    Route::post('legal', [LegalController::class, 'store'])->name('legal.store');
+});
+
+Route::middleware('permission:audit.view')->group(function () {
+    Route::resource('audits', AuditController::class)->only(['index', 'create', 'store', 'show']);
+});
+
+Route::middleware('permission:company_records.view')->group(function () {
+    Route::resource('company-records', CompanyRecordController::class)->except('show');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reports
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:reports.view')->group(function () {
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/work-orders/export', [ReportController::class, 'exportWorkOrders'])->name('reports.work-orders.export');
+    Route::get('reports/payroll/export', [ReportController::class, 'exportPayroll'])->name('reports.payroll.export');
+    Route::get('reports/tickets/export', [ReportController::class, 'exportTickets'])->name('reports.tickets.export');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Administration
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:users.view')->group(function () {
+    Route::resource('admin/users', UserController::class)->except('show')->names('admin.users');
+});
+Route::middleware('permission:roles.view')->group(function () {
+    Route::resource('admin/roles', RoleController::class)->except('show')->names('admin.roles');
+});
+Route::middleware('permission:activity_logs.view')->group(function () {
+    Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Client Portal
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:client_portal.access')->prefix('portal')->name('portal.')->group(function () {
+    Route::get('work-orders', [PortalWorkOrderController::class, 'index'])->name('work-orders.index');
+    Route::get('work-orders/{workOrder}', [PortalWorkOrderController::class, 'show'])->name('work-orders.show');
+    Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
+    Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
+    Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
+});

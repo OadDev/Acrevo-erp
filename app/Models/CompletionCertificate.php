@@ -2,11 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompletionCertificate extends Model
 {
+    use HasSequenceNumber;
+
+    protected $sequencePrefix = 'CC';
+
+    protected $sequenceColumn = 'certificate_no';
+
     protected $fillable = ['work_order_id', 'certificate_no', 'issued_date', 'issued_by', 'pdf_path', 'client_signed_at'];
 
     protected function casts(): array
