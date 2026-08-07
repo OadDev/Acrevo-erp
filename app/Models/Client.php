@@ -28,7 +28,7 @@ class Client extends Model
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnlyDirty()->dontSubmitEmptyLogs();
+        return LogOptions::defaults()->logOnlyDirty()->dontLogEmptyChanges();
     }
 
     public function assignedSales(): BelongsTo

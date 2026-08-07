@@ -58,7 +58,7 @@ class WorkOrder extends Model implements HasMedia
         return LogOptions::defaults()
             ->logOnly(['title', 'status', 'priority', 'deadline'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     public function registerMediaCollections(): void
