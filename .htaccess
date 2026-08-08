@@ -1,0 +1,19 @@
+# Laravel's front controller and assets live in public/, but this deploy
+# puts the whole app (including public/) under the web root. This file
+# makes the site root behave as if public/ were the document root:
+# every request gets transparently routed into public/, so app/, vendor/,
+# config/, .env, etc. are never reachable directly by URL — a request for
+# /vendor/autoload.php resolves to public/vendor/autoload.php, which
+# doesn't exist, so Apache 404s it instead of serving the real file.
+
+# Defense in depth: explicitly deny the most sensitive top-level files,
+# in case the rewrite below is ever disabled or AllowOverride is limited.
+<FilesMatch "(^\.env|^\.env\..*|composer\.(json|lock)|package(-lock)?\.json|^artisan$)">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ /public/$1 [L]
+</IfModule>

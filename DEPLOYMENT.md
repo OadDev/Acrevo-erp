@@ -14,58 +14,52 @@ GitHub tools available to me don't include repo-secret management, and an
 SSH password shouldn't be pasted into a chat anyway. Add exactly these 5,
 named exactly this way (the workflow already references them):
 
-| Secret name | What it is | Where to find it in Hostinger hPanel |
+| Secret name | Value | Where it comes from |
 |---|---|---|
-| `HOSTINGER_SSH_HOST` | SSH hostname or IP | hPanel → **Advanced → SSH Access** — shown as "Hostname" or "Server IP" |
-| `HOSTINGER_SSH_USERNAME` | SSH username | Same page — looks like `u123456789` |
-| `HOSTINGER_SSH_PASSWORD` | SSH password | Your hosting account password, or a separate SSH password if you set one under SSH Access |
-| `HOSTINGER_SSH_PORT` | SSH port | Same page — Hostinger shared hosting is usually `65002`; VPS plans are usually `22` |
-| `HOSTINGER_DEPLOY_PATH` | Absolute path on the server the app deploys into | See step 2 |
+| `HOSTINGER_SSH_HOST` | your server hostname/IP | hPanel → **Advanced → SSH Access** |
+| `HOSTINGER_SSH_USERNAME` | e.g. `u761085554` | same page |
+| `HOSTINGER_SSH_PASSWORD` | your SSH password | your hosting/SSH password |
+| `HOSTINGER_SSH_PORT` | e.g. `65002` on shared hosting, `22` on VPS | same page |
+| `HOSTINGER_DEPLOY_PATH` | `/home/u761085554/domains/geethanworks.in/public_html` | you've already given me this |
 
 SSH access has to be enabled for your plan first: hPanel → **Advanced → SSH
 Access → Enable**.
 
-## 2. Decide the deploy path (document root)
+## 2. Deploy layout: whole app in `public_html`
 
-Laravel's web root is the `public/` folder, not the project root — Hostinger
-serves `public_html` directly, so pick one of these:
-
-**Option A — you can change the domain's document root** (VPS, or shared
-plans with "Website → Document Root" in hPanel): deploy the whole app
-somewhere like
+You chose to deploy the entire app directly into `public_html` rather than
+the split layout, so the deploy path *is* the web root:
 
 ```
-/home/u123456789/domains/geethanworks.in/acrevo-erp
+/home/u761085554/domains/geethanworks.in/public_html
 ```
 
-and point the domain's document root at
-`.../acrevo-erp/public`. Set `HOSTINGER_DEPLOY_PATH` to the app folder
-(`.../acrevo-erp`, not `.../acrevo-erp/public`).
+Laravel's actual entry point is `public/index.php`, not the project root —
+so a root-level **`.htaccess`** (already added to the repo, syncs with
+every deploy) transparently rewrites every request into `public/` before
+Apache resolves it to a file. Visiting `https://geethanworks.in/` serves
+`public_html/public/index.php`; a request for `/vendor/autoload.php`
+rewrites to `/public/vendor/autoload.php`, which doesn't exist, so Apache
+404s it — `vendor/`, `app/`, `config/`, `.env`, etc. are never directly
+web-accessible even though they physically sit in `public_html`. There's
+also a `<FilesMatch>` deny rule on `.env`, `composer.json/.lock`,
+`package.json`, and `artisan` as a second layer, in case the rewrite is
+ever disabled.
 
-**Option B — document root is locked to `public_html`** (typical shared
-hosting): deploy the app one level above `public_html`, e.g.
-
-```
-/home/u123456789/domains/geethanworks.in/acrevo-erp
-```
-
-then make `public_html` serve `acrevo-erp/public`. If your plan allows
-symlinks: `ln -s /home/u.../acrevo-erp/public /home/u.../domains/geethanworks.in/public_html`.
-If it doesn't, copy `public/`'s contents into `public_html` once and edit
-`public_html/index.php` so its two `require` lines point at
-`../acrevo-erp/vendor/autoload.php` and `../acrevo-erp/bootstrap/app.php`
-(the file otherwise deploys are the same). Either way,
-`HOSTINGER_DEPLOY_PATH` is still the app folder, not `public_html`.
+This only works if `.htaccess` overrides are honored (`AllowOverride`
+enabled) — the default on Hostinger shared hosting, since they build for
+exactly this scenario. If `https://geethanworks.in/` ever 404s or shows a
+directory listing after deploy, that's the first thing to check.
 
 ## 3. One-time server setup (before the first deploy)
 
 SSH in once by hand and create what the workflow deliberately never touches:
 
 ```bash
-mkdir -p acrevo-erp/storage/framework/{cache,sessions,views}
-mkdir -p acrevo-erp/storage/{logs,app/public}
-mkdir -p acrevo-erp/bootstrap/cache
-cd acrevo-erp
+cd /home/u761085554/domains/geethanworks.in/public_html
+mkdir -p storage/framework/{cache,sessions,views}
+mkdir -p storage/{logs,app/public}
+mkdir -p bootstrap/cache
 cp .env.example .env   # then edit it — see below
 ```
 
