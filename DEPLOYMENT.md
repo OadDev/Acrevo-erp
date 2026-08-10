@@ -98,12 +98,21 @@ re-syncs the code and re-runs migrations/cache automatically.
   needed.
 - `rsync` and PHP need to already be available over SSH on the server (true
   for virtually all Hostinger plans).
-- `composer.lock` was generated under PHP 8.4, which locked several
-  packages (spatie/laravel-activitylog, symfony/clock, carbon, etc.) to
-  versions that require PHP >=8.4. The deploy workflow's `Setup PHP` step
-  is pinned to `8.4` to match — the live server also needs to run PHP 8.4
-  (check/set this in hPanel → **Advanced → PHP Configuration**), or the
-  app will fail the same way `php artisan` commands run over SSH.
+- `composer.json` pins `"platform": {"php": "8.2"}` under `config` so
+  `composer.lock` always resolves package versions installable on PHP
+  8.2+, regardless of what PHP version generates the lock file locally.
+  The deploy workflow's `Setup PHP` step matches at `8.2`.
+- **The server's default `php` over SSH must also be 8.2 or newer.**
+  Hostinger shared hosting often defaults the plain `php` command to a
+  very old system PHP (we hit 7.2.34) even when the *website's* PHP
+  version is set correctly in hPanel — CLI and web PHP versions are
+  configured separately. Check hPanel → **Advanced → PHP Configuration**
+  for the domain, and confirm the SSH CLI version with `php -v` after
+  SSHing in. If they don't match, hPanel usually has a way to select the
+  CLI PHP version too (sometimes a separate "PHP CLI" dropdown, or a
+  versioned binary like `/opt/alt/php82/usr/bin/php` you'd need to alias
+  or call directly) — if the post-deploy `php artisan` commands keep
+  failing with a PHP version complaint, that's what to check.
 - The workflow currently triggers on push to `main`. This repo's only
   branch so far is `claude/orbitx-erp-work-order-82ptcp` — once you create
   `main` (or want deploys on a different branch), tell me and I'll update
