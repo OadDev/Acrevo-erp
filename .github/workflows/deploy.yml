@@ -58,6 +58,7 @@ jobs:
           sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
             "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
             "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache && \
              php artisan migrate --force && \
              php artisan optimize:clear && \
              php artisan config:cache && \

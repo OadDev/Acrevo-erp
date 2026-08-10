@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
 
+require __DIR__.'/install.php';
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/search', GlobalSearchController::class)->name('search');

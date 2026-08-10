@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuthApiController;
 use App\Http\Controllers\Api\V1\WorkOrderApiController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', fn (Request $request) => $request->user());
+Route::get('/user', [AuthApiController::class, 'me']);
 
 Route::apiResource('work-orders', WorkOrderApiController::class)->only(['index', 'show']);

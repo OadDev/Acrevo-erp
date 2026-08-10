@@ -18,6 +18,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/installed
+/storage/install_token.txt
 /vendor
 Homestead.json
 Homestead.yaml

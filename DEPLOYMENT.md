@@ -16,8 +16,13 @@ different, `HOSTINGER_DEPLOY_PATH` needs to change too, not just `APP_URL`.
 `.github/workflows/deploy.yml` builds the app on GitHub's runner (Composer +
 npm build) and `rsync`s it straight to Hostinger over SSH on every push to
 `main` (or via **Actions → Deploy to Hostinger → Run workflow** for a manual
-run). It never touches `.env` or `storage/` on the server, so those persist
-across deploys.
+run). `.env` and the *contents* of `storage/` are excluded from the sync
+and never overwritten, so logs/sessions/uploads persist across deploys —
+but every deploy does `mkdir -p` the handful of `storage/framework/...`
+subdirectories Laravel needs just to boot (they're empty otherwise, so
+there's nothing to preserve there; without this, a brand-new deploy target
+has no `storage/framework/views` at all and every page, not just
+`/install`, 500s before your code ever runs).
 
 ## 1. GitHub Actions secrets — done
 
@@ -61,49 +66,39 @@ enabled) — the default on Hostinger shared hosting, since they build for
 exactly this scenario. If the site ever 404s or shows a directory listing
 after deploy, that's the first thing to check.
 
-## 3. One-time server setup (before the first deploy)
+## 3. First-time setup: the web installer
 
-SSH in once by hand and create what the workflow deliberately never touches:
+Once the code has been deployed at least once (Part A of the deploy —
+either a push to `main` or a manual workflow run), there's a web-based
+setup wizard at **`/install`** that replaces all the manual SSH `.env`
+editing this section used to describe. It handles: database connection
+(with a live test before saving), writing `.env`, generating `APP_KEY`,
+running migrations, seeding departments/roles/permissions, creating your
+admin account, and `storage:link` + config caching — no SSH required for
+any of it.
 
-```bash
-cd /home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html
-mkdir -p storage/framework/{cache,sessions,views}
-mkdir -p storage/{logs,app/public}
-mkdir -p bootstrap/cache
-cp .env.example .env   # then edit it — see below
-```
+It's gated because it runs before the database (or possibly `.env`
+itself) exists, so it can't rely on sessions or CSRF the way the rest of
+the app does. Instead:
 
-Edit `.env` with production values:
-
-```
-APP_NAME="Acrevo ERP"
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://lightskyblue-snail-890159.hostingersite.com
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_DATABASE=<create this in hPanel → Databases → MySQL Databases>
-DB_USERNAME=<same>
-DB_PASSWORD=<same>
-```
+1. SSH in once, just to read the access token:
+   ```bash
+   cat /home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html/storage/install_token.txt
+   ```
+2. Visit `https://lightskyblue-snail-890159.hostingersite.com/install?token=<that value>`
+   and follow the 4 steps (Requirements → Database → Migrate → Admin Account).
+3. It locks itself when finished — writes `storage/installed` and deletes
+   the token file, so `/install` 403s on every request after that. To run
+   it again (e.g. a fresh reinstall), delete `storage/installed` over SSH.
 
 When `geethanworks.in`'s DNS is pointed at this hosting and you're ready to
-cut over, SSH in, change `APP_URL` to `https://geethanworks.in` in this
-same `.env`, then run `php artisan config:cache` again — the deploy
-workflow never edits `.env`, so this is a manual step whenever you're ready
-for it, not something that happens automatically on the next push.
+cut over, SSH in, change `APP_URL` in `.env` to `https://geethanworks.in`,
+then run `php artisan config:cache` — the deploy workflow never edits
+`.env` after install, so this is a manual step whenever you're ready for
+it, not something that happens automatically on the next push.
 
-Then, still over SSH:
-
-```bash
-php artisan key:generate
-php artisan storage:link
-```
-
-After that, every `git push` to `main` (or a manual workflow run) re-syncs
-the code and re-runs migrations/cache — this bootstrap step only happens
-once.
+After install, every `git push` to `main` (or a manual workflow run)
+re-syncs the code and re-runs migrations/cache automatically.
 
 ## Notes
 
