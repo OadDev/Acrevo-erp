@@ -70,3 +70,18 @@ jobs:
              \$PHP_BIN artisan config:cache && \
              \$PHP_BIN artisan route:cache && \
              \$PHP_BIN artisan view:cache"
+
+      - name: Print install link (only if not yet installed)
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             if [ -f storage/installed ]; then \
+               echo 'Already installed - visit https://geethanworks.in to use the app.'; \
+             elif [ -f storage/install_token.txt ]; then \
+               echo \"Open this link to finish setup: https://geethanworks.in/install?token=\$(cat storage/install_token.txt)\"; \
+             else \
+               echo 'No install token found yet - the installer route has not been hit yet, or storage/ was reset.'; \
+             fi"
