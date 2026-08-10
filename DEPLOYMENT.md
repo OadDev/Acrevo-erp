@@ -1,17 +1,12 @@
 # Deploying to Hostinger
 
-Live for now at **https://lightskyblue-snail-890159.hostingersite.com/** —
-Hostinger's temporary preview URL, ahead of `geethanworks.in`'s DNS being
-pointed at this hosting. It has its **own** document root, separate from
-`geethanworks.in`'s — not a shared folder as originally assumed:
+Live at **https://geethanworks.in/** — this is the final domain and deploy
+path (superseding the earlier temporary `lightskyblue-snail-890159.hostingersite.com`
+preview URL, which is no longer used). Document root:
 
 ```
-/home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html
+/home/u761085554/domains/geethanworks.in/public_html
 ```
-
-When you cut over to `geethanworks.in`, check whether that domain's
-document root is this same folder or a different one in hPanel — if it's
-different, `HOSTINGER_DEPLOY_PATH` needs to change too, not just `APP_URL`.
 
 `.github/workflows/deploy.yml` builds the app on GitHub's runner (Composer +
 npm build) and `rsync`s it straight to Hostinger over SSH on every push to
@@ -35,7 +30,7 @@ secret**. All 5 are set. For reference, what each one holds:
 | `HOSTINGER_SSH_USERNAME` | e.g. `u761085554` | same page |
 | `HOSTINGER_SSH_PASSWORD` | your SSH password | your hosting/SSH password |
 | `HOSTINGER_SSH_PORT` | e.g. `65002` on shared hosting, `22` on VPS | same page |
-| `HOSTINGER_DEPLOY_PATH` | `/home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html` | you've already given me this |
+| `HOSTINGER_DEPLOY_PATH` | `/home/u761085554/domains/geethanworks.in/public_html` | you've already given me this |
 
 SSH access has to be enabled for your plan first: hPanel → **Advanced → SSH
 Access → Enable**.
@@ -46,7 +41,7 @@ You chose to deploy the entire app directly into `public_html` rather than
 the split layout, so the deploy path *is* the web root:
 
 ```
-/home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html
+/home/u761085554/domains/geethanworks.in/public_html
 ```
 
 Laravel's actual entry point is `public/index.php`, not the project root —
@@ -83,19 +78,14 @@ the app does. Instead:
 
 1. SSH in once, just to read the access token:
    ```bash
-   cat /home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html/storage/install_token.txt
+   cat /home/u761085554/domains/geethanworks.in/public_html/storage/install_token.txt
    ```
-2. Visit `https://lightskyblue-snail-890159.hostingersite.com/install?token=<that value>`
+2. Visit `https://geethanworks.in/install?token=<that value>`
    and follow the 4 steps (Requirements → Database → Migrate → Admin Account).
+   Use `https://geethanworks.in` as the App URL on the Database step.
 3. It locks itself when finished — writes `storage/installed` and deletes
    the token file, so `/install` 403s on every request after that. To run
    it again (e.g. a fresh reinstall), delete `storage/installed` over SSH.
-
-When `geethanworks.in`'s DNS is pointed at this hosting and you're ready to
-cut over, SSH in, change `APP_URL` in `.env` to `https://geethanworks.in`,
-then run `php artisan config:cache` — the deploy workflow never edits
-`.env` after install, so this is a manual step whenever you're ready for
-it, not something that happens automatically on the next push.
 
 After install, every `git push` to `main` (or a manual workflow run)
 re-syncs the code and re-runs migrations/cache automatically.
@@ -108,6 +98,12 @@ re-syncs the code and re-runs migrations/cache automatically.
   needed.
 - `rsync` and PHP need to already be available over SSH on the server (true
   for virtually all Hostinger plans).
+- `composer.lock` was generated under PHP 8.4, which locked several
+  packages (spatie/laravel-activitylog, symfony/clock, carbon, etc.) to
+  versions that require PHP >=8.4. The deploy workflow's `Setup PHP` step
+  is pinned to `8.4` to match — the live server also needs to run PHP 8.4
+  (check/set this in hPanel → **Advanced → PHP Configuration**), or the
+  app will fail the same way `php artisan` commands run over SSH.
 - The workflow currently triggers on push to `main`. This repo's only
   branch so far is `claude/orbitx-erp-work-order-82ptcp` — once you create
   `main` (or want deploys on a different branch), tell me and I'll update
