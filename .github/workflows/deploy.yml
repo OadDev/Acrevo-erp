@@ -51,18 +51,6 @@ jobs:
             --exclude='public/storage' \
             ./ "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}:${{ secrets.HOSTINGER_DEPLOY_PATH }}/"
 
-      - name: Diagnose available PHP versions on server
-        env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
-        run: |
-          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
-            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
-            "echo '--- php -v ---'; php -v; \
-             echo '--- ls /usr/bin/php* ---'; ls -alh /usr/bin/php* 2>&1; \
-             echo '--- ls /opt/alt (cPanel-style alt-php, if present) ---'; ls -alh /opt/alt 2>&1; \
-             echo '--- which -a php variants ---'; for v in php php8.1 php8.2 php8.3 php8.4; do which -a \$v 2>&1; done; \
-             echo '--- ls ~/bin (per-user overrides, if present) ---'; ls -alh ~/bin 2>&1"
-
       - name: Run post-deploy commands on server
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
@@ -70,9 +58,14 @@ jobs:
           sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
             "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
             "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             PHP_BIN=\$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.3 || echo /opt/alt/php83/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.2 || echo /opt/alt/php82/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=php && \
+             echo \"Using PHP binary: \$PHP_BIN (\$(\$PHP_BIN -v | head -1))\" && \
              mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache && \
-             php artisan migrate --force && \
-             php artisan optimize:clear && \
-             php artisan config:cache && \
-             php artisan route:cache && \
-             php artisan view:cache"
+             \$PHP_BIN artisan migrate --force && \
+             \$PHP_BIN artisan optimize:clear && \
+             \$PHP_BIN artisan config:cache && \
+             \$PHP_BIN artisan route:cache && \
+             \$PHP_BIN artisan view:cache"

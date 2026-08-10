@@ -102,17 +102,19 @@ re-syncs the code and re-runs migrations/cache automatically.
   `composer.lock` always resolves package versions installable on PHP
   8.2+, regardless of what PHP version generates the lock file locally.
   The deploy workflow's `Setup PHP` step matches at `8.2`.
-- **The server's default `php` over SSH must also be 8.2 or newer.**
-  Hostinger shared hosting often defaults the plain `php` command to a
-  very old system PHP (we hit 7.2.34) even when the *website's* PHP
-  version is set correctly in hPanel — CLI and web PHP versions are
-  configured separately. Check hPanel → **Advanced → PHP Configuration**
-  for the domain, and confirm the SSH CLI version with `php -v` after
-  SSHing in. If they don't match, hPanel usually has a way to select the
-  CLI PHP version too (sometimes a separate "PHP CLI" dropdown, or a
-  versioned binary like `/opt/alt/php82/usr/bin/php` you'd need to alias
-  or call directly) — if the post-deploy `php artisan` commands keep
-  failing with a PHP version complaint, that's what to check.
+- **This server is CloudLinux-based ("PHP Selector").** `/usr/bin/php`
+  is a symlink through `/etc/cl.selector/php-cli`, and on this account it
+  resolves to PHP 7.2.34 — too old for Laravel 12 — even though newer
+  versions are installed at `/opt/alt/php82/`, `/opt/alt/php83/`,
+  `/opt/alt/php84/`, `/opt/alt/php85/` (found by SSHing in and running
+  `ls /opt/alt`). Rather than depend on hPanel's CLI PHP selector, the
+  deploy workflow's post-deploy step now resolves its own `$PHP_BIN` at
+  runtime — preferring `/opt/alt/php84/usr/bin/php`, then 8.3, then 8.2,
+  falling back to plain `php` only if none of those exist — and calls
+  every `artisan` command through that. If PHP versions ever change on
+  the server, no workflow edit should be needed; if they do, that
+  fallback chain in the `Run post-deploy commands on server` step is
+  where to adjust it.
 - The workflow currently triggers on push to `main`. This repo's only
   branch so far is `claude/orbitx-erp-work-order-82ptcp` — once you create
   `main` (or want deploys on a different branch), tell me and I'll update
