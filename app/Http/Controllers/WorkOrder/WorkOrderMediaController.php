@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class WorkOrderMediaController extends Controller
@@ -19,7 +20,11 @@ class WorkOrderMediaController extends Controller
             'file' => ['required', 'file', 'max:51200'],
         ]);
 
-        $workOrder->addMediaFromRequest('file')->toMediaCollection($data['collection']);
+        try {
+            $workOrder->addMediaFromRequest('file')->toMediaCollection($data['collection']);
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['file' => 'That file is too large (max 50MB).']);
+        }
 
         return back()->with('success', 'File uploaded.');
     }
