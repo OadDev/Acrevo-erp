@@ -86,3 +86,19 @@ jobs:
              else \
                echo 'No install token found yet - the installer route has not been hit yet, or storage/ was reset.'; \
              fi"
+
+      - name: One-off role re-seed for Worker rename (remove after use)
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             PHP_BIN=\$(command -v php8.5 || echo /opt/alt/php85/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=php && \
+             echo '--- re-seeding roles/permissions (Worker rename) ---' && \
+             \$PHP_BIN artisan db:seed --class=RolePermissionSeeder --force && \
+             echo 'PD9waHAKJHUgPSBcQXBwXE1vZGVsc1xVc2VyOjp3aGVyZSgnZW1haWwnLCAnYWRtaW5AZ21haWwuY29tJyktPmZpcnN0KCk7CmlmICgkdSkgewogICAgJHUtPnN5bmNSb2xlcyhbJ0FkbWluJ10pOwogICAgZWNobyAiQWRtaW4gcm9sZSByZS1hc3NpZ25lZCB0bzogeyR1LT5lbWFpbH0iIC4gUEhQX0VPTDsKfSBlbHNlIHsKICAgIGVjaG8gImFkbWluQGdtYWlsLmNvbSB1c2VyIG5vdCBmb3VuZCEiIC4gUEhQX0VPTDsKfQo=' | base64 -d > /tmp/reassign_admin.php && \
+             \$PHP_BIN artisan tinker --execute=\"require '/tmp/reassign_admin.php';\" && \
+             rm -f /tmp/reassign_admin.php"
