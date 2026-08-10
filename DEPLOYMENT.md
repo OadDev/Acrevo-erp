@@ -1,4 +1,11 @@
-# Deploying to Hostinger (geethanworks.in)
+# Deploying to Hostinger
+
+Live for now at **https://lightskyblue-snail-890159.hostingersite.com/** —
+Hostinger's temporary preview URL for the same hosting account, before
+`geethanworks.in`'s DNS is pointed at it. It serves the same `public_html`
+document root, so nothing about the deploy path or `.htaccess` setup below
+changes; only `APP_URL` in `.env` differs from the final domain. Swap it
+back to `https://geethanworks.in` once DNS is live (§3 below has that line).
 
 `.github/workflows/deploy.yml` builds the app on GitHub's runner (Composer +
 npm build) and `rsync`s it straight to Hostinger over SSH on every push to
@@ -37,7 +44,7 @@ the split layout, so the deploy path *is* the web root:
 Laravel's actual entry point is `public/index.php`, not the project root —
 so a root-level **`.htaccess`** (already added to the repo, syncs with
 every deploy) transparently rewrites every request into `public/` before
-Apache resolves it to a file. Visiting `https://geethanworks.in/` serves
+Apache resolves it to a file. Visiting the site root serves
 `public_html/public/index.php`; a request for `/vendor/autoload.php`
 rewrites to `/public/vendor/autoload.php`, which doesn't exist, so Apache
 404s it — `vendor/`, `app/`, `config/`, `.env`, etc. are never directly
@@ -48,8 +55,8 @@ ever disabled.
 
 This only works if `.htaccess` overrides are honored (`AllowOverride`
 enabled) — the default on Hostinger shared hosting, since they build for
-exactly this scenario. If `https://geethanworks.in/` ever 404s or shows a
-directory listing after deploy, that's the first thing to check.
+exactly this scenario. If the site ever 404s or shows a directory listing
+after deploy, that's the first thing to check.
 
 ## 3. One-time server setup (before the first deploy)
 
@@ -69,7 +76,7 @@ Edit `.env` with production values:
 APP_NAME="Acrevo ERP"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://geethanworks.in
+APP_URL=https://lightskyblue-snail-890159.hostingersite.com
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -77,6 +84,12 @@ DB_DATABASE=<create this in hPanel → Databases → MySQL Databases>
 DB_USERNAME=<same>
 DB_PASSWORD=<same>
 ```
+
+When `geethanworks.in`'s DNS is pointed at this hosting and you're ready to
+cut over, SSH in, change `APP_URL` to `https://geethanworks.in` in this
+same `.env`, then run `php artisan config:cache` again — the deploy
+workflow never edits `.env`, so this is a manual step whenever you're ready
+for it, not something that happens automatically on the next push.
 
 Then, still over SSH:
 
