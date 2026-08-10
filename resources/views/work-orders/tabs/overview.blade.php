@@ -8,6 +8,7 @@
             <div><dt class="text-gray-400">Priority</dt><dd><x-badge :status="$workOrder->priority" /></dd></div>
             <div><dt class="text-gray-400">Deadline</dt><dd class="text-gray-800 dark:text-gray-200">{{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</dd></div>
             <div><dt class="text-gray-400">Budget</dt><dd class="text-gray-800 dark:text-gray-200">₹{{ number_format($workOrder->budget_amount ?? 0, 2) }}</dd></div>
+            <div class="col-span-2"><dt class="text-gray-400">Execution Method</dt><dd class="text-gray-800 dark:text-gray-200">{{ \App\Models\WorkOrder::EXECUTION_WAYS[$workOrder->execution_way] ?? '—' }}</dd></div>
         </dl>
 
         @if ($workOrder->parent)
@@ -75,6 +76,14 @@
     </x-card>
 
     <x-card>
+        @if ($workOrder->site)
+            <h3 class="mb-4 text-sm font-semibold text-gray-500">Site Details</h3>
+            <dl class="mb-6 space-y-2 border-b border-gray-100 pb-6 text-sm dark:border-gray-800">
+                <div><dt class="text-gray-400">Address</dt><dd class="text-gray-800 dark:text-gray-200">{{ collect([$workOrder->site->address, $workOrder->site->city, $workOrder->site->state, $workOrder->site->pincode])->filter()->join(', ') ?: '—' }}</dd></div>
+                <div><dt class="text-gray-400">Site Contact</dt><dd class="text-gray-800 dark:text-gray-200">{{ $workOrder->site->site_contact_name ?? '—' }} @if ($workOrder->site->site_contact_phone) · {{ $workOrder->site->site_contact_phone }} @endif</dd></div>
+            </dl>
+        @endif
+
         <h3 class="mb-4 text-sm font-semibold text-gray-500">Status Timeline</h3>
         <ol class="space-y-4 border-l border-gray-200 pl-4 dark:border-gray-800">
             @foreach ($workOrder->statusLogs as $log)

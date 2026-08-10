@@ -44,9 +44,20 @@ class WorkOrder extends Model implements HasMedia
         'cancelled',
     ];
 
+    /**
+     * How the work is actually carried out, chosen at creation time:
+     * an in-house team, a sub-contractor, or the client executing it
+     * themselves (with optional chargeable company support).
+     */
+    public const EXECUTION_WAYS = [
+        'way_1' => 'Way 1 — In-house Executive Team',
+        'way_2' => 'Way 2 — Sub-Contractor',
+        'way_3' => 'Way 3 — Client Self-Execution',
+    ];
+
     protected $fillable = [
-        'work_order_no', 'quotation_id', 'enquiry_id', 'client_id', 'parent_work_order_id',
-        'type', 'title', 'scope', 'priority', 'start_date', 'deadline',
+        'work_order_no', 'quotation_id', 'site_id', 'enquiry_id', 'client_id', 'parent_work_order_id',
+        'type', 'title', 'scope', 'execution_way', 'priority', 'start_date', 'deadline',
         'budget_amount', 'status', 'created_by',
     ];
 
@@ -100,6 +111,11 @@ class WorkOrder extends Model implements HasMedia
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(Quotation::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function enquiry(): BelongsTo

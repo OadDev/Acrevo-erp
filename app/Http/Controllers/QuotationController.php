@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\QuotationRequest;
 use App\Models\Enquiry;
 use App\Models\Quotation;
+use App\Models\Site;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,7 +113,21 @@ class QuotationController extends Controller
             'approved_by' => $data['approved_by'] ?? $quotation->client->name,
         ]);
 
-        return back()->with('success', 'Quotation approved. You can now generate the Work Order.');
+        Site::firstOrCreate(
+            ['quotation_id' => $quotation->id],
+            [
+                'client_id' => $quotation->client_id,
+                'address' => $quotation->client->address,
+                'city' => $quotation->client->city,
+                'state' => $quotation->client->state,
+                'pincode' => $quotation->client->pincode,
+                'site_contact_name' => $quotation->client->name,
+                'site_contact_phone' => $quotation->client->phone,
+                'created_by' => $request->user()->id,
+            ]
+        );
+
+        return back()->with('success', 'Quotation approved and site created. You can now generate the Work Order.');
     }
 
     public function reject(Request $request, Quotation $quotation): RedirectResponse

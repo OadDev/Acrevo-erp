@@ -103,7 +103,7 @@ class RolePermissionSeeder extends Seeder
             'tickets' => ['tickets.view', 'tickets.create'],
             'sales' => ['work_orders.view'],
         ],
-        'Executive Team Member' => [
+        'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
         ],
         'QC Officer' => [

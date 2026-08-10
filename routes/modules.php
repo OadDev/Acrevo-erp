@@ -59,6 +59,7 @@ Route::middleware('permission:quotations.view')->group(function () {
 
 Route::middleware('permission:enquiries.view')->group(function () {
     Route::resource('clients', ClientController::class);
+    Route::post('clients/{client}/portal-access', [ClientController::class, 'generatePortalAccess'])->name('clients.portal-access');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {

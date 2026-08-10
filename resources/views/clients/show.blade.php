@@ -20,6 +20,23 @@
                 <div><dt class="text-gray-400">GSTIN</dt><dd class="text-gray-800 dark:text-gray-200">{{ $client->gstin ?: '—' }}</dd></div>
                 <div><dt class="text-gray-400">Assigned Sales</dt><dd class="text-gray-800 dark:text-gray-200">{{ $client->assignedSales?->name ?? '—' }}</dd></div>
             </dl>
+
+            <div class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
+                <h3 class="mb-3 text-sm font-semibold text-gray-500">Client Portal</h3>
+                @if ($client->clientLogin)
+                    <p class="text-sm text-emerald-600 dark:text-emerald-400">Portal access active — {{ $client->clientLogin->user->email }}</p>
+                @else
+                    @can('enquiries.create')
+                        <form method="POST" action="{{ route('clients.portal-access', $client) }}" onsubmit="return confirm('Create portal login for {{ $client->email }}?')">
+                            @csrf
+                            <x-primary-button type="submit">Generate Portal Access</x-primary-button>
+                        </form>
+                        @unless ($client->email)
+                            <p class="mt-2 text-xs text-gray-400">Add an email address first.</p>
+                        @endunless
+                    @endcan
+                @endif
+            </div>
         </x-card>
 
         <div class="space-y-6 lg:col-span-2">

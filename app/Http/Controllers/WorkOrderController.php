@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\WorkOrderRequest;
 use App\Models\ExecutiveTeam;
 use App\Models\Quotation;
+use App\Models\Site;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderExecutiveTeam;
 use Illuminate\Http\RedirectResponse;
@@ -42,18 +43,51 @@ class WorkOrderController extends Controller
 
     public function create(Request $request): View
     {
-        $quotation = $request->get('quotation_id') ? Quotation::with('client')->find($request->get('quotation_id')) : null;
+        $quotation = Quotation::with('client', 'site')->find($request->get('quotation_id'));
 
-        return view('work-orders.create', compact('quotation'));
+        abort_unless($quotation && $quotation->status === 'approved', 404, 'A work order can only be generated from an approved quotation.');
+
+        $site = $quotation->site ?? Site::create([
+            'quotation_id' => $quotation->id,
+            'client_id' => $quotation->client_id,
+            'address' => $quotation->client->address,
+            'city' => $quotation->client->city,
+            'state' => $quotation->client->state,
+            'pincode' => $quotation->client->pincode,
+            'site_contact_name' => $quotation->client->name,
+            'site_contact_phone' => $quotation->client->phone,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return view('work-orders.create', compact('quotation', 'site'));
     }
 
     public function store(WorkOrderRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
-        $quotation = ! empty($data['quotation_id']) ? Quotation::find($data['quotation_id']) : null;
+        $quotation = Quotation::find($data['quotation_id']);
 
-        $workOrder = WorkOrder::create($data + [
+        Site::where('id', $data['site_id'])->update([
+            'address' => $data['site_address'] ?? null,
+            'city' => $data['site_city'] ?? null,
+            'state' => $data['site_state'] ?? null,
+            'pincode' => $data['site_pincode'] ?? null,
+            'site_contact_name' => $data['site_contact_name'] ?? null,
+            'site_contact_phone' => $data['site_contact_phone'] ?? null,
+        ]);
+
+        $workOrder = WorkOrder::create([
+            'quotation_id' => $data['quotation_id'],
+            'site_id' => $data['site_id'],
+            'client_id' => $data['client_id'],
+            'title' => $data['title'],
+            'scope' => $data['scope'] ?? null,
+            'execution_way' => $data['execution_way'],
+            'priority' => $data['priority'],
+            'start_date' => $data['start_date'] ?? null,
+            'deadline' => $data['deadline'] ?? null,
+            'budget_amount' => $data['budget_amount'] ?? null,
             'enquiry_id' => $quotation?->enquiry_id,
             'type' => 'new',
             'status' => 'pending_hr_assignment',
@@ -129,6 +163,9 @@ class WorkOrderController extends Controller
 
         $rework = WorkOrder::create($data + [
             'client_id' => $workOrder->client_id,
+            'quotation_id' => $workOrder->quotation_id,
+            'site_id' => $workOrder->site_id,
+            'execution_way' => $workOrder->execution_way,
             'parent_work_order_id' => $workOrder->id,
             'type' => 'rework',
             'priority' => 'high',
@@ -151,6 +188,9 @@ class WorkOrderController extends Controller
 
         $next = WorkOrder::create($data + [
             'client_id' => $workOrder->client_id,
+            'quotation_id' => $workOrder->quotation_id,
+            'site_id' => $workOrder->site_id,
+            'execution_way' => $workOrder->execution_way,
             'parent_work_order_id' => $workOrder->id,
             'type' => 'next',
             'priority' => 'medium',

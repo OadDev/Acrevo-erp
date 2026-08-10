@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ClientRequest;
 use App\Models\Client;
+use App\Models\ClientLogin;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ClientController extends Controller
@@ -42,9 +45,39 @@ class ClientController extends Controller
 
     public function show(Client $client): View
     {
-        $client->load(['contacts', 'enquiries', 'workOrders', 'invoices.payments']);
+        $client->load(['contacts', 'enquiries', 'workOrders', 'invoices.payments', 'clientLogin.user']);
 
         return view('clients.show', compact('client'));
+    }
+
+    public function generatePortalAccess(Request $request, Client $client): RedirectResponse
+    {
+        abort_if($client->clientLogin, 422, 'This client already has portal access.');
+
+        if (! $client->email) {
+            return back()->withErrors(['email' => 'This client needs an email address before portal access can be created.']);
+        }
+
+        $password = Str::password(12);
+
+        $user = User::firstOrCreate(
+            ['email' => $client->email],
+            [
+                'name' => $client->name,
+                'phone' => $client->phone,
+                'is_active' => true,
+                'must_change_password' => true,
+                'created_by' => $request->user()->id,
+            ]
+        );
+
+        $user->update(['password' => Hash::make($password)]);
+        $user->syncRoles(['Client']);
+
+        ClientLogin::firstOrCreate(['client_id' => $client->id], ['user_id' => $user->id]);
+
+        return redirect()->route('clients.show', $client)
+            ->with('success', "Portal access created. Login: {$client->email} / Temporary password: {$password}");
     }
 
     public function edit(Client $client): View
