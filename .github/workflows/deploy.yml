@@ -51,6 +51,18 @@ jobs:
             --exclude='public/storage' \
             ./ "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}:${{ secrets.HOSTINGER_DEPLOY_PATH }}/"
 
+      - name: Diagnose available PHP versions on server
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "echo '--- php -v ---'; php -v; \
+             echo '--- ls /usr/bin/php* ---'; ls -alh /usr/bin/php* 2>&1; \
+             echo '--- ls /opt/alt (cPanel-style alt-php, if present) ---'; ls -alh /opt/alt 2>&1; \
+             echo '--- which -a php variants ---'; for v in php php8.1 php8.2 php8.3 php8.4; do which -a \$v 2>&1; done; \
+             echo '--- ls ~/bin (per-user overrides, if present) ---'; ls -alh ~/bin 2>&1"
+
       - name: Run post-deploy commands on server
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
