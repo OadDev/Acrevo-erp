@@ -6,4 +6,4 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/user', [AuthApiController::class, 'me']);
 
-Route::apiResource('work-orders', WorkOrderApiController::class)->only(['index', 'show']);
+Route::apiResource('work-orders', WorkOrderApiController::class)->only(['index', 'show'])->names('api.work-orders');
