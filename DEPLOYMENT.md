@@ -1,11 +1,17 @@
 # Deploying to Hostinger
 
 Live for now at **https://lightskyblue-snail-890159.hostingersite.com/** —
-Hostinger's temporary preview URL for the same hosting account, before
-`geethanworks.in`'s DNS is pointed at it. It serves the same `public_html`
-document root, so nothing about the deploy path or `.htaccess` setup below
-changes; only `APP_URL` in `.env` differs from the final domain. Swap it
-back to `https://geethanworks.in` once DNS is live (§3 below has that line).
+Hostinger's temporary preview URL, ahead of `geethanworks.in`'s DNS being
+pointed at this hosting. It has its **own** document root, separate from
+`geethanworks.in`'s — not a shared folder as originally assumed:
+
+```
+/home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html
+```
+
+When you cut over to `geethanworks.in`, check whether that domain's
+document root is this same folder or a different one in hPanel — if it's
+different, `HOSTINGER_DEPLOY_PATH` needs to change too, not just `APP_URL`.
 
 `.github/workflows/deploy.yml` builds the app on GitHub's runner (Composer +
 npm build) and `rsync`s it straight to Hostinger over SSH on every push to
@@ -13,13 +19,10 @@ npm build) and `rsync`s it straight to Hostinger over SSH on every push to
 run). It never touches `.env` or `storage/` on the server, so those persist
 across deploys.
 
-## 1. Add the 5 GitHub Actions secrets
+## 1. GitHub Actions secrets — done
 
 Repo → **Settings → Secrets and variables → Actions → New repository
-secret**. I can't create these for you — they're encrypted at rest and the
-GitHub tools available to me don't include repo-secret management, and an
-SSH password shouldn't be pasted into a chat anyway. Add exactly these 5,
-named exactly this way (the workflow already references them):
+secret**. All 5 are set. For reference, what each one holds:
 
 | Secret name | Value | Where it comes from |
 |---|---|---|
@@ -27,7 +30,7 @@ named exactly this way (the workflow already references them):
 | `HOSTINGER_SSH_USERNAME` | e.g. `u761085554` | same page |
 | `HOSTINGER_SSH_PASSWORD` | your SSH password | your hosting/SSH password |
 | `HOSTINGER_SSH_PORT` | e.g. `65002` on shared hosting, `22` on VPS | same page |
-| `HOSTINGER_DEPLOY_PATH` | `/home/u761085554/domains/geethanworks.in/public_html` | you've already given me this |
+| `HOSTINGER_DEPLOY_PATH` | `/home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html` | you've already given me this |
 
 SSH access has to be enabled for your plan first: hPanel → **Advanced → SSH
 Access → Enable**.
@@ -38,7 +41,7 @@ You chose to deploy the entire app directly into `public_html` rather than
 the split layout, so the deploy path *is* the web root:
 
 ```
-/home/u761085554/domains/geethanworks.in/public_html
+/home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html
 ```
 
 Laravel's actual entry point is `public/index.php`, not the project root —
@@ -63,7 +66,7 @@ after deploy, that's the first thing to check.
 SSH in once by hand and create what the workflow deliberately never touches:
 
 ```bash
-cd /home/u761085554/domains/geethanworks.in/public_html
+cd /home/u761085554/domains/lightskyblue-snail-890159.hostingersite.com/public_html
 mkdir -p storage/framework/{cache,sessions,views}
 mkdir -p storage/{logs,app/public}
 mkdir -p bootstrap/cache
