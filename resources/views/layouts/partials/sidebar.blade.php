@@ -37,6 +37,7 @@
                         <x-nav-link :href="route('quotations.index')" :active="request()->routeIs('quotations.*')" icon="file-text">Quotations</x-nav-link>
                     @endcan
                     @can('work_orders.view')
+                        <x-nav-link :href="route('sites.index')" :active="request()->routeIs('sites.*')" icon="map-pin">Sites</x-nav-link>
                         <x-nav-link :href="route('work-orders.index')" :active="request()->routeIs('work-orders.index') || request()->routeIs('work-orders.show') || request()->routeIs('work-orders.create')" icon="clipboard">Work Orders</x-nav-link>
                         <x-nav-link :href="route('work-orders.completed')" :active="request()->routeIs('work-orders.completed')" icon="check-circle">Completed Sites</x-nav-link>
                     @endcan

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -92,10 +93,29 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function deactivate(Request $request, User $user): RedirectResponse
     {
+        abort_if($user->is($request->user()), 422, "You can't deactivate your own account.");
+
         $user->update(['is_active' => false]);
 
         return back()->with('success', 'User deactivated.');
+    }
+
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        abort_if($user->is($request->user()), 422, "You can't delete your own account.");
+
+        if ($user->hasRole('Admin') && User::role('Admin')->count() <= 1) {
+            return back()->withErrors(['user' => 'You cannot delete the last remaining Admin account.']);
+        }
+
+        try {
+            $user->delete();
+        } catch (QueryException $e) {
+            return back()->withErrors(['user' => 'This user created records (measurement books, ledger entries, etc.) that must exist first, so they can\'t be deleted. Deactivate the account instead.']);
+        }
+
+        return redirect()->route('admin.users.index')->with('success', 'User deleted.');
     }
 }

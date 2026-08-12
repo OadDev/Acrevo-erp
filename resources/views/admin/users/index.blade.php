@@ -29,7 +29,22 @@
                         <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $user->department?->name ?? '—' }}</td>
                         <td class="px-5 py-3"><x-badge :status="$user->is_active ? 'active' : 'cancelled'" /></td>
                         <td class="px-5 py-3 text-right">
-                            <a href="{{ route('admin.users.edit', $user) }}" class="text-sm text-indigo-600 hover:underline">Edit</a>
+                            <div class="flex items-center justify-end gap-3">
+                                <a href="{{ route('admin.users.edit', $user) }}" class="text-sm text-indigo-600 hover:underline">Edit</a>
+                                @unless ($user->is(auth()->user()))
+                                    @if ($user->is_active)
+                                        <form method="POST" action="{{ route('admin.users.deactivate', $user) }}" onsubmit="return confirm('Deactivate {{ $user->name }}?')">
+                                            @csrf
+                                            <button type="submit" class="text-sm text-amber-600 hover:underline">Deactivate</button>
+                                        </form>
+                                    @endif
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Permanently delete {{ $user->name }}? This cannot be undone.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-sm text-red-600 hover:underline">Delete</button>
+                                    </form>
+                                @endunless
+                            </div>
                         </td>
                     </tr>
                 @endforeach

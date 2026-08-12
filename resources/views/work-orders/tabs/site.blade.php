@@ -4,7 +4,7 @@
 
         @if ($workOrder->site)
             <dl class="mb-6 grid grid-cols-2 gap-4 text-sm">
-                <div class="col-span-2"><dt class="text-gray-400">Site ID</dt><dd class="text-gray-800 dark:text-gray-200">{{ $workOrder->site->site_no }}</dd></div>
+                <div class="col-span-2"><dt class="text-gray-400">Site ID</dt><dd class="text-gray-800 dark:text-gray-200"><a href="{{ route('sites.show', $workOrder->site) }}" class="text-indigo-600 hover:underline">{{ $workOrder->site->site_no }}</a></dd></div>
                 <div><dt class="text-gray-400">Client</dt><dd class="text-gray-800 dark:text-gray-200">{{ $workOrder->client->name }}</dd></div>
                 <div><dt class="text-gray-400">Quotation</dt><dd class="text-gray-800 dark:text-gray-200">{{ $workOrder->quotation->quotation_no ?? '—' }}</dd></div>
             </dl>

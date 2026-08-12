@@ -34,7 +34,13 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($workOrders as $workOrder)
                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('work-orders.show', $workOrder) }}'">
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $workOrder->site->site_no ?? '—' }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                    @if ($workOrder->site)
+                                        <a href="{{ route('sites.show', $workOrder->site) }}" onclick="event.stopPropagation()" class="text-indigo-600 hover:underline">{{ $workOrder->site->site_no }}</a>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td class="px-5 py-3">
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $workOrder->work_order_no }}</span>
                                     <p class="text-xs text-gray-400">{{ $workOrder->title }}</p>

@@ -86,17 +86,3 @@ jobs:
              else \
                echo 'No install token found yet - the installer route has not been hit yet, or storage/ was reset.'; \
              fi"
-
-      - name: One-off fix - clean re-seed of roles/permissions (remove after use)
-        env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
-        run: |
-          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
-            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
-            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
-             PHP_BIN=\$(command -v php8.5 || echo /opt/alt/php85/usr/bin/php) && \
-             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php) && \
-             [ -x \"\$PHP_BIN\" ] || PHP_BIN=php && \
-             echo 'PD9waHAKdXNlIElsbHVtaW5hdGVcU3VwcG9ydFxGYWNhZGVzXERCOwp1c2UgSWxsdW1pbmF0ZVxTdXBwb3J0XEZhY2FkZXNcQXJ0aXNhbjsKdXNlIEFwcFxNb2RlbHNcVXNlcjsKCiRhc3NpZ25tZW50cyA9IERCOjp0YWJsZSgnbW9kZWxfaGFzX3JvbGVzJykKICAgIC0+am9pbigncm9sZXMnLCAncm9sZXMuaWQnLCAnPScsICdtb2RlbF9oYXNfcm9sZXMucm9sZV9pZCcpCiAgICAtPndoZXJlKCdtb2RlbF9oYXNfcm9sZXMubW9kZWxfdHlwZScsIFVzZXI6OmNsYXNzKQogICAgLT5zZWxlY3QoJ21vZGVsX2hhc19yb2xlcy5tb2RlbF9pZCBhcyB1c2VyX2lkJywgJ3JvbGVzLm5hbWUgYXMgcm9sZV9uYW1lJykKICAgIC0+Z2V0KCk7CgplY2hvICJDYXB0dXJlZCAiIC4gJGFzc2lnbm1lbnRzLT5jb3VudCgpIC4gIiByb2xlIGFzc2lnbm1lbnRzOiIgLiBQSFBfRU9MOwpmb3JlYWNoICgkYXNzaWdubWVudHMgYXMgJGEpIHsKICAgICR1ID0gVXNlcjo6ZmluZCgkYS0+dXNlcl9pZCk7CiAgICBlY2hvICIgIHskdT8tPmVtYWlsfSA9PiB7JGEtPnJvbGVfbmFtZX0iIC4gUEhQX0VPTDsKfQoKQXJ0aXNhbjo6Y2FsbCgnZGI6c2VlZCcsIFsnLS1jbGFzcycgPT4gJ1JvbGVQZXJtaXNzaW9uU2VlZGVyJywgJy0tZm9yY2UnID0+IHRydWVdKTsKZWNobyBBcnRpc2FuOjpvdXRwdXQoKTsKCmZvcmVhY2ggKCRhc3NpZ25tZW50cyBhcyAkYSkgewogICAgJHVzZXIgPSBVc2VyOjpmaW5kKCRhLT51c2VyX2lkKTsKICAgIGlmICgkdXNlcikgewogICAgICAgICR1c2VyLT5zeW5jUm9sZXMoWyRhLT5yb2xlX25hbWVdKTsKICAgICAgICBlY2hvICJSZXN0b3JlZCB7JHVzZXItPmVtYWlsfSA9PiB7JGEtPnJvbGVfbmFtZX0iIC4gUEhQX0VPTDsKICAgIH0KfQoKYXBwKFxTcGF0aWVcUGVybWlzc2lvblxQZXJtaXNzaW9uUmVnaXN0cmFyOjpjbGFzcyktPmZvcmdldENhY2hlZFBlcm1pc3Npb25zKCk7CgokY2xpZW50Um9sZSA9IFxTcGF0aWVcUGVybWlzc2lvblxNb2RlbHNcUm9sZTo6d2hlcmUoJ25hbWUnLCAnQ2xpZW50JyktPmZpcnN0KCk7CmVjaG8gIkNsaWVudCByb2xlIHBlcm1pc3Npb25zIGFmdGVyIGZpeDogIiAuICRjbGllbnRSb2xlLT5wZXJtaXNzaW9ucy0+cGx1Y2soJ25hbWUnKS0+aW1wbG9kZSgnLCAnKSAuIFBIUF9FT0w7Cgokd29ya2VyUm9sZSA9IFxTcGF0aWVcUGVybWlzc2lvblxNb2RlbHNcUm9sZTo6d2hlcmUoJ25hbWUnLCAnV29ya2VyJyktPmZpcnN0KCk7CmVjaG8gIldvcmtlciByb2xlIHBlcm1pc3Npb25zIGFmdGVyIGZpeDogIiAuICR3b3JrZXJSb2xlLT5wZXJtaXNzaW9ucy0+cGx1Y2soJ25hbWUnKS0+aW1wbG9kZSgnLCAnKSAuIFBIUF9FT0w7Cg==' | base64 -d > /tmp/fix_roles.php && \
-             \$PHP_BIN artisan tinker --execute=\"require '/tmp/fix_roles.php';\" && \
-             rm -f /tmp/fix_roles.php"

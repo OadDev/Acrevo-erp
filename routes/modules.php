@@ -21,6 +21,7 @@ use App\Http\Controllers\Portal\PortalWorkOrderController;
 use App\Http\Controllers\QcInspectionController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteVisitController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\DailyChecklistController;
@@ -60,6 +61,14 @@ Route::middleware('permission:quotations.view')->group(function () {
 Route::middleware('permission:enquiries.view')->group(function () {
     Route::resource('clients', ClientController::class);
     Route::post('clients/{client}/portal-access', [ClientController::class, 'generatePortalAccess'])->name('clients.portal-access');
+});
+
+Route::middleware('permission:work_orders.view')->group(function () {
+    Route::resource('sites', SiteController::class)->only(['index', 'show']);
+});
+
+Route::middleware('permission:work_orders.edit')->group(function () {
+    Route::resource('sites', SiteController::class)->only(['create', 'store', 'update']);
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
@@ -216,6 +225,7 @@ Route::middleware('permission:reports.view')->group(function () {
 */
 Route::middleware('permission:users.view')->group(function () {
     Route::resource('admin/users', UserController::class)->except('show')->names('admin.users');
+    Route::post('admin/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('admin.users.deactivate');
 });
 Route::middleware('permission:roles.view')->group(function () {
     Route::resource('admin/roles', RoleController::class)->except('show')->names('admin.roles');

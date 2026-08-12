@@ -121,4 +121,56 @@ class WorkOrderWorkflowTest extends TestCase
         $response->assertSessionHasErrors('role');
         $this->assertDatabaseMissing('users', ['email' => 'sneaky@example.com']);
     }
+
+    public function test_sites_index_and_show_list_work_orders_for_that_site(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'quotation_id' => $quotation->id, 'site_id' => $site->id, 'client_id' => $client->id, 'title' => 'WO',
+            'execution_way' => 'way_1', 'priority' => 'medium', 'enquiry_id' => $enquiry->id, 'type' => 'new',
+            'status' => 'pending_hr_assignment', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get('/sites')->assertOk()->assertSee($site->site_no);
+
+        $response = $this->actingAs($admin)->get("/sites/{$site->id}");
+        $response->assertOk();
+        $response->assertSee($workOrder->work_order_no);
+    }
+
+    public function test_admin_can_manually_add_a_second_site_for_a_client(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        Site::create(['client_id' => $client->id, 'address' => 'First site', 'created_by' => $admin->id]);
+
+        $response = $this->actingAs($admin)->post('/sites', [
+            'client_id' => $client->id,
+            'address' => 'Second site',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertSame(2, $client->fresh()->sites()->count());
+        $this->assertDatabaseHas('sites', ['client_id' => $client->id, 'address' => 'Second site', 'quotation_id' => null]);
+    }
+
+    public function test_admin_can_delete_a_user_but_not_themselves_or_the_last_admin(): void
+    {
+        $admin = $this->admin();
+        $other = User::create([
+            'name' => 'Other', 'email' => 'other+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $other->syncRoles(['Sales']);
+
+        $this->actingAs($admin)->delete("/admin/users/{$other->id}")->assertRedirect(route('admin.users.index'));
+        $this->assertSoftDeleted('users', ['id' => $other->id]);
+
+        $this->actingAs($admin)->delete("/admin/users/{$admin->id}")->assertStatus(422);
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'deleted_at' => null]);
+    }
 }

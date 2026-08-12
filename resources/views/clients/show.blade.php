@@ -41,6 +41,23 @@
 
         <div class="space-y-6 lg:col-span-2">
             <x-card>
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-gray-500">Sites</h3>
+                    @can('work_orders.edit')
+                        <x-link-button :href="route('sites.create', ['client_id' => $client->id])" variant="secondary" class="text-xs">+ Add Site</x-link-button>
+                    @endcan
+                </div>
+                @forelse ($client->sites as $site)
+                    <a href="{{ route('sites.show', $site) }}" class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
+                        <span class="text-gray-700 dark:text-gray-300">{{ $site->site_no }} — {{ collect([$site->address, $site->city])->filter()->join(', ') ?: 'No address on file' }}</span>
+                        <span class="text-xs text-gray-400">{{ $site->work_orders_count ?? $site->workOrders()->count() }} work order(s)</span>
+                    </a>
+                @empty
+                    <p class="text-sm text-gray-400">No sites yet.</p>
+                @endforelse
+            </x-card>
+
+            <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Enquiries</h3>
                 @forelse ($client->enquiries as $enquiry)
                     <a href="{{ route('enquiries.show', $enquiry) }}" class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
