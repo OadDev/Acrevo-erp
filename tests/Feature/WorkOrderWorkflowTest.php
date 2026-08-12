@@ -72,6 +72,13 @@ class WorkOrderWorkflowTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'pending_hr_assignment', 'created_by' => $admin->id,
         ]);
 
+        // activity_log.subject_id must be wide enough for WorkOrder's UUID primary key -
+        // regression test for the "Data truncated for column 'subject_id'" MySQL error.
+        $activity = \Spatie\Activitylog\Models\Activity::where('subject_type', WorkOrder::class)
+            ->where('subject_id', $legacyWorkOrder->id)
+            ->first();
+        $this->assertNotNull($activity, 'WorkOrder creation should have been logged with its full UUID as subject_id.');
+
         $this->actingAs($admin)->get("/work-orders/{$legacyWorkOrder->id}")->assertOk();
 
         $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
