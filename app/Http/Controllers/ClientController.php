@@ -59,19 +59,21 @@ class ClientController extends Controller
         }
 
         $password = Str::password(12);
+        $hashedPassword = Hash::make($password);
 
         $user = User::firstOrCreate(
             ['email' => $client->email],
             [
                 'name' => $client->name,
                 'phone' => $client->phone,
+                'password' => $hashedPassword,
                 'is_active' => true,
                 'must_change_password' => true,
                 'created_by' => $request->user()->id,
             ]
         );
 
-        $user->update(['password' => Hash::make($password)]);
+        $user->update(['password' => $hashedPassword]);
         $user->syncRoles(['Client']);
 
         ClientLogin::firstOrCreate(['client_id' => $client->id], ['user_id' => $user->id]);
