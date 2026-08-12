@@ -13,7 +13,7 @@ class WorkOrderApiController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $workOrders = WorkOrder::query()
-            ->with('client')
+            ->with(['client', 'site'])
             ->when(! $request->user()->can('work_orders.view'), function ($query) use ($request) {
                 $employeeId = $request->user()->employee?->id;
 
@@ -34,6 +34,6 @@ class WorkOrderApiController extends Controller
     {
         $this->authorize('view', $workOrder);
 
-        return new WorkOrderResource($workOrder->load('client'));
+        return new WorkOrderResource($workOrder->load('client', 'site'));
     }
 }

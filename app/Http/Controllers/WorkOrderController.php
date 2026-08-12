@@ -17,7 +17,7 @@ class WorkOrderController extends Controller
     public function index(Request $request): View
     {
         $workOrders = WorkOrder::query()
-            ->with(['client', 'executiveTeams.executiveTeam'])
+            ->with(['client', 'site', 'executiveTeams.executiveTeam'])
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->when($request->get('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
@@ -33,7 +33,7 @@ class WorkOrderController extends Controller
     public function completed(): View
     {
         $workOrders = WorkOrder::query()
-            ->with('client')
+            ->with(['client', 'site'])
             ->whereIn('status', ['completed', 'cancelled'])
             ->latest()
             ->paginate(15);
@@ -104,7 +104,7 @@ class WorkOrderController extends Controller
         $this->authorize('view', $workOrder);
 
         $workOrder->load([
-            'client', 'quotation', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
+            'client', 'quotation', 'site', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
             'tickets', 'qcInspections.inspectedBy',
             'dailyChecklists' => fn ($q) => $q->latest(),
             'dailyProgressReports' => fn ($q) => $q->latest(),
@@ -126,6 +126,24 @@ class WorkOrderController extends Controller
         $workOrder->transitionTo('cancelled', $data['remarks'] ?? 'Work order cancelled.');
 
         return back()->with('success', 'Work order cancelled.');
+    }
+
+    public function updateSite(Request $request, WorkOrder $workOrder): RedirectResponse
+    {
+        abort_unless($workOrder->site, 404);
+
+        $data = $request->validate([
+            'address' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
+            'pincode' => ['nullable', 'string', 'max:20'],
+            'site_contact_name' => ['nullable', 'string', 'max:255'],
+            'site_contact_phone' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $workOrder->site->update($data);
+
+        return back()->with('success', 'Site details updated.');
     }
 
     public function assignTeam(Request $request, WorkOrder $workOrder): RedirectResponse

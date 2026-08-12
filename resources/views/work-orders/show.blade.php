@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header :title="$workOrder->work_order_no" :subtitle="$workOrder->title">
+        <x-page-header :title="($workOrder->site?->site_no ? $workOrder->site->site_no.' — ' : '').$workOrder->work_order_no" :subtitle="$workOrder->title">
             <x-slot name="actions">
                 <x-badge :status="$workOrder->status" class="text-sm" />
                 @can('work_orders.cancel')
@@ -23,9 +23,10 @@
         </x-page-header>
     </x-slot>
 
-    <div x-data="{ tab: 'overview' }">
+    <div x-data="{ tab: 'site' }">
         <div class="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
             @foreach ([
+                'site' => 'Site',
                 'overview' => 'Overview',
                 'team' => 'Team',
                 'checklist' => 'Daily Checklist',
@@ -43,7 +44,10 @@
             @endforeach
         </div>
 
-        <div x-show="tab === 'overview'">
+        <div x-show="tab === 'site'">
+            @include('work-orders.tabs.site')
+        </div>
+        <div x-show="tab === 'overview'" x-cloak>
             @include('work-orders.tabs.overview')
         </div>
         <div x-show="tab === 'team'" x-cloak>

@@ -31,7 +31,7 @@ class UserController extends Controller
 
     public function create(): View
     {
-        $roles = Role::orderBy('name')->get();
+        $roles = Role::where('name', '!=', 'Client')->orderBy('name')->get();
         $departments = Department::orderBy('name')->get();
 
         return view('admin.users.create', compact('roles', 'departments'));
@@ -45,7 +45,9 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:20'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'designation' => ['nullable', 'string', 'max:150'],
-            'role' => ['required', 'exists:roles,name'],
+            'role' => ['required', 'exists:roles,name', Rule::notIn(['Client'])],
+        ], [
+            'role.not_in' => 'Client accounts are created from the Client\'s page ("Generate Portal Access"), not here - that keeps the login linked to the right Client record.',
         ]);
 
         $password = Str::password(12);
@@ -64,7 +66,7 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        $roles = Role::orderBy('name')->get();
+        $roles = Role::where('name', '!=', 'Client')->orderBy('name')->get();
         $departments = Department::orderBy('name')->get();
 
         return view('admin.users.edit', compact('user', 'roles', 'departments'));
@@ -78,8 +80,10 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:20'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'designation' => ['nullable', 'string', 'max:150'],
-            'role' => ['required', 'exists:roles,name'],
+            'role' => ['required', 'exists:roles,name', Rule::notIn(['Client'])],
             'is_active' => ['nullable', 'boolean'],
+        ], [
+            'role.not_in' => 'Client accounts are managed from the Client\'s page, not here.',
         ]);
 
         $user->update($data + ['is_active' => $request->boolean('is_active')]);

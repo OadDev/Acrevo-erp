@@ -61,7 +61,7 @@ class EnquiryController extends Controller
 
     public function show(Enquiry $enquiry): View
     {
-        $enquiry->load(['client', 'assignedTo', 'followUps.user', 'siteVisits.assignedTo', 'quotations', 'workOrders']);
+        $enquiry->load(['client.clientLogin.user', 'assignedTo', 'followUps.user', 'siteVisits.assignedTo', 'quotations', 'workOrders']);
 
         return view('enquiries.show', compact('enquiry'));
     }

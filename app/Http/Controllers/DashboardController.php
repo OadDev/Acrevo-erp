@@ -21,6 +21,8 @@ class DashboardController extends Controller
         $user = $request->user();
 
         if ($user->hasRole('Client')) {
+            abort_unless($user->client(), 403, 'This login has the Client role but is not linked to a Client record. Ask an Admin to fix this via the Client\'s page ("Generate Portal Access").');
+
             return redirect()->route('portal.work-orders.index');
         }
 

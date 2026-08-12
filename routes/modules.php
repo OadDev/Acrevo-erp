@@ -89,6 +89,10 @@ Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group
     Route::post('work-orders/{workOrder}/unassign-team/{assignment}', [WorkOrderController::class, 'unassignTeam'])->name('work-orders.unassign-team');
 });
 
+Route::middleware('permission:work_orders.edit')->group(function () {
+    Route::patch('work-orders/{workOrder}/site', [WorkOrderController::class, 'updateSite'])->name('work-orders.site.update');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Executive Team execution (shared: sales can view, executive can edit)

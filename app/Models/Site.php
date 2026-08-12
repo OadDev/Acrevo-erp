@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSequenceNumber;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,10 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Site extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasSequenceNumber, HasUuids;
+
+    protected $sequencePrefix = 'ST';
+
+    protected $sequenceColumn = 'site_no';
 
     protected $fillable = [
-        'quotation_id', 'client_id', 'address', 'city', 'state', 'pincode',
+        'site_no', 'quotation_id', 'client_id', 'address', 'city', 'state', 'pincode',
         'site_contact_name', 'site_contact_phone', 'created_by',
     ];
 

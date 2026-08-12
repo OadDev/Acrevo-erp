@@ -56,6 +56,31 @@
 
         <div class="space-y-6">
             <x-card>
+                <h3 class="mb-3 text-sm font-semibold text-gray-500">Client</h3>
+                <dl class="space-y-2 text-sm">
+                    <div><dt class="text-gray-400">Name</dt><dd class="text-gray-800 dark:text-gray-200"><a href="{{ route('clients.show', $enquiry->client) }}" class="text-indigo-600 hover:underline">{{ $enquiry->client->name }}</a></dd></div>
+                    <div><dt class="text-gray-400">Phone</dt><dd class="text-gray-800 dark:text-gray-200">{{ $enquiry->client->phone ?: '—' }}</dd></div>
+                    <div><dt class="text-gray-400">Email</dt><dd class="text-gray-800 dark:text-gray-200">{{ $enquiry->client->email ?: '—' }}</dd></div>
+                </dl>
+
+                <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                    @if ($enquiry->client->clientLogin)
+                        <p class="text-sm text-emerald-600 dark:text-emerald-400">Portal access active — {{ $enquiry->client->clientLogin->user->email }}</p>
+                    @else
+                        @can('enquiries.create')
+                            <form method="POST" action="{{ route('clients.portal-access', $enquiry->client) }}" onsubmit="return confirm('Create portal login for {{ $enquiry->client->email }}?')">
+                                @csrf
+                                <x-primary-button type="submit">Generate Portal Access</x-primary-button>
+                            </form>
+                            @unless ($enquiry->client->email)
+                                <p class="mt-2 text-xs text-gray-400">Add an email address to the client first.</p>
+                            @endunless
+                        @endcan
+                    @endif
+                </div>
+            </x-card>
+
+            <x-card>
                 <h3 class="mb-3 text-sm font-semibold text-gray-500">Site Visits</h3>
                 @forelse ($enquiry->siteVisits as $visit)
                     <div class="border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
