@@ -95,3 +95,12 @@ jobs:
             "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
             "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
              tail -c 20000 storage/logs/laravel.log || echo 'no log file'"
+
+      - name: One-off diagnostic - inspect the crashing compiled view (remove after use)
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             sed -n '1,30p' storage/framework/views/ef79d3b0dcc29e36be7f14bd94309ec5.php || echo 'file not found (recompiled already)'"
