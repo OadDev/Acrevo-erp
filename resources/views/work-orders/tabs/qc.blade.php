@@ -7,7 +7,7 @@
                     <x-badge :status="$inspection->status" />
                 </div>
                 <p class="mt-1 text-sm text-gray-500">{{ $inspection->remarks }}</p>
-                <p class="mt-1 text-xs text-gray-400">By {{ $inspection->inspectedBy->name }}</p>
+                <p class="mt-1 text-xs text-gray-400">By {{ $inspection->inspectedBy?->name ?? 'Unknown' }}</p>
             </x-card>
         @empty
             <x-empty-state icon="shield-check" title="No QC inspections yet" />

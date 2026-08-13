@@ -6,10 +6,12 @@ use App\Models\Client;
 use App\Models\ClientLogin;
 use App\Models\Department;
 use App\Models\Enquiry;
+use App\Models\ExecutiveTeam;
 use App\Models\Quotation;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderExecutiveTeam;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -172,5 +174,33 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->actingAs($admin)->delete("/admin/users/{$admin->id}")->assertStatus(422);
         $this->assertDatabaseHas('users', ['id' => $admin->id, 'deleted_at' => null]);
+    }
+
+    public function test_work_order_show_survives_a_soft_deleted_team_leader(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'pending_hr_assignment', 'created_by' => $admin->id,
+        ]);
+
+        $leader = User::create([
+            'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+
+        // Deleting the leader (soft delete) must not break rendering of work orders their team is on.
+        $leader->delete();
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")->assertOk();
+
+        // Nor should it have been possible to delete them in the first place while they lead a team.
+        $leader->restore();
+        $this->actingAs($admin)->delete("/admin/users/{$leader->id}")->assertSessionHasErrors('user');
+        $this->assertDatabaseHas('users', ['id' => $leader->id, 'deleted_at' => null]);
     }
 }

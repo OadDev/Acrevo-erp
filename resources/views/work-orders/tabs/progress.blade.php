@@ -24,7 +24,7 @@
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Daily Progress Reports</h3>
             @forelse ($workOrder->dailyProgressReports as $report)
                 <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
-                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }} — {{ $report->executiveTeam->name }}</p>
+                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }} — {{ $report->executiveTeam?->name ?? '—' }}</p>
                     <p class="mt-1 text-gray-600 dark:text-gray-300"><span class="text-gray-400">Completed:</span> {{ $report->completed_work }}</p>
                     @if ($report->pending_work)<p class="text-gray-600 dark:text-gray-300"><span class="text-gray-400">Pending:</span> {{ $report->pending_work }}</p>@endif
                     @if ($report->problems)<p class="text-amber-600"><span class="text-gray-400">Problems:</span> {{ $report->problems }}</p>@endif
@@ -44,7 +44,7 @@
                     @csrf
                     <x-select-input name="executive_team_id" class="w-full" required>
                         @foreach ($workOrder->executiveTeams->whereNull('unassigned_at') as $assignment)
-                            <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam->name }}</option>
+                            <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
                         @endforeach
                     </x-select-input>
                     <x-textarea-input name="completed_work" rows="2" class="w-full" placeholder="Completed work" required></x-textarea-input>

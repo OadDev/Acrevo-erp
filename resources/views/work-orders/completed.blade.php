@@ -33,7 +33,7 @@
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $workOrder->work_order_no }}</span>
                                     <p class="text-xs text-gray-400">{{ $workOrder->title }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $workOrder->client->name }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $workOrder->client?->name ?? 'Unknown client' }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$workOrder->status" /></td>
                             </tr>
                         @endforeach

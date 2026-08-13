@@ -4,8 +4,8 @@
         @forelse ($workOrder->executiveTeams as $assignment)
             <div class="flex items-center justify-between border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                 <div>
-                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $assignment->executiveTeam->name }} ({{ $assignment->executiveTeam->team_number }})</p>
-                    <p class="text-xs text-gray-400">Leader: {{ $assignment->executiveTeam->teamLeader->name }}</p>
+                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $assignment->executiveTeam?->name ?? 'Unknown team' }} ({{ $assignment->executiveTeam?->team_number }})</p>
+                    <p class="text-xs text-gray-400">Leader: {{ $assignment->executiveTeam?->teamLeader?->name ?? '—' }}</p>
                 </div>
                 @if (! $assignment->unassigned_at)
                     <x-badge status="active" color="emerald" />

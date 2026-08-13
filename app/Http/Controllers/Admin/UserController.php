@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\ExecutiveTeam;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -108,6 +109,10 @@ class UserController extends Controller
 
         if ($user->hasRole('Admin') && User::role('Admin')->count() <= 1) {
             return back()->withErrors(['user' => 'You cannot delete the last remaining Admin account.']);
+        }
+
+        if ($teamNames = ExecutiveTeam::where('team_leader_id', $user->id)->pluck('name')->join(', ')) {
+            return back()->withErrors(['user' => "This user leads an executive team ({$teamNames}). Assign a new team leader first, then delete this account."]);
         }
 
         try {

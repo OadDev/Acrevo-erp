@@ -4,7 +4,7 @@
         <p class="whitespace-pre-line text-sm text-gray-700 dark:text-gray-300">{{ $workOrder->scope ?: 'No scope defined.' }}</p>
 
         <dl class="mt-6 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 text-sm dark:border-gray-800 sm:grid-cols-4">
-            <div><dt class="text-gray-400">Client</dt><dd class="text-gray-800 dark:text-gray-200">{{ $workOrder->client->name }}</dd></div>
+            <div><dt class="text-gray-400">Client</dt><dd class="text-gray-800 dark:text-gray-200">{{ $workOrder->client?->name ?? 'Unknown client' }}</dd></div>
             <div><dt class="text-gray-400">Priority</dt><dd><x-badge :status="$workOrder->priority" /></dd></div>
             <div><dt class="text-gray-400">Deadline</dt><dd class="text-gray-800 dark:text-gray-200">{{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</dd></div>
             <div><dt class="text-gray-400">Budget</dt><dd class="text-gray-800 dark:text-gray-200">₹{{ number_format($workOrder->budget_amount ?? 0, 2) }}</dd></div>
