@@ -23,6 +23,7 @@
                             <th class="px-5 py-3">Client</th>
                             <th class="px-5 py-3">Address</th>
                             <th class="px-5 py-3">Work Orders</th>
+                            <th class="px-5 py-3">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -34,6 +35,7 @@
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $site->client->name }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ collect([$site->address, $site->city, $site->state])->filter()->join(', ') ?: '—' }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $site->work_orders_count }}</td>
+                                <td class="px-5 py-3"><x-badge :status="$site->status" /></td>
                             </tr>
                         @endforeach
                     </tbody>

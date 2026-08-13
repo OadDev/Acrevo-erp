@@ -203,4 +203,45 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($admin)->delete("/admin/users/{$leader->id}")->assertSessionHasErrors('user');
         $this->assertDatabaseHas('users', ['id' => $leader->id, 'deleted_at' => null]);
     }
+
+    public function test_work_order_moves_to_qc_pending_when_marked_completed_by_the_team(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/submit-for-qc")->assertRedirect();
+
+        $this->assertSame('qc_pending', $workOrder->fresh()->status);
+    }
+
+    public function test_site_can_only_be_marked_completed_once_its_work_orders_are_done(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'quotation_id' => $quotation->id, 'site_id' => $site->id, 'client_id' => $client->id, 'title' => 'WO',
+            'execution_way' => 'way_1', 'priority' => 'medium', 'enquiry_id' => $enquiry->id, 'type' => 'new',
+            'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/sites/{$site->id}/complete")->assertSessionHasErrors('site');
+        $this->assertSame('active', $site->fresh()->status);
+
+        $workOrder->update(['status' => 'completed']);
+
+        $this->actingAs($admin)->post("/sites/{$site->id}/complete")->assertRedirect();
+        $this->assertSame('completed', $site->fresh()->status);
+        $this->assertNotNull($site->fresh()->completed_at);
+
+        // A completed site can't have new work orders added to it.
+        $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}")->assertStatus(422);
+    }
 }

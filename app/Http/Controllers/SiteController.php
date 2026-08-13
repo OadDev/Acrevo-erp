@@ -75,4 +75,19 @@ class SiteController extends Controller
 
         return back()->with('success', 'Site details updated.');
     }
+
+    public function complete(Site $site): RedirectResponse
+    {
+        abort_if($site->status === 'completed', 422, 'This site is already marked completed.');
+
+        $openWorkOrders = $site->workOrders()->whereNotIn('status', ['completed', 'cancelled'])->count();
+
+        if ($openWorkOrders > 0) {
+            return back()->withErrors(['site' => "This site still has {$openWorkOrders} work order(s) that aren't completed or cancelled yet. Finish or cancel them before marking the site completed."]);
+        }
+
+        $site->update(['status' => 'completed', 'completed_at' => now()]);
+
+        return back()->with('success', 'Site marked as completed and handed over to the client.');
+    }
 }

@@ -59,6 +59,8 @@ class WorkOrderController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
+
         return view('work-orders.create', compact('quotation', 'site'));
     }
 
@@ -67,6 +69,8 @@ class WorkOrderController extends Controller
         $data = $request->validated();
 
         $quotation = Quotation::find($data['quotation_id']);
+        $site = Site::findOrFail($data['site_id']);
+        abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
 
         Site::where('id', $data['site_id'])->update([
             'address' => $data['site_address'] ?? null,
@@ -126,6 +130,15 @@ class WorkOrderController extends Controller
         $workOrder->transitionTo('cancelled', $data['remarks'] ?? 'Work order cancelled.');
 
         return back()->with('success', 'Work order cancelled.');
+    }
+
+    public function submitForQc(WorkOrder $workOrder): RedirectResponse
+    {
+        abort_unless(in_array($workOrder->status, ['in_progress', 'rework_in_progress']), 422, 'This work order is not in a state that can be submitted for QC.');
+
+        $workOrder->transitionTo('qc_pending', 'Work marked complete by the executive team — awaiting QC.');
+
+        return back()->with('success', 'Submitted for QC.');
     }
 
     public function updateSite(Request $request, WorkOrder $workOrder): RedirectResponse

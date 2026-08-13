@@ -1,6 +1,18 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header :title="$site->site_no" :subtitle="$site->client->name" />
+        <x-page-header :title="$site->site_no" :subtitle="$site->client->name">
+            <x-slot name="actions">
+                <x-badge :status="$site->status" class="text-sm" />
+                @can('work_orders.edit')
+                    @if ($site->status === 'active')
+                        <form method="POST" action="{{ route('sites.complete', $site) }}" onsubmit="return confirm('Mark this site as completed and hand it over to the client? This should be the final step once all work here is done.')">
+                            @csrf
+                            <x-primary-button type="submit">Completed Site Work — Handover</x-primary-button>
+                        </form>
+                    @endif
+                @endcan
+            </x-slot>
+        </x-page-header>
     </x-slot>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -62,9 +74,20 @@
         </x-card>
     </div>
 
+    @if ($site->status === 'completed')
+        <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+            This site was marked completed and handed over to the client{{ $site->completed_at ? ' on '.$site->completed_at->format('d M Y') : '' }}.
+        </div>
+    @endif
+
     <x-card :padded="false" class="mt-6">
-        <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+        <div class="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
             <h3 class="text-sm font-semibold text-gray-500">Work Orders at this Site</h3>
+            @can('work_orders.create')
+                @if ($site->status === 'active' && $site->quotation && $site->quotation->status === 'approved')
+                    <x-link-button :href="route('work-orders.create', ['quotation_id' => $site->quotation_id])" class="text-xs">+ Create Work Order</x-link-button>
+                @endif
+            @endcan
         </div>
 
         @if ($workOrders->isEmpty())

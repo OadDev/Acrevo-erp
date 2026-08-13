@@ -23,6 +23,17 @@
             </div>
         @endif
 
+        @if (in_array($workOrder->status, ['in_progress', 'rework_in_progress']))
+            <div class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
+                @can('daily_progress.manage')
+                    <form method="POST" action="{{ route('work-orders.submit-for-qc', $workOrder) }}" onsubmit="return confirm('Mark this work as completed and submit it for QC?')">
+                        @csrf
+                        <x-primary-button>Work Completed — Submit for QC</x-primary-button>
+                    </form>
+                @endcan
+            </div>
+        @endif
+
         @if ($workOrder->status === 'client_review')
             <div class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
                 <h4 class="mb-2 text-sm font-semibold text-gray-500">Client Actions</h4>

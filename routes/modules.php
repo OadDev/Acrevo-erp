@@ -68,6 +68,7 @@ Route::middleware('permission:enquiries.view')->group(function () {
 // wildcard below, or Laravel's route matching binds "create" to {site} first.
 Route::middleware('permission:work_orders.edit')->group(function () {
     Route::resource('sites', SiteController::class)->only(['create', 'store', 'update']);
+    Route::post('sites/{site}/complete', [SiteController::class, 'complete'])->name('sites.complete');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
@@ -103,6 +104,10 @@ Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group
 
 Route::middleware('permission:work_orders.edit')->group(function () {
     Route::patch('work-orders/{workOrder}/site', [WorkOrderController::class, 'updateSite'])->name('work-orders.site.update');
+});
+
+Route::middleware('permission:daily_progress.manage|work_orders.edit')->group(function () {
+    Route::post('work-orders/{workOrder}/submit-for-qc', [WorkOrderController::class, 'submitForQc'])->name('work-orders.submit-for-qc');
 });
 
 /*
