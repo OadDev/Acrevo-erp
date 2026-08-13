@@ -86,17 +86,3 @@ jobs:
              else \
                echo 'No install token found yet - the installer route has not been hit yet, or storage/ was reset.'; \
              fi"
-
-      - name: One-off fix - restore soft-deleted executive team leaders (remove after use)
-        env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
-        run: |
-          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
-            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
-            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
-             PHP_BIN=\$(command -v php8.5 || echo /opt/alt/php85/usr/bin/php) && \
-             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php) && \
-             [ -x \"\$PHP_BIN\" ] || PHP_BIN=php && \
-             echo 'PD9waHAKCnVzZSBBcHBcTW9kZWxzXEV4ZWN1dGl2ZVRlYW07CnVzZSBBcHBcTW9kZWxzXFVzZXI7CgokdGVhbXMgPSBFeGVjdXRpdmVUZWFtOjp3aXRoKFsndGVhbUxlYWRlcicgPT4gZm4gKCRxKSA9PiAkcS0+d2l0aFRyYXNoZWQoKV0pLT5nZXQoKTsKCiRyZXN0b3JlZCA9IDA7CmZvcmVhY2ggKCR0ZWFtcyBhcyAkdGVhbSkgewogICAgJGxlYWRlciA9IFVzZXI6OndpdGhUcmFzaGVkKCktPmZpbmQoJHRlYW0tPnRlYW1fbGVhZGVyX2lkKTsKICAgIGlmICghICRsZWFkZXIpIHsKICAgICAgICBlY2hvICJUZWFtIHskdGVhbS0+bmFtZX0gKHskdGVhbS0+dGVhbV9udW1iZXJ9KSBoYXMgbm8gdXNlciBhdCBhbGwgZm9yIHRlYW1fbGVhZGVyX2lkPXskdGVhbS0+dGVhbV9sZWFkZXJfaWR9IC0gY2Fubm90IGF1dG8tZml4LiIgLiBQSFBfRU9MOwogICAgICAgIGNvbnRpbnVlOwogICAgfQogICAgaWYgKCRsZWFkZXItPnRyYXNoZWQoKSkgewogICAgICAgICRsZWFkZXItPnJlc3RvcmUoKTsKICAgICAgICAkcmVzdG9yZWQrKzsKICAgICAgICBlY2hvICJSZXN0b3JlZCBzb2Z0LWRlbGV0ZWQgdGVhbSBsZWFkZXIgeyRsZWFkZXItPmVtYWlsfSBmb3IgdGVhbSB7JHRlYW0tPm5hbWV9ICh7JHRlYW0tPnRlYW1fbnVtYmVyfSkuIiAuIFBIUF9FT0w7CiAgICB9Cn0KCmVjaG8gIkRvbmUuIFJlc3RvcmVkIHskcmVzdG9yZWR9IHVzZXIocykuIiAuIFBIUF9FT0w7Cg==' | base64 -d > /tmp/fix_leaders.php && \
-             \$PHP_BIN artisan tinker --execute=\"require '/tmp/fix_leaders.php';\" && \
-             rm -f /tmp/fix_leaders.php"
