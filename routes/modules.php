@@ -63,12 +63,14 @@ Route::middleware('permission:enquiries.view')->group(function () {
     Route::post('clients/{client}/portal-access', [ClientController::class, 'generatePortalAccess'])->name('clients.portal-access');
 });
 
-Route::middleware('permission:work_orders.view')->group(function () {
-    Route::resource('sites', SiteController::class)->only(['index', 'show']);
-});
-
+// The literal /sites/create path must be registered before the /sites/{site}
+// wildcard below, or Laravel's route matching binds "create" to {site} first.
 Route::middleware('permission:work_orders.edit')->group(function () {
     Route::resource('sites', SiteController::class)->only(['create', 'store', 'update']);
+});
+
+Route::middleware('permission:work_orders.view')->group(function () {
+    Route::resource('sites', SiteController::class)->only(['index', 'show']);
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
