@@ -12,8 +12,8 @@
                     @endif
                 @endcan
                 @can('work_orders.edit')
-                    @if ($workOrder->status === 'final_qc')
-                        <form method="POST" action="{{ route('work-orders.complete', $workOrder) }}">
+                    @if ($workOrder->status === 'client_review')
+                        <form method="POST" action="{{ route('work-orders.complete', $workOrder) }}" onsubmit="return confirm('Mark this work order completed on the client\'s behalf?')">
                             @csrf
                             <x-primary-button>Mark Completed</x-primary-button>
                         </form>

@@ -46,8 +46,10 @@ class QcInspectionController extends Controller
         ]);
 
         match (true) {
-            $data['status'] === 'passed' && $data['inspection_type'] === 'final' => $workOrder->transitionTo('final_qc', 'Final QC passed.'),
-            $data['status'] === 'passed' => $workOrder->transitionTo('client_review', 'Daily QC passed — routed to client review.'),
+            $data['status'] === 'passed' => $workOrder->transitionTo(
+                'client_review',
+                $data['inspection_type'] === 'final' ? 'Final QC passed — routed to client review.' : 'Daily QC passed — routed to client review.'
+            ),
             $data['status'] === 'failed' => $workOrder->transitionTo('qc_failed', 'QC failed: '.($data['remarks'] ?? '')),
             default => $workOrder->transitionTo('rework_in_progress', 'Rework required after QC.'),
         };

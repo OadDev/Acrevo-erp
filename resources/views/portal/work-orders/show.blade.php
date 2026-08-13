@@ -41,6 +41,20 @@
         </div>
 
         <div class="space-y-6">
+            @if ($workOrder->status === 'client_review')
+                <x-card>
+                    <h3 class="mb-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">QC Passed — Your Review Needed</h3>
+                    <p class="mb-4 text-sm text-gray-600 dark:text-gray-300">Our quality team has signed off on this work. Please review it and confirm.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('portal.work-orders.accept', $workOrder) }}">
+                            @csrf
+                            <x-primary-button>Accept &amp; Complete</x-primary-button>
+                        </form>
+                        <x-link-button :href="route('portal.tickets.index', ['work_order_id' => $workOrder->id])" variant="secondary">Raise a Ticket Instead</x-link-button>
+                    </div>
+                </x-card>
+            @endif
+
             @if ($workOrder->status === 'completed')
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">Your Feedback</h3>

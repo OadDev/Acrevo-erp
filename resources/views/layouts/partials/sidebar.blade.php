@@ -20,6 +20,7 @@
 
         @if ($isClient)
             <x-nav-group label="My Projects">
+                <x-nav-link :href="route('portal.quotations.index')" :active="request()->routeIs('portal.quotations.*')" icon="file-text">Quotations</x-nav-link>
                 <x-nav-link :href="route('portal.work-orders.index')" :active="request()->routeIs('portal.work-orders.*')" icon="briefcase">Current Projects</x-nav-link>
                 <x-nav-link :href="route('portal.tickets.index')" :active="request()->routeIs('portal.tickets.*')" icon="ticket">Tickets</x-nav-link>
                 <x-nav-link :href="route('portal.invoices.index')" :active="request()->routeIs('portal.invoices.*')" icon="receipt">Invoices &amp; Payments</x-nav-link>

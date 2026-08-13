@@ -16,6 +16,7 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\MyWorkOrderController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\Portal\PortalInvoiceController;
+use App\Http\Controllers\Portal\PortalQuotationController;
 use App\Http\Controllers\Portal\PortalTicketController;
 use App\Http\Controllers\Portal\PortalWorkOrderController;
 use App\Http\Controllers\QcInspectionController;
@@ -242,8 +243,13 @@ Route::middleware('permission:activity_logs.view')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('permission:client_portal.access')->prefix('portal')->name('portal.')->group(function () {
+    Route::get('quotations', [PortalQuotationController::class, 'index'])->name('quotations.index');
+    Route::get('quotations/{quotation}', [PortalQuotationController::class, 'show'])->name('quotations.show');
+    Route::post('quotations/{quotation}/approve', [PortalQuotationController::class, 'approve'])->name('quotations.approve');
+    Route::post('quotations/{quotation}/reject', [PortalQuotationController::class, 'reject'])->name('quotations.reject');
     Route::get('work-orders', [PortalWorkOrderController::class, 'index'])->name('work-orders.index');
     Route::get('work-orders/{workOrder}', [PortalWorkOrderController::class, 'show'])->name('work-orders.show');
+    Route::post('work-orders/{workOrder}/accept', [PortalWorkOrderController::class, 'accept'])->name('work-orders.accept');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');

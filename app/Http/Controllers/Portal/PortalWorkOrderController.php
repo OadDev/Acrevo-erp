@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\WorkOrder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -27,5 +28,21 @@ class PortalWorkOrderController extends Controller
         $workOrder->load(['dailyProgressReports' => fn ($q) => $q->latest(), 'media', 'tickets', 'clientReviews', 'completionCertificates']);
 
         return view('portal.work-orders.show', compact('workOrder'));
+    }
+
+    public function accept(WorkOrder $workOrder): RedirectResponse
+    {
+        $this->authorize('view', $workOrder);
+
+        abort_unless($workOrder->status === 'client_review', 422, 'This work order is not awaiting your review.');
+
+        $workOrder->transitionTo('completed', 'Client reviewed and accepted the completed work.');
+
+        $workOrder->completionCertificates()->create([
+            'issued_date' => now(),
+            'issued_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('portal.work-orders.show', $workOrder)->with('success', 'Thank you — the work order is now marked complete.');
     }
 }
