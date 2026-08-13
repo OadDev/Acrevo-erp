@@ -244,4 +244,37 @@ class WorkOrderWorkflowTest extends TestCase
         // A completed site can't have new work orders added to it.
         $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}")->assertStatus(422);
     }
+
+    public function test_work_order_creation_can_assign_an_executive_team_leader_up_front(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $leader = User::create([
+            'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+
+        $createResponse = $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}");
+        $createResponse->assertOk()->assertSee($leader->name);
+
+        $storeResponse = $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with team',
+            'execution_way' => 'way_1',
+            'executive_team_id' => $team->id,
+            'priority' => 'medium',
+        ]);
+        $storeResponse->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with team')->firstOrFail();
+        $this->assertSame('team_assigned', $workOrder->status);
+        $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
+    }
 }

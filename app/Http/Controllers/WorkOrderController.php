@@ -61,7 +61,9 @@ class WorkOrderController extends Controller
 
         abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
 
-        return view('work-orders.create', compact('quotation', 'site'));
+        $availableTeams = ExecutiveTeam::where('is_active', true)->with('teamLeader')->get();
+
+        return view('work-orders.create', compact('quotation', 'site', 'availableTeams'));
     }
 
     public function store(WorkOrderRequest $request): RedirectResponse
@@ -97,6 +99,17 @@ class WorkOrderController extends Controller
             'status' => 'pending_hr_assignment',
             'created_by' => $request->user()->id,
         ]);
+
+        if (! empty($data['executive_team_id'])) {
+            WorkOrderExecutiveTeam::create([
+                'work_order_id' => $workOrder->id,
+                'executive_team_id' => $data['executive_team_id'],
+                'assigned_by' => $request->user()->id,
+                'assigned_at' => now(),
+            ]);
+
+            $workOrder->transitionTo('team_assigned', 'Executive team assigned at work order creation.');
+        }
 
         $quotation?->enquiry?->update(['status' => 'converted']);
 

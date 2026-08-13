@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-card class="max-w-2xl">
-        <form method="POST" action="{{ route('work-orders.store') }}">
+        <form method="POST" action="{{ route('work-orders.store') }}" x-data="{ executionWay: '{{ old('execution_way') }}' }">
             @csrf
             <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
             <input type="hidden" name="client_id" value="{{ $quotation->client_id }}">
@@ -65,10 +65,20 @@
 
                 <div class="sm:col-span-2">
                     <x-input-label for="execution_way" value="Execution Method" />
-                    <x-select-input id="execution_way" name="execution_way" class="mt-1 block w-full" required>
+                    <x-select-input id="execution_way" name="execution_way" class="mt-1 block w-full" x-model="executionWay" required>
                         <option value="" disabled selected>Select how this work will be carried out</option>
                         @foreach (\App\Models\WorkOrder::EXECUTION_WAYS as $value => $label)
                             <option value="{{ $value }}" @selected(old('execution_way') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </x-select-input>
+                </div>
+
+                <div class="sm:col-span-2" x-show="executionWay === 'way_1'" x-cloak>
+                    <x-input-label for="executive_team_id" value="Assign Executive Team Leader" />
+                    <x-select-input id="executive_team_id" name="executive_team_id" class="mt-1 block w-full">
+                        <option value="">Assign later from the work order's Team tab</option>
+                        @foreach ($availableTeams as $team)
+                            <option value="{{ $team->id }}" @selected(old('executive_team_id') == $team->id)>{{ $team->teamLeader?->name ?? 'Unassigned leader' }} — {{ $team->name }} ({{ $team->team_number }})</option>
                         @endforeach
                     </x-select-input>
                 </div>
