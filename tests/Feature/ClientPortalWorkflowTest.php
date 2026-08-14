@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApprovalRequest;
 use App\Models\Client;
 use App\Models\ClientLogin;
 use App\Models\Department;
@@ -126,5 +127,91 @@ class ClientPortalWorkflowTest extends TestCase
         $workOrder->refresh();
         $this->assertSame('completed', $workOrder->status);
         $this->assertCount(1, $workOrder->completionCertificates);
+    }
+
+    public function test_company_can_send_an_approval_request_and_client_can_respond(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('layout.pdf', 500, 'application/pdf');
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Approve tile layout',
+            'description' => 'Please confirm before we proceed.',
+            'file' => $file,
+        ])->assertRedirect();
+
+        $approval = ApprovalRequest::where('work_order_id', $workOrder->id)->firstOrFail();
+        $this->assertSame('company_to_client', $approval->direction);
+        $this->assertSame('pending', $approval->status);
+        $this->assertNotNull($approval->getFirstMedia('attachment'));
+
+        $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}")->assertOk()->assertSee('Approve tile layout');
+
+        // The client can't respond to their own kind of request via the wrong endpoint direction check.
+        $this->actingAs($clientUser)->post("/portal/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/respond", [
+            'status' => 'approved',
+            'response_note' => 'Looks good',
+        ])->assertRedirect();
+
+        $approval->refresh();
+        $this->assertSame('approved', $approval->status);
+        $this->assertSame($clientUser->id, $approval->responded_by);
+
+        // Already-responded requests can't be responded to again.
+        $this->actingAs($clientUser)->post("/portal/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/respond", [
+            'status' => 'rejected',
+        ])->assertStatus(422);
+    }
+
+    public function test_client_can_send_an_approval_request_and_company_can_respond(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($clientUser)->post("/portal/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Approve extra material cost',
+        ])->assertRedirect();
+
+        $approval = ApprovalRequest::where('work_order_id', $workOrder->id)->firstOrFail();
+        $this->assertSame('client_to_company', $approval->direction);
+        $this->assertSame($client->id, $approval->requested_by_client_id);
+
+        // Staff can't respond to a company_to_client request via the client_to_company-only internal endpoint direction check.
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/respond", [
+            'status' => 'approved',
+        ])->assertRedirect();
+
+        $this->assertSame('approved', $approval->fresh()->status);
+    }
+
+    public function test_a_client_cannot_view_or_respond_to_another_clients_approval_request(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+        [$otherClient, $otherClientUser] = $this->clientWithLogin($admin);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $approval = $workOrder->approvalRequests()->create([
+            'title' => 'Approve tile layout', 'direction' => 'company_to_client', 'requested_by' => $admin->id, 'status' => 'pending',
+        ]);
+
+        $this->actingAs($otherClientUser)->post("/portal/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/respond", [
+            'status' => 'approved',
+        ])->assertForbidden();
     }
 }

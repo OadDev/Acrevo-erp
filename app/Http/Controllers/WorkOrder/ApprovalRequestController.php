@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Http\Controllers\WorkOrder;
+
+use App\Http\Controllers\Controller;
+use App\Models\ApprovalRequest;
+use App\Models\WorkOrder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+
+class ApprovalRequestController extends Controller
+{
+    public function store(Request $request, WorkOrder $workOrder): RedirectResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'file' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+        ]);
+
+        $approvalRequest = $workOrder->approvalRequests()->create([
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'direction' => 'company_to_client',
+            'requested_by' => $request->user()->id,
+            'status' => 'pending',
+        ]);
+
+        if ($request->hasFile('file')) {
+            try {
+                $approvalRequest->addMediaFromRequest('file')->toMediaCollection('attachment');
+            } catch (FileIsTooBig $e) {
+                return back()->withErrors(['file' => 'That file is too large (max 20MB).']);
+            }
+        }
+
+        return back()->with('success', 'Approval request sent to the client.');
+    }
+
+    public function respond(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
+    {
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+        abort_unless($approvalRequest->direction === 'client_to_company', 403, 'This request is awaiting the client\'s response, not ours.');
+        abort_unless($approvalRequest->status === 'pending', 422, 'This request has already been responded to.');
+
+        $data = $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+            'response_note' => ['nullable', 'string'],
+        ]);
+
+        $approvalRequest->update($data + [
+            'responded_by' => $request->user()->id,
+            'responded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Response recorded.');
+    }
+}

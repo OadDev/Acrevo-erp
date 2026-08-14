@@ -34,6 +34,7 @@
                 'materials' => 'Materials & Labour',
                 'mb' => 'Measurement Book & Ledger',
                 'qc' => 'QC',
+                'approvals' => 'Approval Requests',
                 'tickets' => 'Tickets',
             ] as $key => $label)
                 <button
@@ -67,6 +68,9 @@
         </div>
         <div x-show="tab === 'qc'" x-cloak>
             @include('work-orders.tabs.qc')
+        </div>
+        <div x-show="tab === 'approvals'" x-cloak>
+            @include('work-orders.tabs.approvals')
         </div>
         <div x-show="tab === 'tickets'" x-cloak>
             @include('work-orders.tabs.tickets')

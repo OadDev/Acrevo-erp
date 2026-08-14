@@ -193,6 +193,11 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(Ticket::class);
     }
 
+    public function approvalRequests(): HasMany
+    {
+        return $this->hasMany(ApprovalRequest::class)->latest();
+    }
+
     public function clientReviews(): HasMany
     {
         return $this->hasMany(ClientReview::class);

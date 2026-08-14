@@ -15,6 +15,7 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\MyWorkOrderController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\Portal\PortalApprovalRequestController;
 use App\Http\Controllers\Portal\PortalInvoiceController;
 use App\Http\Controllers\Portal\PortalQuotationController;
 use App\Http\Controllers\Portal\PortalTicketController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteVisitController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\WorkOrder\ApprovalRequestController;
 use App\Http\Controllers\WorkOrder\DailyChecklistController;
 use App\Http\Controllers\WorkOrder\DailyProgressController;
 use App\Http\Controllers\WorkOrder\LabourEntryController;
@@ -99,7 +101,7 @@ Route::get('work-orders/{workOrder}', [WorkOrderController::class, 'show'])->nam
 
 Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');
-    Route::post('work-orders/{workOrder}/unassign-team/{assignment}', [WorkOrderController::class, 'unassignTeam'])->name('work-orders.unassign-team');
+    Route::delete('work-orders/{workOrder}/unassign-team/{assignment}', [WorkOrderController::class, 'unassignTeam'])->name('work-orders.unassign-team');
 });
 
 Route::middleware('permission:work_orders.edit')->group(function () {
@@ -137,6 +139,10 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('measurement-books', [MeasurementBookController::class, 'store'])->name('measurement-books.store');
         Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
         Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+    });
+    Route::middleware('permission:work_orders.edit')->group(function () {
+        Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
+        Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
     });
 });
 
@@ -255,6 +261,8 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::get('work-orders', [PortalWorkOrderController::class, 'index'])->name('work-orders.index');
     Route::get('work-orders/{workOrder}', [PortalWorkOrderController::class, 'show'])->name('work-orders.show');
     Route::post('work-orders/{workOrder}/accept', [PortalWorkOrderController::class, 'accept'])->name('work-orders.accept');
+    Route::post('work-orders/{workOrder}/approval-requests', [PortalApprovalRequestController::class, 'store'])->name('work-orders.approval-requests.store');
+    Route::post('work-orders/{workOrder}/approval-requests/{approvalRequest}/respond', [PortalApprovalRequestController::class, 'respond'])->name('work-orders.approval-requests.respond');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');

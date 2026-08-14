@@ -73,6 +73,48 @@
             @endif
 
             <x-card>
+                <h3 class="mb-3 text-sm font-semibold text-gray-500">Approval Requests</h3>
+                @forelse ($workOrder->approvalRequests as $approval)
+                    <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-medium text-gray-800 dark:text-gray-200">{{ $approval->title }}</span>
+                            <x-badge :status="$approval->status" />
+                        </div>
+                        @if ($approval->description)
+                            <p class="mt-1 text-gray-500">{{ $approval->description }}</p>
+                        @endif
+                        @if ($approval->getFirstMedia('attachment'))
+                            <a href="{{ $approval->getFirstMediaUrl('attachment') }}" target="_blank" class="mt-1 inline-flex items-center gap-1 text-indigo-600 hover:underline">
+                                <x-icon name="paperclip" class="h-3.5 w-3.5" /> {{ $approval->getFirstMedia('attachment')->file_name }}
+                            </a>
+                        @endif
+
+                        @if ($approval->status === 'pending' && $approval->direction === 'company_to_client')
+                            <form method="POST" action="{{ route('portal.work-orders.approval-requests.respond', [$workOrder, $approval]) }}" class="mt-2 flex flex-wrap items-end gap-2">
+                                @csrf
+                                <x-text-input name="response_note" placeholder="Note (optional)" class="flex-1" />
+                                <button name="status" value="approved" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500">Approve</button>
+                                <button name="status" value="rejected" class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Reject</button>
+                            </form>
+                        @elseif ($approval->status === 'pending')
+                            <p class="mt-1 text-xs text-gray-400">Awaiting our team's response.</p>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-sm text-gray-400">No approval requests yet.</p>
+                @endforelse
+
+                <form method="POST" action="{{ route('portal.work-orders.approval-requests.store', $workOrder) }}" enctype="multipart/form-data" class="mt-4 space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+                    @csrf
+                    <x-input-label value="Request Our Approval" />
+                    <x-text-input name="title" placeholder="Title" class="w-full" required />
+                    <x-textarea-input name="description" rows="2" class="w-full" placeholder="Description (optional)"></x-textarea-input>
+                    <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="w-full text-sm">
+                    <x-primary-button class="w-full justify-center">Send Request</x-primary-button>
+                </form>
+            </x-card>
+
+            <x-card>
                 <h3 class="mb-3 text-sm font-semibold text-gray-500">Tickets</h3>
                 @forelse ($workOrder->tickets as $ticket)
                     <div class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">

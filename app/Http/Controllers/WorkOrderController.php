@@ -128,6 +128,7 @@ class WorkOrderController extends Controller
             'materialEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers',
             'children', 'parent', 'clientReviews',
             'media',
+            'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media',
         ]);
 
         $availableTeams = ExecutiveTeam::where('is_active', true)->get();

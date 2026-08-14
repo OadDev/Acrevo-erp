@@ -277,4 +277,25 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('team_assigned', $workOrder->status);
         $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
     }
+
+    public function test_unassigning_a_team_works(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'team_assigned', 'created_by' => $admin->id,
+        ]);
+        $leader = User::create([
+            'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        $assignment = WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+
+        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/unassign-team/{$assignment->id}")->assertRedirect();
+
+        $this->assertNotNull($assignment->fresh()->unassigned_at);
+    }
 }
