@@ -6,6 +6,7 @@ use App\Http\Requests\WorkOrderRequest;
 use App\Models\ExecutiveTeam;
 use App\Models\Quotation;
 use App\Models\Site;
+use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderExecutiveTeam;
 use Illuminate\Http\RedirectResponse;
@@ -61,9 +62,9 @@ class WorkOrderController extends Controller
 
         abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
 
-        $availableTeams = ExecutiveTeam::where('is_active', true)->with('teamLeader')->get();
+        $teamLeaders = User::role('Executive Team Leader')->orderBy('name')->get();
 
-        return view('work-orders.create', compact('quotation', 'site', 'availableTeams'));
+        return view('work-orders.create', compact('quotation', 'site', 'teamLeaders'));
     }
 
     public function store(WorkOrderRequest $request): RedirectResponse
@@ -73,6 +74,15 @@ class WorkOrderController extends Controller
         $quotation = Quotation::find($data['quotation_id']);
         $site = Site::findOrFail($data['site_id']);
         abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
+
+        $team = null;
+        if (! empty($data['team_leader_id'])) {
+            $team = ExecutiveTeam::where('team_leader_id', $data['team_leader_id'])->where('is_active', true)->first();
+
+            if (! $team) {
+                return back()->withInput()->withErrors(['team_leader_id' => 'This Team Leader doesn\'t have an active Executive Team yet. Ask HR to form one first, or assign the team later from the work order\'s Team tab.']);
+            }
+        }
 
         Site::where('id', $data['site_id'])->update([
             'address' => $data['site_address'] ?? null,
@@ -100,10 +110,10 @@ class WorkOrderController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        if (! empty($data['executive_team_id'])) {
+        if ($team) {
             WorkOrderExecutiveTeam::create([
                 'work_order_id' => $workOrder->id,
-                'executive_team_id' => $data['executive_team_id'],
+                'executive_team_id' => $team->id,
                 'assigned_by' => $request->user()->id,
                 'assigned_at' => now(),
             ]);

@@ -257,6 +257,7 @@ class WorkOrderWorkflowTest extends TestCase
             'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
             'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
         ]);
+        $leader->syncRoles(['Executive Team Leader']);
         $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
 
         $createResponse = $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}");
@@ -268,7 +269,7 @@ class WorkOrderWorkflowTest extends TestCase
             'client_id' => $client->id,
             'title' => 'WO with team',
             'execution_way' => 'way_1',
-            'executive_team_id' => $team->id,
+            'team_leader_id' => $leader->id,
             'priority' => 'medium',
         ]);
         $storeResponse->assertRedirect();
@@ -276,6 +277,34 @@ class WorkOrderWorkflowTest extends TestCase
         $workOrder = WorkOrder::where('title', 'WO with team')->firstOrFail();
         $this->assertSame('team_assigned', $workOrder->status);
         $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
+    }
+
+    public function test_work_order_creation_rejects_a_team_leader_with_no_active_team(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $leader = User::create([
+            'name' => 'Leaderless', 'email' => 'leaderless+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $leader->syncRoles(['Executive Team Leader']);
+
+        $response = $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO without a team',
+            'execution_way' => 'way_1',
+            'team_leader_id' => $leader->id,
+            'priority' => 'medium',
+        ]);
+
+        $response->assertSessionHasErrors('team_leader_id');
+        $this->assertDatabaseMissing('work_orders', ['title' => 'WO without a team']);
     }
 
     public function test_unassigning_a_team_works(): void

@@ -74,11 +74,11 @@
                 </div>
 
                 <div class="sm:col-span-2" x-show="executionWay === 'way_1'" x-cloak>
-                    <x-input-label for="executive_team_id" value="Assign Executive Team Leader" />
-                    <x-select-input id="executive_team_id" name="executive_team_id" class="mt-1 block w-full">
+                    <x-input-label for="team_leader_id" value="Assign Executive Team Leader" />
+                    <x-select-input id="team_leader_id" name="team_leader_id" class="mt-1 block w-full">
                         <option value="">Assign later from the work order's Team tab</option>
-                        @foreach ($availableTeams as $team)
-                            <option value="{{ $team->id }}" @selected(old('executive_team_id') == $team->id)>{{ $team->teamLeader?->name ?? 'Unassigned leader' }} — {{ $team->name }} ({{ $team->team_number }})</option>
+                        @foreach ($teamLeaders as $leader)
+                            <option value="{{ $leader->id }}" @selected(old('team_leader_id') == $leader->id)>{{ $leader->name }}</option>
                         @endforeach
                     </x-select-input>
                 </div>

@@ -86,3 +86,17 @@ jobs:
              else \
                echo 'No install token found yet - the installer route has not been hit yet, or storage/ was reset.'; \
              fi"
+
+      - name: One-off diagnostic - check deleted user vs executive team leader state (remove after use)
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             PHP_BIN=\$(command -v php8.5 || echo /opt/alt/php85/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=php && \
+             echo 'PD9waHAKCnVzZSBBcHBcTW9kZWxzXEV4ZWN1dGl2ZVRlYW07CnVzZSBBcHBcTW9kZWxzXFVzZXI7CgplY2hvICI9PT0gVHJhc2hlZCAoc29mdC1kZWxldGVkKSB1c2VycyA9PT0iIC4gUEhQX0VPTDsKJHRyYXNoZWQgPSBVc2VyOjpvbmx5VHJhc2hlZCgpLT5nZXQoWydpZCcsICduYW1lJywgJ2VtYWlsJywgJ2RlbGV0ZWRfYXQnXSk7CmZvcmVhY2ggKCR0cmFzaGVkIGFzICR1KSB7CiAgICBlY2hvICIgIHskdS0+ZW1haWx9ICh7JHUtPm5hbWV9KSBkZWxldGVkX2F0PXskdS0+ZGVsZXRlZF9hdH0iIC4gUEhQX0VPTDsKfQppZiAoJHRyYXNoZWQtPmlzRW1wdHkoKSkgewogICAgZWNobyAiICAobm9uZSkiIC4gUEhQX0VPTDsKfQoKZWNobyBQSFBfRU9MIC4gIj09PSBFeGVjdXRpdmUgVGVhbXMgYW5kIHRoZWlyIGxlYWRlcidzIGN1cnJlbnQgc3RhdGUgPT09IiAuIFBIUF9FT0w7CiR0ZWFtcyA9IEV4ZWN1dGl2ZVRlYW06OndpdGhUcmFzaGVkKCktPmdldCgpOwpmb3JlYWNoICgkdGVhbXMgYXMgJHRlYW0pIHsKICAgICRsZWFkZXIgPSBVc2VyOjp3aXRoVHJhc2hlZCgpLT5maW5kKCR0ZWFtLT50ZWFtX2xlYWRlcl9pZCk7CiAgICAkc3RhdGUgPSAkbGVhZGVyID8gKCRsZWFkZXItPnRyYXNoZWQoKSA/ICdUUkFTSEVEJyA6ICdhY3RpdmUnKSA6ICdNSVNTSU5HJzsKICAgIGVjaG8gIiAgeyR0ZWFtLT5uYW1lfSAoeyR0ZWFtLT50ZWFtX251bWJlcn0pIGFjdGl2ZT17JHRlYW0tPmlzX2FjdGl2ZX0gbGVhZGVyX2lkPXskdGVhbS0+dGVhbV9sZWFkZXJfaWR9IC0+ICIgLiAoJGxlYWRlciA/ICJ7JGxlYWRlci0+ZW1haWx9IFt7JHN0YXRlfV0iIDogJ25vIHN1Y2ggdXNlcicpIC4gUEhQX0VPTDsKfQoKZWNobyBQSFBfRU9MIC4gIj09PSBVc2VycyB3aXRoIHJvbGUgJ0V4ZWN1dGl2ZSBUZWFtIExlYWRlcicgPT09IiAuIFBIUF9FT0w7CiR0bHMgPSBVc2VyOjpyb2xlKCdFeGVjdXRpdmUgVGVhbSBMZWFkZXInKS0+Z2V0KFsnaWQnLCAnbmFtZScsICdlbWFpbCddKTsKZm9yZWFjaCAoJHRscyBhcyAkdGwpIHsKICAgIGVjaG8gIiAgeyR0bC0+ZW1haWx9ICh7JHRsLT5uYW1lfSkiIC4gUEhQX0VPTDsKfQo=' | base64 -d > /tmp/check_leader.php && \
+             \$PHP_BIN artisan tinker --execute=\"require '/tmp/check_leader.php';\" && \
+             rm -f /tmp/check_leader.php"

@@ -20,7 +20,7 @@ class WorkOrderRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'scope' => ['nullable', 'string'],
             'execution_way' => ['required', 'in:'.implode(',', array_keys(\App\Models\WorkOrder::EXECUTION_WAYS))],
-            'executive_team_id' => ['nullable', 'exists:executive_teams,id'],
+            'team_leader_id' => ['nullable', 'exists:users,id'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'start_date' => ['nullable', 'date'],
             'deadline' => ['nullable', 'date', 'after_or_equal:start_date'],
