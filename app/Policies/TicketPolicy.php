@@ -32,6 +32,21 @@ class TicketPolicy
 
     public function update(User $user, Ticket $ticket): bool
     {
-        return $user->can('tickets.manage');
+        if ($ticket->locked_at) {
+            return false;
+        }
+
+        if ($ticket->raised_by_type === 'client') {
+            return $user->hasRole(['Sales', 'Executive Team Leader']);
+        }
+
+        // Raised internally (Sales, Executive Team Leader, or whoever else has
+        // tickets.create) - only the person who raised it may edit it.
+        return $ticket->raised_by === $user->id;
+    }
+
+    public function lock(User $user, Ticket $ticket): bool
+    {
+        return $this->update($user, $ticket);
     }
 }

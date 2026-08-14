@@ -387,4 +387,31 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->assertNotNull($assignment->fresh()->unassigned_at);
     }
+
+    public function test_qc_index_and_show_survive_a_soft_deleted_inspector(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'qc_pending', 'created_by' => $admin->id,
+        ]);
+
+        $inspector = User::create([
+            'name' => 'Inspector', 'email' => 'inspector+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $inspection = \App\Models\QcInspection::create([
+            'work_order_id' => $workOrder->id, 'inspection_type' => 'daily', 'status' => 'passed',
+            'inspection_date' => now()->toDateString(), 'inspected_by' => $inspector->id,
+        ]);
+
+        // The inspector account is later deleted - the QC list/detail pages must
+        // not 500 just because a historical inspector no longer resolves.
+        $inspector->delete();
+
+        $this->actingAs($admin)->get('/qc')->assertOk();
+        $this->actingAs($admin)->get("/qc/{$inspection->id}")->assertOk();
+    }
 }

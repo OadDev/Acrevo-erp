@@ -25,12 +25,12 @@ class Ticket extends Model implements HasMedia
     protected $fillable = [
         'ticket_no', 'work_order_id', 'type', 'priority', 'title', 'description',
         'raised_by_type', 'raised_by', 'raised_by_client_id', 'department_id',
-        'assigned_to', 'status', 'due_date', 'resolved_at', 'closed_at',
+        'assigned_to', 'status', 'locked_at', 'locked_by', 'due_date', 'resolved_at', 'closed_at',
     ];
 
     protected function casts(): array
     {
-        return ['due_date' => 'date', 'resolved_at' => 'datetime', 'closed_at' => 'datetime'];
+        return ['due_date' => 'date', 'resolved_at' => 'datetime', 'closed_at' => 'datetime', 'locked_at' => 'datetime'];
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -66,6 +66,11 @@ class Ticket extends Model implements HasMedia
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function lockedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'locked_by');
     }
 
     public function comments(): HasMany

@@ -7,7 +7,7 @@
         <dl class="space-y-3 text-sm">
             <div><dt class="text-gray-400">Type</dt><dd>{{ Str::title($qcInspection->inspection_type) }}</dd></div>
             <div><dt class="text-gray-400">Status</dt><dd><x-badge :status="$qcInspection->status" /></dd></div>
-            <div><dt class="text-gray-400">Inspector</dt><dd>{{ $qcInspection->inspectedBy->name }}</dd></div>
+            <div><dt class="text-gray-400">Inspector</dt><dd>{{ $qcInspection->inspectedBy?->name ?? 'Unknown' }}</dd></div>
             <div><dt class="text-gray-400">Date</dt><dd>{{ $qcInspection->inspection_date->format('d M Y') }}</dd></div>
             <div><dt class="text-gray-400">Remarks</dt><dd>{{ $qcInspection->remarks ?: '—' }}</dd></div>
         </dl>

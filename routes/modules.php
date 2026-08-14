@@ -192,6 +192,7 @@ Route::middleware('permission:tickets.view')->group(function () {
     Route::resource('tickets', TicketController::class);
     Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
+    Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
 });
 
 /*

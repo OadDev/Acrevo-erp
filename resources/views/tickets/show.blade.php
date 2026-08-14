@@ -3,8 +3,19 @@
         <x-page-header :title="$ticket->ticket_no" :subtitle="$ticket->title">
             <x-slot name="actions">
                 <x-badge :status="$ticket->status" class="text-sm" />
-                @can('tickets.manage')
+                @if ($ticket->locked_at)
+                    <x-badge status="closed" color="rose">Uneditable</x-badge>
+                @endif
+                @can('update', $ticket)
                     <x-link-button :href="route('tickets.edit', $ticket)" variant="secondary">Edit</x-link-button>
+                @endcan
+                @can('lock', $ticket)
+                    <form method="POST" action="{{ route('tickets.lock', $ticket) }}" onsubmit="return confirm('Mark this ticket uneditable? This cannot be undone.')">
+                        @csrf
+                        <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Mark Uneditable</button>
+                    </form>
+                @endcan
+                @can('tickets.manage')
                     <form method="POST" action="{{ route('tickets.status', $ticket) }}" class="flex items-center gap-2">
                         @csrf
                         <x-select-input name="status" onchange="this.form.submit()" class="text-sm">

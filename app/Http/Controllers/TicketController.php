@@ -58,6 +58,8 @@ class TicketController extends Controller
 
     public function edit(Ticket $ticket): View
     {
+        $this->authorize('update', $ticket);
+
         $workOrder = $ticket->workOrder()->with('client')->first();
         $departments = Department::orderBy('name')->get();
         $assignees = User::orderBy('name')->get();
@@ -67,9 +69,20 @@ class TicketController extends Controller
 
     public function update(TicketRequest $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorize('update', $ticket);
+
         $ticket->update($request->validated());
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket updated.');
+    }
+
+    public function lock(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('lock', $ticket);
+
+        $ticket->update(['locked_at' => now(), 'locked_by' => $request->user()->id]);
+
+        return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket marked uneditable.');
     }
 
     public function addComment(Request $request, Ticket $ticket): RedirectResponse

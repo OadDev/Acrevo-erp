@@ -32,7 +32,7 @@
                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('work-orders.show', $inspection->workOrder) }}'">
                                 <td class="px-5 py-3 font-medium text-gray-900 dark:text-white">{{ $inspection->workOrder->work_order_no }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ Str::title($inspection->inspection_type) }}</td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $inspection->inspectedBy->name }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $inspection->inspectedBy?->name ?? 'Unknown' }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $inspection->inspection_date->format('d M Y') }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$inspection->status" /></td>
                             </tr>
