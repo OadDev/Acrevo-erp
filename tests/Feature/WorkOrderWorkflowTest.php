@@ -414,4 +414,31 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($admin)->get('/qc')->assertOk();
         $this->actingAs($admin)->get("/qc/{$inspection->id}")->assertOk();
     }
+
+    public function test_uploading_media_to_a_work_order_stores_the_full_uuid_model_id(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('site.jpg')->size(500);
+
+        $response = $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'before_images',
+            'file' => $file,
+        ]);
+        $response->assertRedirect();
+
+        // media.model_id must be created wide enough to hold WorkOrder's full
+        // UUID id, not just the first ~19 chars an unsignedBigInteger allows.
+        $media = \Spatie\MediaLibrary\MediaCollections\Models\Media::where('model_type', WorkOrder::class)
+            ->where('model_id', $workOrder->id)
+            ->first();
+        $this->assertNotNull($media, 'Media should be attached with the work order\'s full UUID as model_id.');
+        $this->assertCount(1, $workOrder->fresh()->getMedia('before_images'));
+    }
 }
