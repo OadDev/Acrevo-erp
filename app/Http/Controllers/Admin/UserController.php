@@ -43,7 +43,7 @@ class UserController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'email' => ['required', 'email'],
             'phone' => ['nullable', 'string', 'max:20'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'designation' => ['nullable', 'string', 'max:150'],
@@ -52,7 +52,30 @@ class UserController extends Controller
             'role.not_in' => 'Client accounts are created from the Client\'s page ("Generate Portal Access"), not here - that keeps the login linked to the right Client record.',
         ]);
 
+        if (User::where('email', $data['email'])->exists()) {
+            return back()->withInput()->withErrors(['email' => 'This email is already registered to an active account.']);
+        }
+
         $password = Str::password(12);
+
+        // The email column is unique at the database level with no exception for
+        // soft-deleted rows, so a deleted user's email is otherwise stuck forever.
+        // Restoring their old (trashed) row instead of inserting a fresh one is
+        // what "delete then recreate this account" actually means to an admin.
+        $trashed = User::onlyTrashed()->where('email', $data['email'])->first();
+
+        if ($trashed) {
+            $trashed->restore();
+            $trashed->update($data + [
+                'password' => Hash::make($password),
+                'is_active' => true,
+                'must_change_password' => true,
+                'created_by' => $request->user()->id,
+            ]);
+            $trashed->syncRoles([$data['role']]);
+
+            return redirect()->route('admin.users.index')->with('success', "Restored the previously deleted account for this email. Temporary password: {$password}");
+        }
 
         $user = User::create($data + [
             'password' => Hash::make($password),

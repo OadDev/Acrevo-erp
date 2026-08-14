@@ -61,7 +61,15 @@ class ClientController extends Controller
         $password = Str::password(12);
         $hashedPassword = Hash::make($password);
 
-        $user = User::firstOrCreate(
+        // users.email is unique at the database level with no exception for
+        // soft-deleted rows, so firstOrCreate() would throw on a trashed match
+        // (its lookup skips trashed rows, then the insert hits the constraint).
+        $user = User::onlyTrashed()->where('email', $client->email)->first();
+        if ($user) {
+            $user->restore();
+        }
+
+        $user ??= User::firstOrCreate(
             ['email' => $client->email],
             [
                 'name' => $client->name,
@@ -73,7 +81,13 @@ class ClientController extends Controller
             ]
         );
 
-        $user->update(['password' => $hashedPassword]);
+        $user->update([
+            'name' => $client->name,
+            'phone' => $client->phone,
+            'password' => $hashedPassword,
+            'is_active' => true,
+            'must_change_password' => true,
+        ]);
         $user->syncRoles(['Client']);
 
         ClientLogin::firstOrCreate(['client_id' => $client->id], ['user_id' => $user->id]);

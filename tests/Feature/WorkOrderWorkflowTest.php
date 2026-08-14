@@ -124,6 +124,66 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'sneaky@example.com']);
     }
 
+    public function test_creating_a_user_with_a_previously_deleted_email_restores_that_account(): void
+    {
+        $admin = $this->admin();
+        $old = User::create([
+            'name' => 'Old Name', 'email' => 'reused@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $old->syncRoles(['Sales']);
+        $old->delete();
+
+        $response = $this->actingAs($admin)->post('/admin/users', [
+            'name' => 'New Name', 'email' => 'reused@example.com', 'role' => 'HR',
+        ]);
+        $response->assertRedirect(route('admin.users.index'));
+
+        $restored = User::where('email', 'reused@example.com')->firstOrFail();
+        $this->assertSame($old->id, $restored->id);
+        $this->assertSame('New Name', $restored->name);
+        $this->assertTrue($restored->hasRole('HR'));
+        $this->assertFalse($restored->hasRole('Sales'));
+        $this->assertNull($restored->deleted_at);
+    }
+
+    public function test_creating_a_user_with_an_email_already_in_active_use_is_blocked(): void
+    {
+        $admin = $this->admin();
+        User::create([
+            'name' => 'Existing', 'email' => 'taken@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->post('/admin/users', [
+            'name' => 'Duplicate', 'email' => 'taken@example.com', 'role' => 'HR',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertSame(1, User::where('email', 'taken@example.com')->count());
+    }
+
+    public function test_generating_portal_access_with_a_previously_deleted_email_restores_that_account(): void
+    {
+        $admin = $this->admin();
+        $old = User::create([
+            'name' => 'Old Employee', 'email' => 'reused-client@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $old->delete();
+
+        $client = Client::create(['name' => 'C', 'email' => 'reused-client@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+
+        $response = $this->actingAs($admin)->post("/clients/{$client->id}/portal-access");
+        $response->assertRedirect(route('clients.show', $client));
+
+        $login = ClientLogin::where('client_id', $client->id)->first();
+        $this->assertNotNull($login);
+        $this->assertSame($old->id, $login->user_id);
+        $this->assertTrue($login->user->hasRole('Client'));
+        $this->assertNull($login->user->fresh()->deleted_at);
+    }
+
     public function test_sites_index_and_show_list_work_orders_for_that_site(): void
     {
         $admin = $this->admin();
