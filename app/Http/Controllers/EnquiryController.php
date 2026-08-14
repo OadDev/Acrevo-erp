@@ -75,7 +75,23 @@ class EnquiryController extends Controller
 
     public function update(EnquiryRequest $request, Enquiry $enquiry): RedirectResponse
     {
-        $enquiry->update($request->validated());
+        $data = $request->validated();
+        $enquiry->update($data);
+
+        // The Client record is a separate row from the enquiry's own contact_*
+        // fields, so editing "the client's email/address" here never used to
+        // reach it. Fill in whatever the Client is still missing - never
+        // overwrite a value it already has, since the enquiry's contact may
+        // legitimately differ from the client's own registered details.
+        $client = $enquiry->client;
+        $missing = array_filter([
+            'email' => $client->email ? null : ($data['contact_email'] ?? null),
+            'address' => $client->address ? null : ($data['address'] ?? null),
+            'city' => $client->city ? null : ($data['city'] ?? null),
+        ]);
+        if ($missing) {
+            $client->update($missing);
+        }
 
         return redirect()->route('enquiries.show', $enquiry)->with('success', 'Enquiry updated successfully.');
     }
