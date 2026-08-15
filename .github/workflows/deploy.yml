@@ -72,6 +72,22 @@ jobs:
              \$PHP_BIN artisan route:cache && \
              \$PHP_BIN artisan view:cache"
 
+      - name: TEMP - check laravel.log for media/upload errors
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             if [ -f storage/logs/laravel.log ]; then \
+               echo '--- last 400 lines, filtered for media/upload/file-related errors ---' && \
+               tail -n 400 storage/logs/laravel.log | grep -i -E 'media|upload|FileIsTooBig|MediaCollection|filesystem|disk|storage' -A 5 -B 1 || echo 'No matching lines in the last 400.' ; \
+               echo '--- laravel.log file size and last-modified ---' && \
+               ls -la storage/logs/laravel.log ; \
+             else \
+               echo 'No storage/logs/laravel.log file found on server.' ; \
+             fi"
+
       - name: Print install link (only if not yet installed)
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}

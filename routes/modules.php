@@ -34,6 +34,8 @@ use App\Http\Controllers\WorkOrder\LabourEntryController;
 use App\Http\Controllers\WorkOrder\LedgerController;
 use App\Http\Controllers\WorkOrder\MaterialEntryController;
 use App\Http\Controllers\WorkOrder\MeasurementBookController;
+use App\Http\Controllers\WorkOrder\MeasurementBookItemController;
+use App\Http\Controllers\WorkOrder\WorkOrderAttendanceController;
 use App\Http\Controllers\WorkOrder\WorkOrderMediaController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -139,8 +141,10 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('labour', [LabourEntryController::class, 'store'])->name('labour.store');
         Route::get('measurement-books', [MeasurementBookController::class, 'index'])->name('measurement-books.index');
         Route::post('measurement-books', [MeasurementBookController::class, 'store'])->name('measurement-books.store');
+        Route::post('measurement-books/{measurementBook}/items', [MeasurementBookItemController::class, 'store'])->name('measurement-books.items.store');
         Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
         Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+        Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
     });
     Route::middleware('permission:work_orders.edit')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');

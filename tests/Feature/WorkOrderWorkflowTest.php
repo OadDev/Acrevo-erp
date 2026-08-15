@@ -558,4 +558,89 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('4500.00', $workOrder->estimated_labour_budget);
         $this->assertSame('19500.50', $workOrder->budget_amount);
     }
+
+    public function test_a_ledger_entry_can_be_recorded_with_a_bill_attachment(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'debit',
+            'category' => 'Materials',
+            'description' => 'Cement bags',
+            'amount' => '2500.00',
+            'bill' => \Illuminate\Http\UploadedFile::fake()->create('bill.pdf', 200, 'application/pdf'),
+        ])->assertRedirect();
+
+        $ledger = $workOrder->fresh()->ledgers()->firstOrFail();
+        $this->assertEquals(2500.00, $ledger->amount);
+        $this->assertNotNull($ledger->getFirstMedia('bill'));
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()->assertSee('Bill');
+    }
+
+    public function test_a_measurement_book_item_can_be_added_and_computes_its_amount(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $mb = $workOrder->measurementBooks()->create([
+            'description' => 'Ground floor slab', 'date' => now()->toDateString(), 'recorded_by' => $admin->id, 'status' => 'draft',
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items", [
+            'item_description' => 'RCC slab casting',
+            'unit' => 'Sqft',
+            'length' => '10',
+            'breadth' => '5',
+            'quantity' => '50',
+            'rate' => '120',
+        ])->assertRedirect();
+
+        $item = $mb->fresh()->items()->firstOrFail();
+        $this->assertEquals(10, $item->length);
+        $this->assertEquals(50, $item->quantity);
+        $this->assertEquals(6000, $item->amount);
+    }
+
+    public function test_worker_attendance_can_be_recorded_for_a_work_order_and_computes_hours(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker One', 'status' => 'active']);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/attendance", [
+            'employee_id' => $employee->id,
+            'date' => now()->toDateString(),
+            'status' => 'present',
+            'check_in' => '09:00',
+            'check_out' => '17:30',
+            'salary' => '800',
+            'advance' => '200',
+        ])->assertRedirect();
+
+        $attendance = \App\Models\Attendance::where('employee_id', $employee->id)->firstOrFail();
+        $this->assertSame($workOrder->id, $attendance->work_order_id);
+        $this->assertEquals(8.5, $attendance->hours_worked);
+        $this->assertSame('800.00', $attendance->salary);
+        $this->assertSame('200.00', $attendance->advance);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()->assertSee('Worker One');
+    }
 }

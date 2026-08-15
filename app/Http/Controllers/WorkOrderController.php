@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\WorkOrderRequest;
+use App\Models\Employee;
 use App\Models\ExecutiveTeam;
 use App\Models\Quotation;
 use App\Models\Site;
@@ -142,15 +143,17 @@ class WorkOrderController extends Controller
             'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
             'dailyChecklists.executiveTeam',
             'dailyProgressReports' => fn ($q) => $q->latest(),
-            'materialEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers',
+            'materialEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
+            'attendances.employee', 'attendances.markedBy',
             'children', 'parent', 'clientReviews',
             'media',
             'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media',
         ]);
 
         $availableTeams = ExecutiveTeam::where('is_active', true)->get();
+        $activeEmployees = Employee::where('status', 'active')->orderBy('name')->get();
 
-        return view('work-orders.show', compact('workOrder', 'availableTeams'));
+        return view('work-orders.show', compact('workOrder', 'availableTeams', 'activeEmployees'));
     }
 
     public function cancel(Request $request, WorkOrder $workOrder): RedirectResponse
