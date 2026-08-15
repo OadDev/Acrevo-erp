@@ -533,4 +533,29 @@ class WorkOrderWorkflowTest extends TestCase
         $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
         $response->assertOk()->assertSee('site-plan.pdf');
     }
+
+    public function test_work_order_creation_computes_budget_from_material_and_labour_estimates(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with split budget',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'estimated_material_budget' => '15000.50',
+            'estimated_labour_budget' => '4500',
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with split budget')->firstOrFail();
+        $this->assertSame('15000.50', $workOrder->estimated_material_budget);
+        $this->assertSame('4500.00', $workOrder->estimated_labour_budget);
+        $this->assertSame('19500.50', $workOrder->budget_amount);
+    }
 }

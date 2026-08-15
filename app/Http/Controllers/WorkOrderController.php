@@ -93,6 +93,9 @@ class WorkOrderController extends Controller
             'site_contact_phone' => $data['site_contact_phone'] ?? null,
         ]);
 
+        $materialBudget = $data['estimated_material_budget'] ?? 0;
+        $labourBudget = $data['estimated_labour_budget'] ?? 0;
+
         $workOrder = WorkOrder::create([
             'quotation_id' => $data['quotation_id'],
             'site_id' => $data['site_id'],
@@ -103,7 +106,9 @@ class WorkOrderController extends Controller
             'priority' => $data['priority'],
             'start_date' => $data['start_date'] ?? null,
             'deadline' => $data['deadline'] ?? null,
-            'budget_amount' => $data['budget_amount'] ?? null,
+            'estimated_material_budget' => $data['estimated_material_budget'] ?? null,
+            'estimated_labour_budget' => $data['estimated_labour_budget'] ?? null,
+            'budget_amount' => $materialBudget + $labourBudget ?: null,
             'enquiry_id' => $quotation?->enquiry_id,
             'type' => 'new',
             'status' => 'pending_hr_assignment',

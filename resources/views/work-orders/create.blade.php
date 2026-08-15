@@ -4,7 +4,12 @@
     </x-slot>
 
     <x-card class="max-w-2xl">
-        <form method="POST" action="{{ route('work-orders.store') }}" x-data="{ executionWay: '{{ old('execution_way') }}' }">
+        <form method="POST" action="{{ route('work-orders.store') }}" x-data="{
+            executionWay: '{{ old('execution_way') }}',
+            materialBudget: {{ old('estimated_material_budget', 0) ?: 0 }},
+            labourBudget: {{ old('estimated_labour_budget', 0) ?: 0 }},
+            get totalBudget() { return (parseFloat(this.materialBudget) || 0) + (parseFloat(this.labourBudget) || 0); }
+        }">
             @csrf
             <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
             <input type="hidden" name="client_id" value="{{ $quotation->client_id }}">
@@ -93,13 +98,27 @@
                 </div>
 
                 <div>
-                    <x-input-label for="budget_amount" value="Budget Amount" />
-                    <x-text-input id="budget_amount" type="number" step="0.01" name="budget_amount" class="mt-1 block w-full" value="{{ old('budget_amount', $quotation?->total_amount) }}" />
-                </div>
-
-                <div>
                     <x-input-label for="start_date" value="Start Date" />
                     <x-text-input id="start_date" type="date" name="start_date" class="mt-1 block w-full" />
+                </div>
+
+                <div class="sm:col-span-2">
+                    <x-input-label value="Budget" />
+                    <div class="mt-1 grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 dark:border-gray-800 sm:grid-cols-3">
+                        <div>
+                            <x-input-label for="estimated_material_budget" value="Using Material Specifications" class="text-xs text-gray-500" />
+                            <x-text-input id="estimated_material_budget" type="number" step="0.01" name="estimated_material_budget" x-model="materialBudget" class="mt-1 block w-full" />
+                        </div>
+                        <div>
+                            <x-input-label for="estimated_labour_budget" value="Man Power Schedule Book" class="text-xs text-gray-500" />
+                            <x-text-input id="estimated_labour_budget" type="number" step="0.01" name="estimated_labour_budget" x-model="labourBudget" class="mt-1 block w-full" />
+                        </div>
+                        <div>
+                            <x-input-label value="Total Budget" class="text-xs text-gray-500" />
+                            <p class="mt-1 flex h-[calc(2.375rem+2px)] items-center text-lg font-semibold text-gray-900 dark:text-white" x-text="'₹' + totalBudget.toFixed(2)"></p>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">You can add itemised material and labour entries later from the work order's Budget tab.</p>
                 </div>
 
                 <div>

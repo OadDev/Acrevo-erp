@@ -58,7 +58,7 @@ class WorkOrder extends Model implements HasMedia
     protected $fillable = [
         'work_order_no', 'quotation_id', 'site_id', 'enquiry_id', 'client_id', 'parent_work_order_id',
         'type', 'title', 'scope', 'execution_way', 'priority', 'start_date', 'deadline',
-        'budget_amount', 'status', 'created_by',
+        'budget_amount', 'estimated_material_budget', 'estimated_labour_budget', 'status', 'created_by',
     ];
 
     protected function casts(): array
@@ -67,6 +67,8 @@ class WorkOrder extends Model implements HasMedia
             'start_date' => 'date',
             'deadline' => 'date',
             'budget_amount' => 'decimal:2',
+            'estimated_material_budget' => 'decimal:2',
+            'estimated_labour_budget' => 'decimal:2',
         ];
     }
 
