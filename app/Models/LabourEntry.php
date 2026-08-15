@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LabourEntry extends Model
 {
-    protected $fillable = ['work_order_id', 'employee_id', 'labour_type', 'count', 'wage_rate', 'hours', 'amount', 'entry_date', 'added_by'];
+    protected $fillable = ['work_order_id', 'employee_id', 'labour_type', 'count', 'wage_rate', 'hours', 'total_time_to_finish', 'remark', 'amount', 'entry_date', 'added_by'];
 
     protected function casts(): array
     {

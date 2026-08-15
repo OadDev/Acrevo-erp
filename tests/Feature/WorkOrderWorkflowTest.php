@@ -684,4 +684,46 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('1800.00', $workOrder->estimated_labour_budget);
         $this->assertSame('5800.00', $workOrder->budget_amount);
     }
+
+    public function test_work_order_creation_accepts_time_schedule_and_work_procedure_rows(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with schedule',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'labour' => [
+                ['labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900', 'total_time_to_finish' => '3 days', 'remark' => 'Ground floor'],
+            ],
+            'procedures' => [
+                ['item_description' => 'Foundation excavation', 'length' => '20', 'breadth' => '10', 'height' => '3', 'quantity' => '600', 'unit' => 'cft'],
+                ['item_description' => ''],
+            ],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with schedule')->firstOrFail();
+
+        $labour = $workOrder->labourEntries()->firstOrFail();
+        $this->assertSame('3 days', $labour->total_time_to_finish);
+        $this->assertSame('Ground floor', $labour->remark);
+
+        $this->assertSame(1, $workOrder->measurementBooks()->count());
+        $scheduleBook = $workOrder->measurementBooks()->firstOrFail();
+        $this->assertSame('Work Schedule (M.Book)', $scheduleBook->description);
+        $this->assertSame(1, $scheduleBook->items()->count());
+
+        $item = $scheduleBook->items()->firstOrFail();
+        $this->assertSame('Foundation excavation', $item->item_description);
+        $this->assertEquals(20, $item->length);
+        $this->assertEquals(600, $item->quantity);
+        $this->assertSame('cft', $item->unit);
+    }
 }

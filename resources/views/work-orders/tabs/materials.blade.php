@@ -71,6 +71,8 @@
                         <th class="px-4 py-2">Designation</th>
                         <th class="px-4 py-2">Nos</th>
                         <th class="px-4 py-2">Target Hrs</th>
+                        <th class="px-4 py-2">Total Time to Finish</th>
+                        <th class="px-4 py-2">Remark</th>
                         <th class="px-4 py-2 text-right">Amount</th>
                     </tr>
                 </thead>
@@ -80,10 +82,12 @@
                             <td class="px-4 py-2">{{ $entry->labour_type }}</td>
                             <td class="px-4 py-2 text-gray-500">{{ $entry->count }} × ₹{{ $entry->wage_rate }}</td>
                             <td class="px-4 py-2 text-gray-500">{{ $entry->hours ?? '—' }}</td>
+                            <td class="px-4 py-2 text-gray-500">{{ $entry->total_time_to_finish ?? '—' }}</td>
+                            <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
                             <td class="px-4 py-2 text-right font-medium">₹{{ number_format($entry->amount, 2) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">No labour entries yet.</td></tr>
+                        <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No labour entries yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -146,10 +146,37 @@ class WorkOrderController extends Controller
                 'count' => $row['count'],
                 'hours' => $row['hours'] ?? null,
                 'wage_rate' => $row['wage_rate'],
+                'total_time_to_finish' => $row['total_time_to_finish'] ?? null,
+                'remark' => $row['remark'] ?? null,
                 'amount' => $row['count'] * $row['wage_rate'],
                 'entry_date' => now()->toDateString(),
                 'added_by' => $request->user()->id,
             ]);
+        }
+
+        $procedureRows = collect($data['procedures'] ?? [])
+            ->filter(fn ($row) => filled($row['item_description'] ?? null));
+
+        if ($procedureRows->isNotEmpty()) {
+            $scheduleBook = $workOrder->measurementBooks()->create([
+                'description' => 'Work Schedule (M.Book)',
+                'date' => $data['start_date'] ?? now()->toDateString(),
+                'recorded_by' => $request->user()->id,
+                'status' => 'draft',
+            ]);
+
+            foreach ($procedureRows as $row) {
+                $scheduleBook->items()->create([
+                    'item_description' => $row['item_description'],
+                    'unit' => $row['unit'] ?: 'Sqft',
+                    'length' => $row['length'] ?? null,
+                    'breadth' => $row['breadth'] ?? null,
+                    'height' => $row['height'] ?? null,
+                    'quantity' => $row['quantity'] ?? 0,
+                    'rate' => 0,
+                    'amount' => 0,
+                ]);
+            }
         }
 
         if ($team) {
