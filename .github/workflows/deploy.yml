@@ -72,26 +72,6 @@ jobs:
              \$PHP_BIN artisan route:cache && \
              \$PHP_BIN artisan view:cache"
 
-      - name: TEMP - check laravel.log for media/upload errors
-        env:
-          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
-        run: |
-          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
-            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
-            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
-             if [ -f storage/logs/laravel.log ]; then \
-               echo '--- full exception header + first stack lines for each FileAdder occurrence ---' && \
-               grep -n 'FileAdder->attachMedia' storage/logs/laravel.log | cut -d: -f1 | while read -r ln; do \
-                 start=\$((ln > 25 ? ln - 25 : 1)); \
-                 echo \"=== context ending at line \$ln ===\"; \
-                 sed -n \"\${start},\${ln}p\" storage/logs/laravel.log | grep -E '^\[|Exception|Error:' ; \
-               done ; \
-               echo '--- laravel.log file size and last-modified ---' && \
-               ls -la storage/logs/laravel.log ; \
-             else \
-               echo 'No storage/logs/laravel.log file found on server.' ; \
-             fi"
-
       - name: Print install link (only if not yet installed)
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
