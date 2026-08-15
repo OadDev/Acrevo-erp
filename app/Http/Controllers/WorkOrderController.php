@@ -94,8 +94,17 @@ class WorkOrderController extends Controller
             'site_contact_phone' => $data['site_contact_phone'] ?? null,
         ]);
 
-        $materialBudget = $data['estimated_material_budget'] ?? 0;
-        $labourBudget = $data['estimated_labour_budget'] ?? 0;
+        $materialRows = collect($data['materials'] ?? [])
+            ->filter(fn ($row) => filled($row['material_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
+        $labourRows = collect($data['labour'] ?? [])
+            ->filter(fn ($row) => filled($row['labour_type'] ?? null) && filled($row['count'] ?? null) && isset($row['wage_rate']));
+
+        $materialBudget = $materialRows->isNotEmpty()
+            ? $materialRows->sum(fn ($row) => $row['quantity'] * $row['rate'])
+            : ($data['estimated_material_budget'] ?? 0);
+        $labourBudget = $labourRows->isNotEmpty()
+            ? $labourRows->sum(fn ($row) => $row['count'] * $row['wage_rate'])
+            : ($data['estimated_labour_budget'] ?? 0);
 
         $workOrder = WorkOrder::create([
             'quotation_id' => $data['quotation_id'],
@@ -107,14 +116,41 @@ class WorkOrderController extends Controller
             'priority' => $data['priority'],
             'start_date' => $data['start_date'] ?? null,
             'deadline' => $data['deadline'] ?? null,
-            'estimated_material_budget' => $data['estimated_material_budget'] ?? null,
-            'estimated_labour_budget' => $data['estimated_labour_budget'] ?? null,
+            'estimated_material_budget' => $materialBudget ?: null,
+            'estimated_labour_budget' => $labourBudget ?: null,
             'budget_amount' => $materialBudget + $labourBudget ?: null,
             'enquiry_id' => $quotation?->enquiry_id,
             'type' => 'new',
             'status' => 'pending_hr_assignment',
             'created_by' => $request->user()->id,
         ]);
+
+        foreach ($materialRows as $row) {
+            $workOrder->materialEntries()->create([
+                'material_name' => $row['material_name'],
+                'brand' => $row['brand'] ?? null,
+                'size' => $row['size'] ?? null,
+                'unit' => $row['unit'] ?: 'Nos',
+                'quantity' => $row['quantity'],
+                'rate' => $row['rate'],
+                'amount' => $row['quantity'] * $row['rate'],
+                'vendor' => $row['vendor'] ?? null,
+                'entry_date' => now()->toDateString(),
+                'added_by' => $request->user()->id,
+            ]);
+        }
+
+        foreach ($labourRows as $row) {
+            $workOrder->labourEntries()->create([
+                'labour_type' => $row['labour_type'],
+                'count' => $row['count'],
+                'hours' => $row['hours'] ?? null,
+                'wage_rate' => $row['wage_rate'],
+                'amount' => $row['count'] * $row['wage_rate'],
+                'entry_date' => now()->toDateString(),
+                'added_by' => $request->user()->id,
+            ]);
+        }
 
         if ($team) {
             WorkOrderExecutiveTeam::create([

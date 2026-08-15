@@ -3,12 +3,18 @@
         <x-page-header title="Generate Work Order" :subtitle="$quotation?->quotation_no" />
     </x-slot>
 
-    <x-card class="max-w-2xl">
+    <x-card class="max-w-5xl">
         <form method="POST" action="{{ route('work-orders.store') }}" x-data="{
             executionWay: '{{ old('execution_way') }}',
-            materialBudget: {{ old('estimated_material_budget', 0) ?: 0 }},
-            labourBudget: {{ old('estimated_labour_budget', 0) ?: 0 }},
-            get totalBudget() { return (parseFloat(this.materialBudget) || 0) + (parseFloat(this.labourBudget) || 0); }
+            materials: [{ material_name:'', brand:'', size:'', unit:'Nos', quantity:'', rate:'', vendor:'' }],
+            labour: [{ labour_type:'', count:1, hours:'', wage_rate:'' }],
+            addMaterial() { this.materials.push({ material_name:'', brand:'', size:'', unit:'Nos', quantity:'', rate:'', vendor:'' }); },
+            removeMaterial(i) { this.materials.splice(i, 1); },
+            addLabour() { this.labour.push({ labour_type:'', count:1, hours:'', wage_rate:'' }); },
+            removeLabour(i) { this.labour.splice(i, 1); },
+            get materialTotal() { return this.materials.reduce((sum, m) => sum + ((parseFloat(m.quantity) || 0) * (parseFloat(m.rate) || 0)), 0); },
+            get labourTotal() { return this.labour.reduce((sum, l) => sum + ((parseFloat(l.count) || 0) * (parseFloat(l.wage_rate) || 0)), 0); },
+            get totalBudget() { return this.materialTotal + this.labourTotal; }
         }">
             @csrf
             <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
@@ -102,29 +108,99 @@
                     <x-text-input id="start_date" type="date" name="start_date" class="mt-1 block w-full" />
                 </div>
 
-                <div class="sm:col-span-2">
-                    <x-input-label value="Budget" />
-                    <div class="mt-1 grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 dark:border-gray-800 sm:grid-cols-3">
-                        <div>
-                            <x-input-label for="estimated_material_budget" value="Using Material Specifications" class="text-xs text-gray-500" />
-                            <x-text-input id="estimated_material_budget" type="number" step="0.01" name="estimated_material_budget" x-model="materialBudget" class="mt-1 block w-full" />
-                        </div>
-                        <div>
-                            <x-input-label for="estimated_labour_budget" value="Man Power Schedule Book" class="text-xs text-gray-500" />
-                            <x-text-input id="estimated_labour_budget" type="number" step="0.01" name="estimated_labour_budget" x-model="labourBudget" class="mt-1 block w-full" />
-                        </div>
-                        <div>
-                            <x-input-label value="Total Budget" class="text-xs text-gray-500" />
-                            <p class="mt-1 flex h-[calc(2.375rem+2px)] items-center text-lg font-semibold text-gray-900 dark:text-white" x-text="'₹' + totalBudget.toFixed(2)"></p>
-                        </div>
-                    </div>
-                    <p class="mt-1 text-xs text-gray-400">You can add itemised material and labour entries later from the work order's Budget tab.</p>
-                </div>
-
                 <div>
                     <x-input-label for="deadline" value="Deadline" />
                     <x-text-input id="deadline" type="date" name="deadline" class="mt-1 block w-full" />
                 </div>
+            </div>
+
+            <div class="mt-8 rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+                <h3 class="text-sm font-semibold text-gray-500">Total Budget</h3>
+                <p class="text-2xl font-semibold text-gray-900 dark:text-white" x-text="'₹' + totalBudget.toFixed(2)"></p>
+                <dl class="mt-2 flex gap-6 text-sm">
+                    <div><dt class="text-gray-400">Material Specifications</dt><dd class="font-medium text-gray-800 dark:text-gray-200" x-text="'₹' + materialTotal.toFixed(2)"></dd></div>
+                    <div><dt class="text-gray-400">Man Power Schedule</dt><dd class="font-medium text-gray-800 dark:text-gray-200" x-text="'₹' + labourTotal.toFixed(2)"></dd></div>
+                </dl>
+            </div>
+
+            <div class="mt-6">
+                <h3 class="mb-2 text-sm font-semibold text-gray-500">Using Material Specifications</h3>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+                    <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                        <thead class="bg-gray-50 dark:bg-gray-800/50">
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                <th class="px-3 py-2">Material</th>
+                                <th class="px-3 py-2">Brand</th>
+                                <th class="px-3 py-2">Size</th>
+                                <th class="px-3 py-2 w-20">Unit</th>
+                                <th class="px-3 py-2 w-24">Qty</th>
+                                <th class="px-3 py-2 w-28">Cost/Unit</th>
+                                <th class="px-3 py-2">Vendor</th>
+                                <th class="px-3 py-2 w-28 text-right">Amount</th>
+                                <th class="px-2 py-2 w-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(m, index) in materials" :key="index">
+                                <tr class="border-t border-gray-100 dark:border-gray-800">
+                                    <td class="px-3 py-2"><input type="text" :name="'materials['+index+'][material_name]'" x-model="m.material_name" placeholder="Material name" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="text" :name="'materials['+index+'][brand]'" x-model="m.brand" placeholder="Optional" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="text" :name="'materials['+index+'][size]'" x-model="m.size" placeholder="Optional" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="text" :name="'materials['+index+'][unit]'" x-model="m.unit" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="number" step="0.01" min="0" :name="'materials['+index+'][quantity]'" x-model.number="m.quantity" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="number" step="0.01" min="0" :name="'materials['+index+'][rate]'" x-model.number="m.rate" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="text" :name="'materials['+index+'][vendor]'" x-model="m.vendor" placeholder="Optional" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300" x-text="'₹' + (((parseFloat(m.quantity) || 0) * (parseFloat(m.rate) || 0)).toFixed(2))"></td>
+                                    <td class="px-2 py-2 text-center">
+                                        <button type="button" @click="removeMaterial(index)" class="text-gray-400 hover:text-rose-500">
+                                            <x-icon name="trash" class="h-4 w-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" @click="addMaterial" class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                    <x-icon name="plus" class="h-4 w-4" /> Add Material
+                </button>
+            </div>
+
+            <div class="mt-6">
+                <h3 class="mb-2 text-sm font-semibold text-gray-500">Man Power Schedule Book</h3>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+                    <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                        <thead class="bg-gray-50 dark:bg-gray-800/50">
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                <th class="px-3 py-2">Designation</th>
+                                <th class="px-3 py-2 w-20">Nos</th>
+                                <th class="px-3 py-2 w-28">Target Hrs</th>
+                                <th class="px-3 py-2 w-28">Salary</th>
+                                <th class="px-3 py-2 w-28 text-right">Amount</th>
+                                <th class="px-2 py-2 w-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(l, index) in labour" :key="index">
+                                <tr class="border-t border-gray-100 dark:border-gray-800">
+                                    <td class="px-3 py-2"><input type="text" :name="'labour['+index+'][labour_type]'" x-model="l.labour_type" placeholder="Worker designation" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="number" min="1" :name="'labour['+index+'][count]'" x-model.number="l.count" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="number" step="0.5" min="0" :name="'labour['+index+'][hours]'" x-model.number="l.hours" placeholder="Optional" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2"><input type="number" step="0.01" min="0" :name="'labour['+index+'][wage_rate]'" x-model.number="l.wage_rate" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
+                                    <td class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300" x-text="'₹' + (((parseFloat(l.count) || 0) * (parseFloat(l.wage_rate) || 0)).toFixed(2))"></td>
+                                    <td class="px-2 py-2 text-center">
+                                        <button type="button" @click="removeLabour(index)" class="text-gray-400 hover:text-rose-500">
+                                            <x-icon name="trash" class="h-4 w-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" @click="addLabour" class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                    <x-icon name="plus" class="h-4 w-4" /> Add Man Power
+                </button>
             </div>
 
             <div class="mt-6 flex justify-end gap-2">

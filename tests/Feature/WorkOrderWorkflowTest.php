@@ -643,4 +643,45 @@ class WorkOrderWorkflowTest extends TestCase
         $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
         $response->assertOk()->assertSee('Worker One');
     }
+
+    public function test_work_order_creation_accepts_itemized_material_and_labour_rows(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with itemized budget',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'materials' => [
+                ['material_name' => 'Cement', 'brand' => 'ACC', 'unit' => 'Bags', 'quantity' => '10', 'rate' => '400'],
+                ['material_name' => '', 'quantity' => '', 'rate' => ''],
+            ],
+            'labour' => [
+                ['labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900'],
+            ],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with itemized budget')->firstOrFail();
+        $this->assertSame(1, $workOrder->materialEntries()->count());
+        $this->assertSame(1, $workOrder->labourEntries()->count());
+
+        $material = $workOrder->materialEntries()->firstOrFail();
+        $this->assertSame('Cement', $material->material_name);
+        $this->assertEquals(4000, $material->amount);
+
+        $labour = $workOrder->labourEntries()->firstOrFail();
+        $this->assertSame('Mason', $labour->labour_type);
+        $this->assertEquals(1800, $labour->amount);
+
+        $this->assertSame('4000.00', $workOrder->estimated_material_budget);
+        $this->assertSame('1800.00', $workOrder->estimated_labour_budget);
+        $this->assertSame('5800.00', $workOrder->budget_amount);
+    }
 }
