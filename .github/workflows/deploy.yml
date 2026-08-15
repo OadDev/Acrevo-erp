@@ -80,8 +80,12 @@ jobs:
             "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
             "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
              if [ -f storage/logs/laravel.log ]; then \
-               echo '--- last 400 lines, filtered for media/upload/file-related errors ---' && \
-               tail -n 400 storage/logs/laravel.log | grep -i -E 'media|upload|FileIsTooBig|MediaCollection|filesystem|disk|storage' -A 5 -B 1 || echo 'No matching lines in the last 400.' ; \
+               echo '--- last 5 ERROR entries with full stack (timestamp + message) ---' && \
+               grep -n '^\[' storage/logs/laravel.log | grep -i 'ERROR' | tail -n 5 ; \
+               echo '--- full text around the most recent \"Attempt to read property\" error ---' && \
+               grep -n -B 5 -A 15 'Attempt to read property' storage/logs/laravel.log | tail -n 100 ; \
+               echo '--- explicit media/upload keyword search (whole file) ---' && \
+               grep -n -i -E 'MediaCollections|addMediaFromRequest|FileIsTooBig|Spatie.MediaLibrary' storage/logs/laravel.log | tail -n 20 || echo 'No media-library-specific errors found in the whole file.' ; \
                echo '--- laravel.log file size and last-modified ---' && \
                ls -la storage/logs/laravel.log ; \
              else \
