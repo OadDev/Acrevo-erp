@@ -29,7 +29,7 @@
                 'site' => 'Site',
                 'overview' => 'Overview',
                 'team' => 'Team',
-                'checklist' => 'Daily Checklist',
+                'checklist' => 'Daily Work with Checklist',
                 'progress' => 'Progress & Media',
                 'materials' => 'Materials & Labour',
                 'mb' => 'Measurement Book & Ledger',

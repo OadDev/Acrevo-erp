@@ -134,6 +134,8 @@ class WorkOrderController extends Controller
             'client', 'quotation', 'site', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
             'tickets', 'qcInspections.inspectedBy',
             'dailyChecklists' => fn ($q) => $q->latest(),
+            'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
+            'dailyChecklists.executiveTeam',
             'dailyProgressReports' => fn ($q) => $q->latest(),
             'materialEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers',
             'children', 'parent', 'clientReviews',

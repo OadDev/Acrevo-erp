@@ -4,18 +4,42 @@
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Media Gallery</h3>
             <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 @forelse ($workOrder->media as $item)
-                    <div class="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <a href="{{ $item->getUrl() }}" target="_blank" class="group relative block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
                         @if (str_starts_with($item->mime_type, 'image'))
                             <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
-                        @else
+                        @elseif (str_starts_with($item->mime_type, 'video'))
                             <div class="flex h-full w-full items-center justify-center">
                                 <x-icon name="video" class="h-6 w-6 text-gray-400" />
                             </div>
+                        @else
+                            <div class="flex h-full w-full items-center justify-center">
+                                <x-icon name="file-text" class="h-6 w-6 text-gray-400" />
+                            </div>
                         @endif
                         <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{{ Str::title(str_replace('_',' ',$item->collection_name)) }}</span>
-                    </div>
+                    </a>
                 @empty
                     <p class="col-span-full text-sm text-gray-400">No media uploaded yet.</p>
+                @endforelse
+            </div>
+        </x-card>
+
+        <x-card :padded="false">
+            <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Details Upload — Every File Stored on This Work Order</h3>
+            <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                @forelse ($workOrder->media as $item)
+                    <a href="{{ $item->getUrl() }}" target="_blank" class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                        <div class="flex items-center gap-2 truncate">
+                            <x-icon name="file-text" class="h-4 w-4 shrink-0 text-gray-400" />
+                            <span class="truncate text-gray-700 dark:text-gray-300">{{ $item->file_name }}</span>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-3 text-xs text-gray-400">
+                            <span>{{ Str::title(str_replace('_', ' ', $item->collection_name)) }}</span>
+                            <span>{{ $item->created_at->format('d M Y') }}</span>
+                        </div>
+                    </a>
+                @empty
+                    <p class="px-4 py-6 text-center text-sm text-gray-400">No files uploaded yet.</p>
                 @endforelse
             </div>
         </x-card>

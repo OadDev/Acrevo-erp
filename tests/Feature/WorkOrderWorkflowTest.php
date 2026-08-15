@@ -441,4 +441,96 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertNotNull($media, 'Media should be attached with the work order\'s full UUID as model_id.');
         $this->assertCount(1, $workOrder->fresh()->getMedia('before_images'));
     }
+
+    public function test_daily_work_entries_can_be_added_multiple_times_a_day_with_tickable_items(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'team_assigned', 'created_by' => $admin->id,
+        ]);
+        $leader = User::create([
+            'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id,
+            'title' => 'Plastering - Ground floor',
+            'items' => "Mix cement\nApply first coat",
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id,
+            'title' => 'Painting - First floor',
+            'items' => "Prime the wall",
+        ])->assertRedirect();
+
+        $this->assertSame(2, $workOrder->fresh()->dailyChecklists()->count());
+        $this->assertSame('in_progress', $workOrder->fresh()->status);
+
+        $plastering = \App\Models\DailyChecklist::where('title', 'Plastering - Ground floor')->firstOrFail();
+        $this->assertCount(2, $plastering->checklistItems);
+        $this->assertTrue($plastering->checklistItems->every(fn ($item) => ! $item->is_done));
+    }
+
+    public function test_marking_a_checklist_item_done_requires_a_proof_upload(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $leader = User::create([
+            'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        $checklist = $workOrder->dailyChecklists()->create(['executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Task', 'created_by' => $admin->id]);
+        $item = $checklist->checklistItems()->create(['description' => 'Do the thing', 'sort_order' => 0]);
+
+        // No file - must fail validation and leave the item undone.
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done")
+            ->assertSessionHasErrors('proof');
+        $this->assertFalse($item->fresh()->is_done);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('proof.jpg');
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [
+            'proof' => $file,
+        ])->assertRedirect();
+
+        $item->refresh();
+        $this->assertTrue($item->is_done);
+        $this->assertSame($admin->id, $item->done_by);
+        $this->assertNotNull($item->getFirstMedia('proof'));
+
+        // Already-done items can't be marked done again.
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [
+            'proof' => \Illuminate\Http\UploadedFile::fake()->image('again.jpg'),
+        ])->assertStatus(422);
+    }
+
+    public function test_details_upload_section_lists_uploaded_files_by_name(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'documents',
+            'file' => \Illuminate\Http\UploadedFile::fake()->create('site-plan.pdf', 200, 'application/pdf'),
+        ])->assertRedirect();
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()->assertSee('site-plan.pdf');
+    }
 }

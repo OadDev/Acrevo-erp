@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MaterialEntry extends Model
 {
-    protected $fillable = ['work_order_id', 'material_name', 'unit', 'quantity', 'rate', 'amount', 'vendor', 'entry_date', 'added_by'];
+    protected $fillable = ['work_order_id', 'material_name', 'brand', 'size', 'unit', 'quantity', 'rate', 'amount', 'vendor', 'entry_date', 'added_by'];
 
     protected function casts(): array
     {

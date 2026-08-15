@@ -19,6 +19,7 @@ class LabourEntryController extends Controller
         $data = $request->validate([
             'labour_type' => ['required', 'string', 'max:150'],
             'count' => ['required', 'integer', 'min:1'],
+            'hours' => ['nullable', 'numeric', 'min:0'],
             'wage_rate' => ['required', 'numeric', 'min:0'],
         ]);
 

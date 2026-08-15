@@ -28,6 +28,7 @@ use App\Http\Controllers\SiteVisitController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
 use App\Http\Controllers\WorkOrder\DailyChecklistController;
+use App\Http\Controllers\WorkOrder\DailyChecklistItemController;
 use App\Http\Controllers\WorkOrder\DailyProgressController;
 use App\Http\Controllers\WorkOrder\LabourEntryController;
 use App\Http\Controllers\WorkOrder\LedgerController;
@@ -121,6 +122,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:daily_checklist.manage')->group(function () {
         Route::get('checklists', [DailyChecklistController::class, 'index'])->name('checklists.index');
         Route::post('checklists', [DailyChecklistController::class, 'store'])->name('checklists.store');
+        Route::post('checklist-items/{item}/done', [DailyChecklistItemController::class, 'markDone'])->name('checklist-items.done');
     });
     Route::middleware('permission:daily_progress.manage')->group(function () {
         Route::get('progress', [DailyProgressController::class, 'index'])->name('progress.index');

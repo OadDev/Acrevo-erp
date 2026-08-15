@@ -18,24 +18,31 @@ class DailyChecklistController extends Controller
     {
         $data = $request->validate([
             'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'title' => ['required', 'string', 'max:255'],
             'items' => ['required', 'string'],
         ]);
 
         $items = collect(explode("\n", $data['items']))
             ->map(fn ($line) => trim($line))
             ->filter()
-            ->values()
-            ->all();
+            ->values();
 
-        $workOrder->dailyChecklists()->updateOrCreate(
-            ['executive_team_id' => $data['executive_team_id'], 'date' => now()->toDateString()],
-            ['items' => $items, 'created_by' => $request->user()->id]
-        );
+        $checklist = $workOrder->dailyChecklists()->create([
+            'executive_team_id' => $data['executive_team_id'],
+            'date' => now()->toDateString(),
+            'title' => $data['title'],
+            'created_by' => $request->user()->id,
+        ]);
+
+        $items->each(fn ($description, $index) => $checklist->checklistItems()->create([
+            'description' => $description,
+            'sort_order' => $index,
+        ]));
 
         if ($workOrder->status === 'team_assigned') {
-            $workOrder->transitionTo('in_progress', 'First daily checklist submitted.');
+            $workOrder->transitionTo('in_progress', 'First daily work entry submitted.');
         }
 
-        return back()->with('success', 'Checklist saved.');
+        return back()->with('success', 'Daily work entry saved.');
     }
 }

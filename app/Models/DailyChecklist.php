@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DailyChecklist extends Model
 {
-    protected $fillable = ['work_order_id', 'executive_team_id', 'date', 'items', 'created_by'];
+    protected $fillable = ['work_order_id', 'executive_team_id', 'date', 'title', 'items', 'created_by'];
 
     protected function casts(): array
     {
@@ -27,5 +28,10 @@ class DailyChecklist extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(DailyChecklistItem::class)->orderBy('sort_order');
     }
 }

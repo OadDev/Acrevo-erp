@@ -18,6 +18,8 @@ class MaterialEntryController extends Controller
     {
         $data = $request->validate([
             'material_name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:150'],
+            'size' => ['nullable', 'string', 'max:100'],
             'unit' => ['required', 'string', 'max:30'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'rate' => ['required', 'numeric', 'min:0'],
