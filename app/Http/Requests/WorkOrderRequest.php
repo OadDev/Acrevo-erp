@@ -39,8 +39,6 @@ class WorkOrderRequest extends FormRequest
             'labour.*.count' => ['nullable', 'integer', 'min:1'],
             'labour.*.hours' => ['nullable', 'numeric', 'min:0'],
             'labour.*.wage_rate' => ['nullable', 'numeric', 'min:0'],
-            'labour.*.total_time_to_finish' => ['nullable', 'string', 'max:100'],
-            'labour.*.remark' => ['nullable', 'string', 'max:255'],
             'procedures' => ['nullable', 'array'],
             'procedures.*.item_description' => ['nullable', 'string', 'max:255'],
             'procedures.*.length' => ['nullable', 'numeric', 'min:0'],

@@ -1,10 +1,29 @@
 @php
+    $materialAllocated = (float) ($workOrder->estimated_material_budget ?? 0);
     $materialTotal = $workOrder->materialEntries->sum('amount');
+    $materialRemaining = $materialAllocated - $materialTotal;
 @endphp
 
 <x-card class="mb-6">
-    <h3 class="text-sm font-semibold text-gray-500">Material Inward Total</h3>
-    <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($materialTotal, 2) }}</p>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+            <h3 class="text-sm font-semibold text-gray-500">Allocated Material Budget</h3>
+            <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($materialAllocated, 2) }}</p>
+            <p class="text-xs text-gray-400">Set on the work order's create page.</p>
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-gray-500">Material Inward Total</h3>
+            <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($materialTotal, 2) }}</p>
+            <p class="text-xs text-gray-400">Actual site purchases recorded below.</p>
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-gray-500">Remaining Budget</h3>
+            <p class="text-2xl font-semibold {{ $materialRemaining < 0 ? 'text-rose-600' : 'text-gray-900 dark:text-white' }}">₹{{ number_format($materialRemaining, 2) }}</p>
+            @if ($materialRemaining < 0)
+                <p class="text-xs text-rose-500">Over allocated budget.</p>
+            @endif
+        </div>
+    </div>
 </x-card>
 
 <x-card class="mb-6" :padded="false">

@@ -1,15 +1,34 @@
 @php
+    $labourAllocated = (float) ($workOrder->estimated_labour_budget ?? 0);
     $labourTotal = $workOrder->labourEntries->sum('amount');
+    $labourRemaining = $labourAllocated - $labourTotal;
 @endphp
 
 <x-card class="mb-6">
-    <h3 class="text-sm font-semibold text-gray-500">Man Power Schedule Total</h3>
-    <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($labourTotal, 2) }}</p>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+            <h3 class="text-sm font-semibold text-gray-500">Allocated Man Power Budget</h3>
+            <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($labourAllocated, 2) }}</p>
+            <p class="text-xs text-gray-400">Set on the work order's create page.</p>
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-gray-500">Used Man Power Total</h3>
+            <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($labourTotal, 2) }}</p>
+            <p class="text-xs text-gray-400">Actual site usage recorded below.</p>
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-gray-500">Remaining Budget</h3>
+            <p class="text-2xl font-semibold {{ $labourRemaining < 0 ? 'text-rose-600' : 'text-gray-900 dark:text-white' }}">₹{{ number_format($labourRemaining, 2) }}</p>
+            @if ($labourRemaining < 0)
+                <p class="text-xs text-rose-500">Over allocated budget.</p>
+            @endif
+        </div>
+    </div>
 </x-card>
 
 <x-card :padded="false">
     <div class="flex items-center justify-between p-4">
-        <h3 class="text-sm font-semibold text-gray-500">Man Power Schedule Book</h3>
+        <h3 class="text-sm font-semibold text-gray-500">Used Man Power</h3>
     </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">

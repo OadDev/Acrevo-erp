@@ -125,35 +125,6 @@ class WorkOrderController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        foreach ($materialRows as $row) {
-            $workOrder->materialEntries()->create([
-                'material_name' => $row['material_name'],
-                'brand' => $row['brand'] ?? null,
-                'size' => $row['size'] ?? null,
-                'unit' => $row['unit'] ?: 'Nos',
-                'quantity' => $row['quantity'],
-                'rate' => $row['rate'],
-                'amount' => $row['quantity'] * $row['rate'],
-                'vendor' => $row['vendor'] ?? null,
-                'entry_date' => now()->toDateString(),
-                'added_by' => $request->user()->id,
-            ]);
-        }
-
-        foreach ($labourRows as $row) {
-            $workOrder->labourEntries()->create([
-                'labour_type' => $row['labour_type'],
-                'count' => $row['count'],
-                'hours' => $row['hours'] ?? null,
-                'wage_rate' => $row['wage_rate'],
-                'total_time_to_finish' => $row['total_time_to_finish'] ?? null,
-                'remark' => $row['remark'] ?? null,
-                'amount' => $row['count'] * $row['wage_rate'],
-                'entry_date' => now()->toDateString(),
-                'added_by' => $request->user()->id,
-            ]);
-        }
-
         $procedureRows = collect($data['procedures'] ?? [])
             ->filter(fn ($row) => filled($row['item_description'] ?? null));
 

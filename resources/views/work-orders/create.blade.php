@@ -7,11 +7,11 @@
         <form method="POST" action="{{ route('work-orders.store') }}" x-data="{
             executionWay: '{{ old('execution_way') }}',
             materials: [{ material_name:'', brand:'', size:'', unit:'Nos', quantity:'', rate:'', vendor:'' }],
-            labour: [{ labour_type:'', count:1, hours:'', wage_rate:'', total_time_to_finish:'', remark:'' }],
+            labour: [{ labour_type:'', count:1, hours:'', wage_rate:'' }],
             procedures: [{ item_description:'', length:'', breadth:'', height:'', quantity:'', unit:'Sqft' }],
             addMaterial() { this.materials.push({ material_name:'', brand:'', size:'', unit:'Nos', quantity:'', rate:'', vendor:'' }); },
             removeMaterial(i) { this.materials.splice(i, 1); },
-            addLabour() { this.labour.push({ labour_type:'', count:1, hours:'', wage_rate:'', total_time_to_finish:'', remark:'' }); },
+            addLabour() { this.labour.push({ labour_type:'', count:1, hours:'', wage_rate:'' }); },
             removeLabour(i) { this.labour.splice(i, 1); },
             addProcedure() { this.procedures.push({ item_description:'', length:'', breadth:'', height:'', quantity:'', unit:'Sqft' }); },
             removeProcedure(i) { this.procedures.splice(i, 1); },
@@ -167,6 +167,7 @@
 
             <div class="mt-6">
                 <h3 class="mb-2 text-sm font-semibold text-gray-500">Using Material Specifications</h3>
+                <p class="mb-2 text-xs text-gray-400">Allocated material budget for this work order — actual site purchases are recorded later in the Material Inward tab.</p>
                 <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
                     <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                         <thead class="bg-gray-50 dark:bg-gray-800/50">
@@ -209,7 +210,8 @@
             </div>
 
             <div class="mt-6">
-                <h3 class="mb-2 text-sm font-semibold text-gray-500">Man Power Schedule Book <span class="font-normal normal-case text-gray-400">+ Time Schedule</span></h3>
+                <h3 class="mb-2 text-sm font-semibold text-gray-500">Man Power Schedule Book</h3>
+                <p class="mb-2 text-xs text-gray-400">Allocated man power budget for this work order — actual site usage is recorded later in the Used Man Power Budget tab.</p>
                 <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
                     <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                         <thead class="bg-gray-50 dark:bg-gray-800/50">
@@ -218,8 +220,6 @@
                                 <th class="px-3 py-2 w-20">Nos</th>
                                 <th class="px-3 py-2 w-28">Target Hrs</th>
                                 <th class="px-3 py-2 w-28">Salary</th>
-                                <th class="px-3 py-2 w-32">Total Time to Finish</th>
-                                <th class="px-3 py-2">Remark</th>
                                 <th class="px-3 py-2 w-28 text-right">Amount</th>
                                 <th class="px-2 py-2 w-8"></th>
                             </tr>
@@ -231,8 +231,6 @@
                                     <td class="px-3 py-2"><input type="number" min="1" :name="'labour['+index+'][count]'" x-model.number="l.count" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
                                     <td class="px-3 py-2"><input type="number" step="0.5" min="0" :name="'labour['+index+'][hours]'" x-model.number="l.hours" placeholder="Optional" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
                                     <td class="px-3 py-2"><input type="number" step="0.01" min="0" :name="'labour['+index+'][wage_rate]'" x-model.number="l.wage_rate" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
-                                    <td class="px-3 py-2"><input type="text" :name="'labour['+index+'][total_time_to_finish]'" x-model="l.total_time_to_finish" placeholder="e.g. 2 days" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
-                                    <td class="px-3 py-2"><input type="text" :name="'labour['+index+'][remark]'" x-model="l.remark" placeholder="Optional" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"></td>
                                     <td class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300" x-text="'₹' + (((parseFloat(l.count) || 0) * (parseFloat(l.wage_rate) || 0)).toFixed(2))"></td>
                                     <td class="px-2 py-2 text-center">
                                         <button type="button" @click="removeLabour(index)" class="text-gray-400 hover:text-rose-500">

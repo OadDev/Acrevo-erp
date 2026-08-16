@@ -669,23 +669,19 @@ class WorkOrderWorkflowTest extends TestCase
         ])->assertRedirect();
 
         $workOrder = WorkOrder::where('title', 'WO with itemized budget')->firstOrFail();
-        $this->assertSame(1, $workOrder->materialEntries()->count());
-        $this->assertSame(1, $workOrder->labourEntries()->count());
 
-        $material = $workOrder->materialEntries()->firstOrFail();
-        $this->assertSame('Cement', $material->material_name);
-        $this->assertEquals(4000, $material->amount);
-
-        $labour = $workOrder->labourEntries()->firstOrFail();
-        $this->assertSame('Mason', $labour->labour_type);
-        $this->assertEquals(1800, $labour->amount);
+        // The itemized rows on the create page are budget allocation only -
+        // they must NOT create real MaterialEntry/LabourEntry rows, or they'd
+        // pollute the Material Inward / Used Man Power actuals tabs.
+        $this->assertSame(0, $workOrder->materialEntries()->count());
+        $this->assertSame(0, $workOrder->labourEntries()->count());
 
         $this->assertSame('4000.00', $workOrder->estimated_material_budget);
         $this->assertSame('1800.00', $workOrder->estimated_labour_budget);
         $this->assertSame('5800.00', $workOrder->budget_amount);
     }
 
-    public function test_work_order_creation_accepts_time_schedule_and_work_procedure_rows(): void
+    public function test_work_order_creation_accepts_work_procedure_rows_for_the_schedule_book(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -701,7 +697,7 @@ class WorkOrderWorkflowTest extends TestCase
             'execution_way' => 'way_2',
             'priority' => 'medium',
             'labour' => [
-                ['labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900', 'total_time_to_finish' => '3 days', 'remark' => 'Ground floor'],
+                ['labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900'],
             ],
             'procedures' => [
                 ['item_description' => 'Foundation excavation', 'length' => '20', 'breadth' => '10', 'height' => '3', 'quantity' => '600', 'unit' => 'cft'],
@@ -711,9 +707,8 @@ class WorkOrderWorkflowTest extends TestCase
 
         $workOrder = WorkOrder::where('title', 'WO with schedule')->firstOrFail();
 
-        $labour = $workOrder->labourEntries()->firstOrFail();
-        $this->assertSame('3 days', $labour->total_time_to_finish);
-        $this->assertSame('Ground floor', $labour->remark);
+        $this->assertSame(0, $workOrder->labourEntries()->count());
+        $this->assertSame('1800.00', $workOrder->estimated_labour_budget);
 
         $this->assertSame(1, $workOrder->measurementBooks()->count());
         $scheduleBook = $workOrder->measurementBooks()->firstOrFail();
@@ -893,5 +888,39 @@ class WorkOrderWorkflowTest extends TestCase
 
         $response = $this->actingAs($workerUser)->get('/dashboard');
         $response->assertOk()->assertSee($workOrder->work_order_no)->assertSee('My Attendance');
+    }
+
+    public function test_material_inward_and_man_power_budget_tabs_show_allocated_actual_and_remaining(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+            'estimated_material_budget' => 10000, 'estimated_labour_budget' => 5000,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10', 'unit' => 'Bag', 'rate' => '300',
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/labour", [
+            'labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900',
+        ])->assertRedirect();
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials");
+        $response->assertOk()
+            ->assertSee('Allocated Material Budget')
+            ->assertSee('₹10,000.00')
+            ->assertSee('₹3,000.00')
+            ->assertSee('₹7,000.00');
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=manpower");
+        $response->assertOk()
+            ->assertSee('Allocated Man Power Budget')
+            ->assertSee('₹5,000.00')
+            ->assertSee('₹1,800.00')
+            ->assertSee('₹3,200.00');
     }
 }
