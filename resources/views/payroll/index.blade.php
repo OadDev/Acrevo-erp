@@ -102,6 +102,7 @@
                             <th class="px-4 py-3 text-right">Paid</th>
                             <th class="px-4 py-3 text-right">Held / Remaining</th>
                             <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Payment History</th>
                             <th class="px-4 py-3"></th>
                             <th class="px-4 py-3"></th>
                         </tr>
@@ -115,9 +116,35 @@
                                 <td class="px-4 py-3 text-right text-sm {{ $payroll->remaining() > 0 ? 'text-amber-600 font-medium' : 'text-gray-400' }}">₹{{ number_format($payroll->remaining(), 2) }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$payroll->status" /></td>
                                 <td class="px-4 py-3">
+                                    @if ($payroll->payments->isNotEmpty())
+                                        <details>
+                                            <summary class="cursor-pointer text-xs font-medium text-indigo-600">{{ $payroll->payments->count() }} payment(s)</summary>
+                                            <table class="mt-2 min-w-full text-xs">
+                                                <thead>
+                                                    <tr class="text-left text-gray-400">
+                                                        <th class="pr-3 py-1">Date</th>
+                                                        <th class="pr-3 py-1 text-right">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach ($payroll->payments as $payment)
+                                                        <tr>
+                                                            <td class="pr-3 py-1">{{ $payment->paid_on->format('d M Y') }}</td>
+                                                            <td class="pr-3 py-1 text-right">₹{{ number_format($payment->amount, 2) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </details>
+                                    @else
+                                        <span class="text-xs text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
                                     @if ($payroll->status !== 'paid')
                                         <form method="POST" action="{{ route('payroll.record-payment', $payroll) }}" class="flex items-center gap-1">
                                             @csrf
+                                            <input type="date" name="paid_on" value="{{ now()->format('Y-m-d') }}" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
                                             <input type="number" step="0.01" min="0.01" max="{{ $payroll->remaining() }}" name="amount" value="{{ number_format($payroll->remaining(), 2, '.', '') }}" class="w-24 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
                                             <button class="text-sm text-emerald-600 hover:underline">Pay</button>
                                         </form>
@@ -128,7 +155,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">No payroll processed for this period.</td></tr>
+                            <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">No payroll processed for this period.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Payroll;
+use App\Models\PayrollPayment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class PayrollController extends Controller
         $month = (int) $request->get('month', now()->month);
         $year = (int) $request->get('year', now()->year);
 
-        $payrolls = Payroll::with('employee')
+        $payrolls = Payroll::with(['employee', 'payments'])
             ->where('month', $month)->where('year', $year)
             ->get();
 
@@ -70,6 +71,7 @@ class PayrollController extends Controller
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01', 'max:'.max($payroll->remaining(), 0.01)],
+            'paid_on' => ['nullable', 'date'],
         ]);
 
         $paidAmount = (float) $payroll->paid_amount + $data['amount'];
@@ -79,6 +81,13 @@ class PayrollController extends Controller
             'paid_amount' => $paidAmount,
             'status' => $status,
             'paid_at' => $status === 'paid' ? now() : $payroll->paid_at,
+        ]);
+
+        PayrollPayment::create([
+            'payroll_id' => $payroll->id,
+            'amount' => $data['amount'],
+            'paid_on' => $data['paid_on'] ?? now()->toDateString(),
+            'paid_by' => $request->user()->id,
         ]);
 
         return back()->with('success', $status === 'paid' ? 'Payroll fully paid.' : 'Payment recorded — remaining balance held.');
@@ -134,7 +143,7 @@ class PayrollController extends Controller
 
     public function pdf(Payroll $payroll)
     {
-        $payroll->load('employee');
+        $payroll->load('employee', 'payments');
 
         $pdf = Pdf::loadView('payroll.pdf', compact('payroll'));
 

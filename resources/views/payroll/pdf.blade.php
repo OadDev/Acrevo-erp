@@ -58,5 +58,21 @@
         <tr><td>Paid So Far</td><td class="text-right">₹{{ number_format($payroll->paid_amount, 2) }}</td></tr>
         <tr><td>Held / Remaining</td><td class="text-right">₹{{ number_format($payroll->remaining(), 2) }}</td></tr>
     </table>
+
+    @if ($payroll->payments->isNotEmpty())
+        <table>
+            <thead>
+                <tr><th>Payment Date</th><th class="text-right">Amount Paid</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($payroll->payments as $payment)
+                    <tr>
+                        <td>{{ $payment->paid_on->format('d M Y') }}</td>
+                        <td class="text-right">₹{{ number_format($payment->amount, 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 </body>
 </html>

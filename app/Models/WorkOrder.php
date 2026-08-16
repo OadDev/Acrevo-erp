@@ -180,6 +180,11 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(LabourEntry::class);
     }
 
+    public function timeSchedules(): HasMany
+    {
+        return $this->hasMany(WorkOrderTimeSchedule::class);
+    }
+
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class)->latest('date');

@@ -125,6 +125,17 @@ class WorkOrderController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        $timeScheduleRows = collect($data['time_schedules'] ?? [])
+            ->filter(fn ($row) => filled($row['time_to_finish'] ?? null));
+
+        foreach ($timeScheduleRows as $row) {
+            $workOrder->timeSchedules()->create([
+                'time_to_finish' => $row['time_to_finish'],
+                'unit' => $row['unit'] ?? null,
+                'remark' => $row['remark'] ?? null,
+            ]);
+        }
+
         $procedureRows = collect($data['procedures'] ?? [])
             ->filter(fn ($row) => filled($row['item_description'] ?? null));
 
@@ -178,7 +189,7 @@ class WorkOrderController extends Controller
             'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
             'dailyChecklists.executiveTeam',
             'dailyProgressReports' => fn ($q) => $q->latest(),
-            'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
+            'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'timeSchedules', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
             'attendances.employee', 'attendances.markedBy',
             'children', 'parent', 'clientReviews',
             'media',

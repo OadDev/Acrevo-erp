@@ -17,6 +17,7 @@ class LabourEntryController extends Controller
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
+            'entry_date' => ['required', 'date'],
             'labour_type' => ['required', 'string', 'max:150'],
             'count' => ['required', 'integer', 'min:1'],
             'hours' => ['nullable', 'numeric', 'min:0'],
@@ -27,7 +28,6 @@ class LabourEntryController extends Controller
 
         $workOrder->labourEntries()->create($data + [
             'amount' => $data['count'] * $data['wage_rate'],
-            'entry_date' => now()->toDateString(),
             'added_by' => $request->user()->id,
         ]);
 

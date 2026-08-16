@@ -906,7 +906,7 @@ class WorkOrderWorkflowTest extends TestCase
         ])->assertRedirect();
 
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/labour", [
-            'labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900',
+            'entry_date' => now()->toDateString(), 'labour_type' => 'Mason', 'count' => '2', 'wage_rate' => '900',
         ])->assertRedirect();
 
         $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials");
@@ -1032,5 +1032,89 @@ class WorkOrderWorkflowTest extends TestCase
         $response = $this->actingAs($admin)->get("/payroll/{$payroll->id}/pdf");
         $response->assertOk();
         $response->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_work_order_creation_accepts_time_schedule_rows_shown_in_used_man_power_tab(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with time schedule',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'time_schedules' => [
+                ['time_to_finish' => '10', 'unit' => 'Days', 'remark' => 'Overall completion target'],
+            ],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with time schedule')->firstOrFail();
+        $schedule = $workOrder->timeSchedules()->firstOrFail();
+        $this->assertSame('10', $schedule->time_to_finish);
+        $this->assertSame('Days', $schedule->unit);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=manpower");
+        $response->assertOk()
+            ->assertSee('Allocated Time Schedule')
+            ->assertSee('Overall completion target');
+    }
+
+    public function test_used_man_power_entry_records_the_entry_date(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/labour", [
+            'entry_date' => '2026-08-10', 'labour_type' => 'Mason', 'count' => '1', 'wage_rate' => '900',
+        ])->assertRedirect();
+
+        $entry = $workOrder->fresh()->labourEntries()->firstOrFail();
+        $this->assertSame('2026-08-10', $entry->entry_date->format('Y-m-d'));
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=manpower");
+        $response->assertOk()->assertSee('10 Aug 2026');
+    }
+
+    public function test_payroll_payment_history_is_recorded_date_wise(): void
+    {
+        $admin = $this->admin();
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Seven', 'status' => 'active']);
+
+        $this->actingAs($admin)->post('/payroll', [
+            'employee_id' => $employee->id,
+            'month' => now()->month,
+            'year' => now()->year,
+            'basic_salary' => '10000',
+        ])->assertRedirect();
+
+        $payroll = \App\Models\Payroll::where('employee_id', $employee->id)->firstOrFail();
+
+        $this->actingAs($admin)->post("/payroll/{$payroll->id}/record-payment", [
+            'amount' => '4000', 'paid_on' => '2026-08-05',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/payroll/{$payroll->id}/record-payment", [
+            'amount' => '6000', 'paid_on' => '2026-08-20',
+        ])->assertRedirect();
+
+        $payments = $payroll->payments()->get();
+        $this->assertSame(2, $payments->count());
+        $this->assertSame('2026-08-05', $payments[0]->paid_on->format('Y-m-d'));
+        $this->assertEquals(4000, $payments[0]->amount);
+        $this->assertSame('2026-08-20', $payments[1]->paid_on->format('Y-m-d'));
+        $this->assertEquals(6000, $payments[1]->amount);
+
+        $response = $this->actingAs($admin)->get('/payroll?month='.now()->month.'&year='.now()->year);
+        $response->assertOk()->assertSee('2 payment(s)');
     }
 }
