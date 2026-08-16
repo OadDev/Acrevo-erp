@@ -21,6 +21,8 @@ class LabourEntryController extends Controller
             'count' => ['required', 'integer', 'min:1'],
             'hours' => ['nullable', 'numeric', 'min:0'],
             'wage_rate' => ['required', 'numeric', 'min:0'],
+            'total_time_to_finish' => ['nullable', 'string', 'max:100'],
+            'remark' => ['nullable', 'string', 'max:255'],
         ]);
 
         $workOrder->labourEntries()->create($data + [

@@ -32,6 +32,7 @@
                 'checklist' => 'Daily Work with Checklist',
                 'progress' => 'Progress & Media',
                 'materials' => 'Material Inward and Daily Material Used Entry',
+                'manpower' => 'Man Power Schedule',
                 'mb' => 'Measurement Book & Ledger',
                 'qc' => 'QC',
                 'approvals' => 'Approval Requests',
@@ -62,6 +63,9 @@
         </div>
         <div x-show="tab === 'materials'" x-cloak>
             @include('work-orders.tabs.materials')
+        </div>
+        <div x-show="tab === 'manpower'" x-cloak>
+            @include('work-orders.tabs.manpower')
         </div>
         <div x-show="tab === 'mb'" x-cloak>
             @include('work-orders.tabs.measurement-ledger')
