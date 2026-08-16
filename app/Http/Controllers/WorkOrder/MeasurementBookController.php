@@ -22,6 +22,7 @@ class MeasurementBookController extends Controller
         ]);
 
         $workOrder->measurementBooks()->create($data + [
+            'type' => 'actual',
             'recorded_by' => $request->user()->id,
             'status' => 'draft',
         ]);

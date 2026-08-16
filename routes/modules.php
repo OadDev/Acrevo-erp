@@ -176,7 +176,8 @@ Route::middleware('permission:payroll.view')->group(function () {
     Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
     Route::post('payroll', [PayrollController::class, 'store'])->name('payroll.store');
     Route::post('payroll/generate-from-attendance', [PayrollController::class, 'generateFromAttendance'])->name('payroll.generate-from-attendance');
-    Route::post('payroll/{payroll}/mark-paid', [PayrollController::class, 'markPaid'])->name('payroll.mark-paid');
+    Route::post('payroll/{payroll}/record-payment', [PayrollController::class, 'recordPayment'])->name('payroll.record-payment');
+    Route::get('payroll/{payroll}/pdf', [PayrollController::class, 'pdf'])->name('payroll.pdf');
 });
 Route::middleware('permission:executive_teams.view')->group(function () {
     Route::resource('executive-teams', ExecutiveTeamController::class);

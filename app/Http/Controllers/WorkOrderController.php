@@ -130,6 +130,7 @@ class WorkOrderController extends Controller
 
         if ($procedureRows->isNotEmpty()) {
             $scheduleBook = $workOrder->measurementBooks()->create([
+                'type' => 'schedule',
                 'description' => 'Work Schedule (M.Book)',
                 'date' => $data['start_date'] ?? now()->toDateString(),
                 'recorded_by' => $request->user()->id,

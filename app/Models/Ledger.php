@@ -11,7 +11,7 @@ class Ledger extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
-    protected $fillable = ['work_order_id', 'entry_date', 'type', 'category', 'description', 'amount', 'balance', 'created_by'];
+    protected $fillable = ['work_order_id', 'entry_date', 'type', 'category', 'description', 'remark', 'amount', 'balance', 'created_by'];
 
     protected function casts(): array
     {

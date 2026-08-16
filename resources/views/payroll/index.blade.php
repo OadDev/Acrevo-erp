@@ -99,7 +99,10 @@
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             <th class="px-4 py-3">Worker</th>
                             <th class="px-4 py-3 text-right">Net Salary</th>
+                            <th class="px-4 py-3 text-right">Paid</th>
+                            <th class="px-4 py-3 text-right">Held / Remaining</th>
                             <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3"></th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -108,18 +111,24 @@
                             <tr>
                                 <td class="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{{ $payroll->employee->name }}</td>
                                 <td class="px-4 py-3 text-right text-sm font-medium">₹{{ number_format($payroll->net_salary, 2) }}</td>
+                                <td class="px-4 py-3 text-right text-sm text-gray-500">₹{{ number_format($payroll->paid_amount, 2) }}</td>
+                                <td class="px-4 py-3 text-right text-sm {{ $payroll->remaining() > 0 ? 'text-amber-600 font-medium' : 'text-gray-400' }}">₹{{ number_format($payroll->remaining(), 2) }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$payroll->status" /></td>
-                                <td class="px-4 py-3 text-right">
-                                    @if ($payroll->status === 'pending')
-                                        <form method="POST" action="{{ route('payroll.mark-paid', $payroll) }}">
+                                <td class="px-4 py-3">
+                                    @if ($payroll->status !== 'paid')
+                                        <form method="POST" action="{{ route('payroll.record-payment', $payroll) }}" class="flex items-center gap-1">
                                             @csrf
-                                            <button class="text-sm text-emerald-600 hover:underline">Mark Paid</button>
+                                            <input type="number" step="0.01" min="0.01" max="{{ $payroll->remaining() }}" name="amount" value="{{ number_format($payroll->remaining(), 2, '.', '') }}" class="w-24 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
+                                            <button class="text-sm text-emerald-600 hover:underline">Pay</button>
                                         </form>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 text-right">
+                                    <a href="{{ route('payroll.pdf', $payroll) }}" class="text-sm text-indigo-600 hover:underline">PDF</a>
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">No payroll processed for this period.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">No payroll processed for this period.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

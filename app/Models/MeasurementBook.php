@@ -15,7 +15,7 @@ class MeasurementBook extends Model
 
     protected $sequenceColumn = 'mb_no';
 
-    protected $fillable = ['work_order_id', 'mb_no', 'description', 'date', 'recorded_by', 'status'];
+    protected $fillable = ['work_order_id', 'mb_no', 'type', 'description', 'date', 'recorded_by', 'status'];
 
     protected function casts(): array
     {

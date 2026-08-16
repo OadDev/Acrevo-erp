@@ -9,13 +9,18 @@ class Payroll extends Model
 {
     protected $fillable = [
         'employee_id', 'month', 'year', 'basic_salary', 'allowances', 'deductions',
-        'advance_deducted', 'overtime_amount', 'incentive', 'net_salary',
+        'advance_deducted', 'overtime_amount', 'incentive', 'net_salary', 'paid_amount',
         'status', 'paid_at', 'payslip_path', 'processed_by',
     ];
 
     protected function casts(): array
     {
         return ['paid_at' => 'datetime'];
+    }
+
+    public function remaining(): float
+    {
+        return (float) $this->net_salary - (float) $this->paid_amount;
     }
 
     public function employee(): BelongsTo

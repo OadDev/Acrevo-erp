@@ -923,4 +923,114 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertSee('₹1,800.00')
             ->assertSee('₹3,200.00');
     }
+
+    public function test_allocated_work_schedule_is_kept_separate_from_actual_measurement_book(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with allocated schedule',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'procedures' => [
+                ['item_description' => 'Foundation excavation', 'length' => '20', 'breadth' => '10', 'height' => '3', 'quantity' => '600', 'unit' => 'cft'],
+            ],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with allocated schedule')->firstOrFail();
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/measurement-books", [
+            'description' => 'Actual daily work', 'date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $this->assertSame('schedule', $workOrder->measurementBooks()->where('description', 'Work Schedule (M.Book)')->firstOrFail()->type);
+        $this->assertSame('actual', $workOrder->measurementBooks()->where('description', 'Actual daily work')->firstOrFail()->type);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=mb");
+        $response->assertOk()
+            ->assertSee('Allocated Work Schedule')
+            ->assertSee('Actual Work Done')
+            ->assertSee('Foundation excavation')
+            ->assertSee('Actual daily work');
+    }
+
+    public function test_ledger_supports_borrow_and_lended_types_with_remark(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'borrow', 'amount' => '2000', 'remark' => 'Borrowed from site supervisor',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'lended', 'amount' => '500', 'remark' => 'Lent to worker',
+        ])->assertRedirect();
+
+        $entries = $workOrder->fresh()->ledgers()->orderBy('id')->get();
+        $this->assertSame('borrow', $entries[0]->type);
+        $this->assertEquals(2000, $entries[0]->balance);
+        $this->assertSame('lended', $entries[1]->type);
+        $this->assertEquals(1500, $entries[1]->balance);
+        $this->assertSame('Lent to worker', $entries[1]->remark);
+    }
+
+    public function test_payroll_supports_partial_payments_and_holds_remaining_balance(): void
+    {
+        $admin = $this->admin();
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Five', 'status' => 'active']);
+
+        $this->actingAs($admin)->post('/payroll', [
+            'employee_id' => $employee->id,
+            'month' => now()->month,
+            'year' => now()->year,
+            'basic_salary' => '10000',
+        ])->assertRedirect();
+
+        $payroll = \App\Models\Payroll::where('employee_id', $employee->id)
+            ->where('month', now()->month)->where('year', now()->year)->firstOrFail();
+        $this->assertSame('pending', $payroll->status);
+
+        $this->actingAs($admin)->post("/payroll/{$payroll->id}/record-payment", ['amount' => '6000'])->assertRedirect();
+        $payroll->refresh();
+        $this->assertSame('partial', $payroll->status);
+        $this->assertEquals(6000, $payroll->paid_amount);
+        $this->assertEquals(4000, $payroll->remaining());
+
+        $this->actingAs($admin)->post("/payroll/{$payroll->id}/record-payment", ['amount' => '4000'])->assertRedirect();
+        $payroll->refresh();
+        $this->assertSame('paid', $payroll->status);
+        $this->assertEquals(0, $payroll->remaining());
+        $this->assertNotNull($payroll->paid_at);
+    }
+
+    public function test_payroll_pdf_can_be_downloaded(): void
+    {
+        $admin = $this->admin();
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Six', 'status' => 'active']);
+
+        $this->actingAs($admin)->post('/payroll', [
+            'employee_id' => $employee->id,
+            'month' => now()->month,
+            'year' => now()->year,
+            'basic_salary' => '5000',
+        ])->assertRedirect();
+
+        $payroll = \App\Models\Payroll::where('employee_id', $employee->id)->firstOrFail();
+
+        $response = $this->actingAs($admin)->get("/payroll/{$payroll->id}/pdf");
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+    }
 }

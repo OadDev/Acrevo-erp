@@ -65,6 +65,9 @@
                             <x-badge :status="$myPayroll->status" class="mt-2" />
                             @if ($myPayroll->status === 'paid')
                                 <p class="mt-2 text-xs text-gray-400">Paid on {{ $myPayroll->paid_at?->format('d M Y') }}</p>
+                            @else
+                                <p class="mt-2 text-xs text-gray-500">Paid so far: ₹{{ number_format($myPayroll->paid_amount, 2) }}</p>
+                                <p class="text-xs text-amber-600">Held / Remaining: ₹{{ number_format($myPayroll->remaining(), 2) }}</p>
                             @endif
                         @else
                             <p class="mt-2 text-sm text-gray-400">Not processed yet.</p>

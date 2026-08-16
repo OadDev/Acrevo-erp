@@ -19,20 +19,23 @@ class LedgerController extends Controller
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
-            'type' => ['required', 'in:credit,debit'],
+            'type' => ['required', 'in:credit,debit,borrow,lended'],
             'category' => ['nullable', 'string', 'max:150'],
             'description' => ['nullable', 'string'],
+            'remark' => ['nullable', 'string'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
         $previousBalance = (float) ($workOrder->ledgers()->latest('id')->value('balance') ?? 0);
-        $balance = $data['type'] === 'credit' ? $previousBalance + $data['amount'] : $previousBalance - $data['amount'];
+        $increasesBalance = in_array($data['type'], ['credit', 'borrow'], true);
+        $balance = $increasesBalance ? $previousBalance + $data['amount'] : $previousBalance - $data['amount'];
 
         $ledger = $workOrder->ledgers()->create([
             'type' => $data['type'],
             'category' => $data['category'] ?? null,
             'description' => $data['description'] ?? null,
+            'remark' => $data['remark'] ?? null,
             'amount' => $data['amount'],
             'entry_date' => now()->toDateString(),
             'balance' => $balance,
@@ -65,15 +68,19 @@ class LedgerController extends Controller
 
         return response()->streamDownload(function () use ($entries) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Date', 'Category', 'Type', 'Description', 'Amount', 'Balance']);
+            fputcsv($out, ['Date', 'Category', 'Description', 'Borrow', 'Credit', 'Debit', 'Lended', 'Balance', 'Bill', 'Remark']);
             foreach ($entries as $entry) {
                 fputcsv($out, [
                     $entry->entry_date->format('Y-m-d'),
                     $entry->category,
-                    ucfirst($entry->type),
                     $entry->description,
-                    $entry->amount,
+                    $entry->type === 'borrow' ? $entry->amount : '',
+                    $entry->type === 'credit' ? $entry->amount : '',
+                    $entry->type === 'debit' ? $entry->amount : '',
+                    $entry->type === 'lended' ? $entry->amount : '',
                     $entry->balance,
+                    $entry->getFirstMedia('bill') ? 'Yes' : '',
+                    $entry->remark,
                 ]);
             }
             fclose($out);

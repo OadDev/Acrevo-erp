@@ -1,11 +1,15 @@
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <x-card>
-        <h3 class="mb-4 text-sm font-semibold text-gray-500">Measurement Books — Work Done</h3>
-        @forelse ($workOrder->measurementBooks as $mb)
+@php
+    $scheduleBooks = $workOrder->measurementBooks->where('type', 'schedule');
+    $actualBooks = $workOrder->measurementBooks->where('type', 'actual');
+@endphp
+
+@if ($scheduleBooks->isNotEmpty())
+    <x-card class="mb-6">
+        <h3 class="mb-1 text-sm font-semibold text-gray-500">Allocated Work Schedule (M.Book)</h3>
+        <p class="mb-3 text-xs text-gray-400">Planned at work order creation — for reference only, not actual work done.</p>
+        @foreach ($scheduleBooks as $mb)
             <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                 <p class="font-medium text-gray-800 dark:text-gray-200">{{ $mb->mb_no }} — {{ $mb->date->format('d M Y') }}</p>
-                <p class="text-gray-500">{{ $mb->description }}</p>
-
                 @if ($mb->items->isNotEmpty())
                     <div class="mt-2 overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-100 text-xs dark:divide-gray-800">
@@ -15,9 +19,8 @@
                                     <th class="py-1 pr-2">L</th>
                                     <th class="py-1 pr-2">B</th>
                                     <th class="py-1 pr-2">D</th>
-                                    <th class="py-1 pr-2">Total Nos</th>
+                                    <th class="py-1 pr-2">Total</th>
                                     <th class="py-1 pr-2">Unit</th>
-                                    <th class="py-1 pr-2 text-right">Amount</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -29,6 +32,53 @@
                                         <td class="py-1 pr-2">{{ $item->height ?? '—' }}</td>
                                         <td class="py-1 pr-2">{{ $item->quantity }}</td>
                                         <td class="py-1 pr-2">{{ $item->unit }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endforeach
+    </x-card>
+@endif
+
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <x-card>
+        <h3 class="mb-4 text-sm font-semibold text-gray-500">Measurement Book — Actual Work Done</h3>
+        @forelse ($actualBooks as $mb)
+            @php
+                $workersPresent = $workOrder->attendances->filter(fn ($a) => $a->date->isSameDay($mb->date));
+            @endphp
+            <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                <p class="font-medium text-gray-800 dark:text-gray-200">{{ $mb->mb_no }} — {{ $mb->date->format('d M Y') }}</p>
+                <p class="text-gray-500">{{ $mb->description }}</p>
+
+                @if ($mb->items->isNotEmpty())
+                    <div class="mt-2 overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-xs dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-gray-400">
+                                    <th class="py-1 pr-2">Work Name</th>
+                                    <th class="py-1 pr-2">L</th>
+                                    <th class="py-1 pr-2">B</th>
+                                    <th class="py-1 pr-2">D/T/H</th>
+                                    <th class="py-1 pr-2">Total</th>
+                                    <th class="py-1 pr-2">Unit</th>
+                                    <th class="py-1 pr-2 text-right">Rate/Unit</th>
+                                    <th class="py-1 pr-2 text-right">Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach ($mb->items as $item)
+                                    <tr>
+                                        <td class="py-1 pr-2">{{ $item->item_description }}</td>
+                                        <td class="py-1 pr-2">{{ $item->length ?? '—' }}</td>
+                                        <td class="py-1 pr-2">{{ $item->breadth ?? '—' }}</td>
+                                        <td class="py-1 pr-2">{{ $item->height ?? '—' }}</td>
+                                        <td class="py-1 pr-2">{{ $item->quantity }}</td>
+                                        <td class="py-1 pr-2">{{ $item->unit }}</td>
+                                        <td class="py-1 pr-2 text-right">₹{{ number_format($item->rate, 2) }}</td>
                                         <td class="py-1 pr-2 text-right">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>
                                 @endforeach
@@ -38,25 +88,34 @@
                 @endif
                 <p class="mt-1 text-xs text-gray-400">{{ $mb->items->count() }} item(s) · ₹{{ number_format($mb->items->sum('amount'), 2) }}</p>
 
+                <div class="mt-2 text-xs text-gray-500">
+                    <span class="font-medium text-gray-600 dark:text-gray-400">Workers Attendance:</span>
+                    @if ($workersPresent->isNotEmpty())
+                        {{ $workersPresent->map(fn ($a) => $a->employee?->name)->filter()->join(', ') }}
+                    @else
+                        <span class="text-gray-400">No attendance recorded for this date.</span>
+                    @endif
+                </div>
+
                 @can('site_records.manage')
                     <details class="mt-2">
                         <summary class="cursor-pointer text-xs font-medium text-indigo-600">+ Add work done entry</summary>
                         <form method="POST" action="{{ route('work-orders.measurement-books.items.store', [$workOrder, $mb]) }}" class="mt-2 grid grid-cols-3 gap-2">
                             @csrf
-                            <x-text-input name="item_description" placeholder="Work description" class="col-span-3 text-xs" required />
+                            <x-text-input name="item_description" placeholder="Work name" class="col-span-3 text-xs" required />
                             <x-text-input type="number" step="0.01" name="length" placeholder="L" class="text-xs" />
                             <x-text-input type="number" step="0.01" name="breadth" placeholder="B" class="text-xs" />
-                            <x-text-input type="number" step="0.01" name="height" placeholder="D" class="text-xs" />
-                            <x-text-input type="number" step="0.01" name="quantity" placeholder="Total Nos" class="text-xs" required />
+                            <x-text-input type="number" step="0.01" name="height" placeholder="D/T/H" class="text-xs" />
+                            <x-text-input type="number" step="0.01" name="quantity" placeholder="Total" class="text-xs" required />
                             <x-text-input name="unit" placeholder="Unit (Sqft, Nos...)" class="text-xs" required />
-                            <x-text-input type="number" step="0.01" name="rate" placeholder="Rate (optional)" class="text-xs" />
+                            <x-text-input type="number" step="0.01" name="rate" placeholder="Rate per unit" class="text-xs" />
                             <x-primary-button class="col-span-3 justify-center py-1 text-xs">Add Entry</x-primary-button>
                         </form>
                     </details>
                 @endcan
             </div>
         @empty
-            <x-empty-state icon="file-text" title="No measurement books yet" />
+            <x-empty-state icon="file-text" title="No work done recorded yet" />
         @endforelse
 
         @can('site_records.manage')

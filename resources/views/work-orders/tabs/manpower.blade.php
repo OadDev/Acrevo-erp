@@ -37,7 +37,7 @@
                     <th class="px-4 py-2">Designation</th>
                     <th class="px-4 py-2">Nos</th>
                     <th class="px-4 py-2">Target Hrs</th>
-                    <th class="px-4 py-2">Total Time to Finish</th>
+                    <th class="px-4 py-2">Actual Time Taken</th>
                     <th class="px-4 py-2">Remark</th>
                     <th class="px-4 py-2 text-right">Amount</th>
                 </tr>
@@ -65,7 +65,7 @@
             <x-text-input type="number" name="count" placeholder="Nos" value="1" class="text-sm" required />
             <x-text-input type="number" step="0.5" name="hours" placeholder="Target working hrs (optional)" class="text-sm" />
             <x-text-input type="number" step="0.01" name="wage_rate" placeholder="Salary" class="text-sm" required />
-            <x-text-input name="total_time_to_finish" placeholder="Total time to finish (e.g. 2 days)" class="text-sm" />
+            <x-text-input name="total_time_to_finish" placeholder="Actual time taken (e.g. 2 days)" class="text-sm" />
             <x-text-input name="remark" placeholder="Remark (optional)" class="col-span-2 text-sm" />
             <x-primary-button class="col-span-2 justify-center sm:col-span-4">Add Man Power Entry</x-primary-button>
         </form>

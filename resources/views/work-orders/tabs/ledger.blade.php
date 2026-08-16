@@ -41,6 +41,8 @@
             <option value="">All Types</option>
             <option value="credit" @selected(request('ledger_type') === 'credit')>Credit</option>
             <option value="debit" @selected(request('ledger_type') === 'debit')>Debit</option>
+            <option value="borrow" @selected(request('ledger_type') === 'borrow')>Borrow</option>
+            <option value="lended" @selected(request('ledger_type') === 'lended')>Lended</option>
         </x-select-input>
         <x-primary-button class="justify-center">Filter</x-primary-button>
     </form>
@@ -52,9 +54,13 @@
                     <th class="px-4 py-2">Date</th>
                     <th class="px-4 py-2">Category</th>
                     <th class="px-4 py-2">Description</th>
-                    <th class="px-4 py-2 text-right">Amount</th>
+                    <th class="px-4 py-2 text-right">Borrow</th>
+                    <th class="px-4 py-2 text-right">Credit</th>
+                    <th class="px-4 py-2 text-right">Debit</th>
+                    <th class="px-4 py-2 text-right">Lended</th>
                     <th class="px-4 py-2 text-right">Balance</th>
                     <th class="px-4 py-2">Bill</th>
+                    <th class="px-4 py-2">Remark</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -63,10 +69,11 @@
                         <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date->format('d M Y') }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->category ?? '—' }}</td>
                         <td class="px-4 py-2">{{ $entry->description }}</td>
-                        <td class="px-4 py-2 text-right font-medium {{ $entry->type === 'credit' ? 'text-emerald-600' : 'text-rose-600' }}">
-                            {{ $entry->type === 'credit' ? '+' : '-' }}₹{{ number_format($entry->amount, 2) }}
-                        </td>
-                        <td class="px-4 py-2 text-right text-gray-500">₹{{ number_format($entry->balance, 2) }}</td>
+                        <td class="px-4 py-2 text-right text-blue-600">{{ $entry->type === 'borrow' ? '₹'.number_format($entry->amount, 2) : '—' }}</td>
+                        <td class="px-4 py-2 text-right text-emerald-600">{{ $entry->type === 'credit' ? '₹'.number_format($entry->amount, 2) : '—' }}</td>
+                        <td class="px-4 py-2 text-right text-rose-600">{{ $entry->type === 'debit' ? '₹'.number_format($entry->amount, 2) : '—' }}</td>
+                        <td class="px-4 py-2 text-right text-amber-600">{{ $entry->type === 'lended' ? '₹'.number_format($entry->amount, 2) : '—' }}</td>
+                        <td class="px-4 py-2 text-right font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($entry->balance, 2) }}</td>
                         <td class="px-4 py-2">
                             @if ($entry->getFirstMedia('bill'))
                                 <a href="{{ $entry->getFirstMediaUrl('bill') }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
@@ -74,9 +81,10 @@
                                 </a>
                             @endif
                         </td>
+                        <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No ledger entries match this filter.</td></tr>
+                    <tr><td colspan="10" class="px-4 py-6 text-center text-gray-400">No ledger entries match this filter.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -87,10 +95,13 @@
             <x-select-input name="type" class="text-sm">
                 <option value="debit">Debit</option>
                 <option value="credit">Credit</option>
+                <option value="borrow">Borrow</option>
+                <option value="lended">Lended</option>
             </x-select-input>
             <x-text-input type="number" step="0.01" name="amount" placeholder="Amount" class="text-sm" required />
             <x-text-input name="category" placeholder="Category" class="text-sm" />
             <x-text-input name="description" placeholder="Description" class="text-sm" />
+            <x-text-input name="remark" placeholder="Remark (optional)" class="col-span-2 text-sm sm:col-span-4" />
             <div class="col-span-2 sm:col-span-4">
                 <x-input-label value="Bill (image or PDF, optional)" />
                 <input type="file" name="bill" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 w-full text-sm">
