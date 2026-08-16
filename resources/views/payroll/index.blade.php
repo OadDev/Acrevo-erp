@@ -18,6 +18,79 @@
         </x-page-header>
     </x-slot>
 
+    <x-card :padded="false" class="mb-6">
+        <div class="p-4">
+            <h3 class="text-sm font-semibold text-gray-500">Attendance Summary — {{ \Carbon\Carbon::create($year, $month, 1)->format('F Y') }}</h3>
+            <p class="mt-1 text-xs text-gray-400">Totals come from Worker Attendance recorded against each work order this month.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th class="px-4 py-3">Worker</th>
+                        <th class="px-4 py-3">Days Present</th>
+                        <th class="px-4 py-3 text-right">Total Salary</th>
+                        <th class="px-4 py-3 text-right">Total Advance</th>
+                        <th class="px-4 py-3"></th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse ($employees as $employee)
+                        @php
+                            $records = $attendanceByEmployee->get($employee->id, collect());
+                            $totalSalary = $records->sum('salary');
+                            $totalAdvance = $records->sum('advance');
+                        @endphp
+                        @if ($records->isNotEmpty())
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{{ $employee->name }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-500">{{ $records->pluck('date')->map->format('Y-m-d')->unique()->count() }}</td>
+                                <td class="px-4 py-3 text-right text-sm font-medium">₹{{ number_format($totalSalary, 2) }}</td>
+                                <td class="px-4 py-3 text-right text-sm text-gray-500">₹{{ number_format($totalAdvance, 2) }}</td>
+                                <td class="px-4 py-3">
+                                    <details>
+                                        <summary class="cursor-pointer text-xs font-medium text-indigo-600">Day-by-day</summary>
+                                        <table class="mt-2 min-w-full text-xs">
+                                            <thead>
+                                                <tr class="text-left text-gray-400">
+                                                    <th class="pr-3 py-1">Date</th>
+                                                    <th class="pr-3 py-1">Work Order</th>
+                                                    <th class="pr-3 py-1">Hours</th>
+                                                    <th class="pr-3 py-1 text-right">Salary</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($records as $record)
+                                                    <tr>
+                                                        <td class="pr-3 py-1">{{ $record->date->format('d M') }}</td>
+                                                        <td class="pr-3 py-1">{{ $record->workOrder?->work_order_no ?? '—' }}</td>
+                                                        <td class="pr-3 py-1">{{ $record->hours_worked ?? '—' }}</td>
+                                                        <td class="pr-3 py-1 text-right">{{ $record->salary ? '₹'.number_format($record->salary, 2) : '—' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </details>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <form method="POST" action="{{ route('payroll.generate-from-attendance') }}">
+                                        @csrf
+                                        <input type="hidden" name="employee_id" value="{{ $employee->id }}">
+                                        <input type="hidden" name="month" value="{{ $month }}">
+                                        <input type="hidden" name="year" value="{{ $year }}">
+                                        <button class="text-sm text-indigo-600 hover:underline">Generate Payroll</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endif
+                    @empty
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </x-card>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <x-card :padded="false" class="lg:col-span-2">
             <div class="overflow-x-auto">

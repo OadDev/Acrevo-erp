@@ -784,4 +784,114 @@ class WorkOrderWorkflowTest extends TestCase
         $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
         $response->assertOk()->assertSee('Cement');
     }
+
+    public function test_worker_attendance_deducts_break_time_from_working_hours(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Two', 'status' => 'active']);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/attendance", [
+            'employee_id' => $employee->id,
+            'date' => now()->toDateString(),
+            'status' => 'present',
+            'check_in' => '09:00',
+            'check_out' => '18:00',
+            'break_minutes' => '90',
+        ])->assertRedirect();
+
+        $attendance = \App\Models\Attendance::where('employee_id', $employee->id)->firstOrFail();
+        $this->assertSame(90, $attendance->break_minutes);
+        $this->assertEquals(7.5, $attendance->hours_worked);
+    }
+
+    public function test_ledger_can_be_exported_as_csv_with_filters(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'debit', 'category' => 'Materials', 'description' => 'Cement', 'amount' => '1000',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'credit', 'category' => 'Advance', 'description' => 'Client advance', 'amount' => '5000',
+        ])->assertRedirect();
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/ledger/export?category=Materials");
+        $response->assertOk();
+        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Cement', $content);
+        $this->assertStringNotContainsString('Client advance', $content);
+    }
+
+    public function test_payroll_can_be_generated_from_attendance_records(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Three', 'status' => 'active']);
+
+        \App\Models\Attendance::create([
+            'employee_id' => $employee->id, 'work_order_id' => $workOrder->id,
+            'date' => now()->startOfMonth()->addDays(2), 'status' => 'present', 'salary' => 800, 'advance' => 100,
+        ]);
+        \App\Models\Attendance::create([
+            'employee_id' => $employee->id, 'work_order_id' => $workOrder->id,
+            'date' => now()->startOfMonth()->addDays(3), 'status' => 'present', 'salary' => 800, 'advance' => 0,
+        ]);
+
+        $this->actingAs($admin)->post('/payroll/generate-from-attendance', [
+            'employee_id' => $employee->id,
+            'month' => now()->month,
+            'year' => now()->year,
+        ])->assertRedirect();
+
+        $payroll = \App\Models\Payroll::where('employee_id', $employee->id)
+            ->where('month', now()->month)->where('year', now()->year)->firstOrFail();
+        $this->assertEquals(1600, $payroll->basic_salary);
+        $this->assertEquals(100, $payroll->advance_deducted);
+        $this->assertEquals(1500, $payroll->net_salary);
+        $this->assertSame('pending', $payroll->status);
+    }
+
+    public function test_dashboard_shows_my_attendance_and_payroll_for_a_linked_employee(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $workerUser = User::create([
+            'name' => 'Worker Login', 'email' => 'worker+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $workerUser->syncRoles(['Worker']);
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Four', 'status' => 'active', 'user_id' => $workerUser->id]);
+
+        \App\Models\Attendance::create([
+            'employee_id' => $employee->id, 'work_order_id' => $workOrder->id,
+            'date' => now(), 'status' => 'present', 'salary' => 800, 'advance' => 0,
+        ]);
+
+        $response = $this->actingAs($workerUser)->get('/dashboard');
+        $response->assertOk()->assertSee($workOrder->work_order_no)->assertSee('My Attendance');
+    }
 }

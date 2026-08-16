@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Enquiry;
 use App\Models\Payment;
@@ -127,6 +128,22 @@ class DashboardController extends Controller
             ? \Spatie\Activitylog\Models\Activity::latest()->take(8)->get()
             : collect();
 
-        return view('dashboard', compact('widgets', 'recentActivity'));
+        $myAttendance = null;
+        $myPayroll = null;
+        if ($employee = $user->employee) {
+            $myAttendance = Attendance::where('employee_id', $employee->id)
+                ->whereMonth('date', now()->month)
+                ->whereYear('date', now()->year)
+                ->with('workOrder')
+                ->orderBy('date')
+                ->get();
+
+            $myPayroll = Payroll::where('employee_id', $employee->id)
+                ->where('month', now()->month)
+                ->where('year', now()->year)
+                ->first();
+        }
+
+        return view('dashboard', compact('widgets', 'recentActivity', 'myAttendance', 'myPayroll'));
     }
 }

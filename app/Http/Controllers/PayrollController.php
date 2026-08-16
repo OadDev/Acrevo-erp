@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Payroll;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,14 @@ class PayrollController extends Controller
 
         $employees = Employee::where('status', 'active')->orderBy('name')->get();
 
-        return view('payroll.index', compact('payrolls', 'employees', 'month', 'year'));
+        $attendanceByEmployee = Attendance::whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->with('workOrder')
+            ->orderBy('date')
+            ->get()
+            ->groupBy('employee_id');
+
+        return view('payroll.index', compact('payrolls', 'employees', 'month', 'year', 'attendanceByEmployee'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -58,5 +66,39 @@ class PayrollController extends Controller
         $payroll->update(['status' => 'paid', 'paid_at' => now()]);
 
         return back()->with('success', 'Payroll marked as paid.');
+    }
+
+    public function generateFromAttendance(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'employee_id' => ['required', 'exists:employees,id'],
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'year' => ['required', 'integer', 'min:2000'],
+        ]);
+
+        $attendance = Attendance::where('employee_id', $data['employee_id'])
+            ->whereMonth('date', $data['month'])
+            ->whereYear('date', $data['year'])
+            ->get();
+
+        $basicSalary = (float) $attendance->sum('salary');
+        $advanceDeducted = (float) $attendance->sum('advance');
+
+        Payroll::updateOrCreate(
+            ['employee_id' => $data['employee_id'], 'month' => $data['month'], 'year' => $data['year']],
+            [
+                'basic_salary' => $basicSalary,
+                'allowances' => 0,
+                'deductions' => 0,
+                'advance_deducted' => $advanceDeducted,
+                'overtime_amount' => 0,
+                'incentive' => 0,
+                'net_salary' => $basicSalary - $advanceDeducted,
+                'status' => 'pending',
+                'processed_by' => $request->user()->id,
+            ]
+        );
+
+        return back()->with('success', 'Payroll generated from attendance.');
     }
 }

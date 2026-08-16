@@ -23,7 +23,11 @@
         </x-page-header>
     </x-slot>
 
-    <div x-data="{ tab: 'site' }">
+    @php
+        $validTabs = ['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'ledger', 'qc', 'approvals', 'tickets'];
+        $initialTab = in_array(request('tab'), $validTabs, true) ? request('tab') : 'site';
+    @endphp
+    <div x-data="{ tab: '{{ $initialTab }}' }">
         <div class="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
             @foreach ([
                 'site' => 'Site',
@@ -33,7 +37,8 @@
                 'progress' => 'Progress & Media',
                 'materials' => 'Material Inward and Daily Material Used Entry',
                 'manpower' => 'Man Power Schedule',
-                'mb' => 'Measurement Book & Ledger',
+                'mb' => 'Measurement Book',
+                'ledger' => 'Site Ledger',
                 'qc' => 'QC',
                 'approvals' => 'Approval Requests',
                 'tickets' => 'Tickets',
@@ -69,6 +74,9 @@
         </div>
         <div x-show="tab === 'mb'" x-cloak>
             @include('work-orders.tabs.measurement-ledger')
+        </div>
+        <div x-show="tab === 'ledger'" x-cloak>
+            @include('work-orders.tabs.ledger')
         </div>
         <div x-show="tab === 'qc'" x-cloak>
             @include('work-orders.tabs.qc')

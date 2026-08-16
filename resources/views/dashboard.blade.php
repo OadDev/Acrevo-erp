@@ -28,6 +28,52 @@
             <x-empty-state icon="layers" title="No dashboard widgets available" description="Your role doesn't have any modules assigned yet. Contact your administrator." />
         @endforelse
 
+        @if ($myAttendance !== null)
+            <div>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">My Attendance &amp; Payroll — {{ now()->format('F Y') }}</h3>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <x-card :padded="false" class="lg:col-span-2">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                        <th class="px-4 py-2">Date</th>
+                                        <th class="px-4 py-2">Work Order</th>
+                                        <th class="px-4 py-2">Hours</th>
+                                        <th class="px-4 py-2 text-right">Salary</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @forelse ($myAttendance as $record)
+                                        <tr>
+                                            <td class="px-4 py-2">{{ $record->date->format('d M') }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $record->workOrder?->work_order_no ?? '—' }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $record->hours_worked ?? '—' }}</td>
+                                            <td class="px-4 py-2 text-right font-medium">{{ $record->salary ? '₹'.number_format($record->salary, 2) : '—' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">No attendance recorded yet this month.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </x-card>
+                    <x-card>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">This Month's Payroll</p>
+                        @if ($myPayroll)
+                            <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($myPayroll->net_salary, 2) }}</p>
+                            <x-badge :status="$myPayroll->status" class="mt-2" />
+                            @if ($myPayroll->status === 'paid')
+                                <p class="mt-2 text-xs text-gray-400">Paid on {{ $myPayroll->paid_at?->format('d M Y') }}</p>
+                            @endif
+                        @else
+                            <p class="mt-2 text-sm text-gray-400">Not processed yet.</p>
+                        @endif
+                    </x-card>
+                </div>
+            </div>
+        @endif
+
         @if ($recentActivity->isNotEmpty())
             <div>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Recent Activity</h3>

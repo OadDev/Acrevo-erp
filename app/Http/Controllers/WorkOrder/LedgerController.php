@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 
 class LedgerController extends Controller
@@ -47,5 +48,35 @@ class LedgerController extends Controller
         }
 
         return back()->with('success', 'Ledger entry recorded.');
+    }
+
+    public function export(Request $request, WorkOrder $workOrder): StreamedResponse
+    {
+        $entries = $workOrder->ledgers()
+            ->when($request->get('from'), fn ($q, $from) => $q->whereDate('entry_date', '>=', $from))
+            ->when($request->get('to'), fn ($q, $to) => $q->whereDate('entry_date', '<=', $to))
+            ->when($request->get('category'), fn ($q, $category) => $q->where('category', $category))
+            ->when($request->get('type'), fn ($q, $type) => $q->where('type', $type))
+            ->orderBy('entry_date')
+            ->orderBy('id')
+            ->get();
+
+        $filename = 'ledger-'.$workOrder->work_order_no.'-'.now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($entries) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Date', 'Category', 'Type', 'Description', 'Amount', 'Balance']);
+            foreach ($entries as $entry) {
+                fputcsv($out, [
+                    $entry->entry_date->format('Y-m-d'),
+                    $entry->category,
+                    ucfirst($entry->type),
+                    $entry->description,
+                    $entry->amount,
+                    $entry->balance,
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 }

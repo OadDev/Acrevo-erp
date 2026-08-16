@@ -18,6 +18,7 @@ class WorkOrderAttendanceController extends Controller
             'status' => ['required', 'in:present,absent,half_day,leave'],
             'check_in' => ['nullable', 'date_format:H:i'],
             'check_out' => ['nullable', 'date_format:H:i', 'after:check_in'],
+            'break_minutes' => ['nullable', 'integer', 'min:0'],
             'salary' => ['nullable', 'numeric', 'min:0'],
             'advance' => ['nullable', 'numeric', 'min:0'],
         ]);
@@ -25,9 +26,11 @@ class WorkOrderAttendanceController extends Controller
         $hoursWorked = null;
         if (! empty($data['check_in']) && ! empty($data['check_out'])) {
             $hoursWorked = round(
-                (strtotime($data['check_out']) - strtotime($data['check_in'])) / 3600,
+                (strtotime($data['check_out']) - strtotime($data['check_in'])) / 3600
+                - (($data['break_minutes'] ?? 0) / 60),
                 2
             );
+            $hoursWorked = max($hoursWorked, 0);
         }
 
         Attendance::updateOrCreate(
@@ -37,6 +40,7 @@ class WorkOrderAttendanceController extends Controller
                 'status' => $data['status'],
                 'check_in' => $data['check_in'] ?? null,
                 'check_out' => $data['check_out'] ?? null,
+                'break_minutes' => $data['break_minutes'] ?? null,
                 'hours_worked' => $hoursWorked,
                 'salary' => $data['salary'] ?? null,
                 'advance' => $data['advance'] ?? null,

@@ -146,6 +146,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('measurement-books/{measurementBook}/items', [MeasurementBookItemController::class, 'store'])->name('measurement-books.items.store');
         Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
         Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+        Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
     });
     Route::middleware('permission:work_orders.edit')->group(function () {
@@ -174,6 +175,7 @@ Route::middleware('permission:attendance.view')->group(function () {
 Route::middleware('permission:payroll.view')->group(function () {
     Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
     Route::post('payroll', [PayrollController::class, 'store'])->name('payroll.store');
+    Route::post('payroll/generate-from-attendance', [PayrollController::class, 'generateFromAttendance'])->name('payroll.generate-from-attendance');
     Route::post('payroll/{payroll}/mark-paid', [PayrollController::class, 'markPaid'])->name('payroll.mark-paid');
 });
 Route::middleware('permission:executive_teams.view')->group(function () {
