@@ -170,6 +170,11 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(MaterialEntry::class);
     }
 
+    public function materialUsageEntries(): HasMany
+    {
+        return $this->hasMany(MaterialUsageEntry::class)->latest('date');
+    }
+
     public function labourEntries(): HasMany
     {
         return $this->hasMany(LabourEntry::class);

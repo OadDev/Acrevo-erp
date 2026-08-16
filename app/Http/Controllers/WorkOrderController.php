@@ -206,7 +206,7 @@ class WorkOrderController extends Controller
             'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
             'dailyChecklists.executiveTeam',
             'dailyProgressReports' => fn ($q) => $q->latest(),
-            'materialEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
+            'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
             'attendances.employee', 'attendances.markedBy',
             'children', 'parent', 'clientReviews',
             'media',

@@ -17,21 +17,21 @@ class MaterialEntryController extends Controller
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
+            'entry_date' => ['required', 'date'],
             'material_name' => ['required', 'string', 'max:255'],
-            'brand' => ['nullable', 'string', 'max:150'],
-            'size' => ['nullable', 'string', 'max:100'],
             'unit' => ['required', 'string', 'max:30'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'rate' => ['required', 'numeric', 'min:0'],
+            'scope' => ['nullable', 'in:client,company'],
             'vendor' => ['nullable', 'string', 'max:255'],
+            'delivery_vehicle_details' => ['nullable', 'string', 'max:255'],
         ]);
 
         $workOrder->materialEntries()->create($data + [
             'amount' => $data['quantity'] * $data['rate'],
-            'entry_date' => now()->toDateString(),
             'added_by' => $request->user()->id,
         ]);
 
-        return back()->with('success', 'Material entry added.');
+        return back()->with('success', 'Material inward recorded.');
     }
 }

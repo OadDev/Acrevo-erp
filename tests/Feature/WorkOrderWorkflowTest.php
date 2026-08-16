@@ -726,4 +726,62 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertEquals(600, $item->quantity);
         $this->assertSame('cft', $item->unit);
     }
+
+    public function test_material_inward_entry_can_be_recorded_with_supplier_and_scope_details(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => now()->toDateString(),
+            'material_name' => 'Steel rods',
+            'quantity' => '10',
+            'unit' => 'Nos',
+            'rate' => '650',
+            'scope' => 'client',
+            'vendor' => 'Sri Lakshmi Steels',
+            'delivery_vehicle_details' => 'TN 45 AB 1234',
+        ])->assertRedirect();
+
+        $entry = $workOrder->fresh()->materialEntries()->firstOrFail();
+        $this->assertSame('Steel rods', $entry->material_name);
+        $this->assertEquals(6500, $entry->amount);
+        $this->assertSame('client', $entry->scope);
+        $this->assertSame('Sri Lakshmi Steels', $entry->vendor);
+        $this->assertSame('TN 45 AB 1234', $entry->delivery_vehicle_details);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()->assertSee('Sri Lakshmi Steels');
+    }
+
+    public function test_daily_material_used_entry_can_be_recorded(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/material-usage", [
+            'date' => now()->toDateString(),
+            'material_name' => 'Cement',
+            'quantity' => '5',
+            'unit' => 'Bag',
+        ])->assertRedirect();
+
+        $entry = $workOrder->fresh()->materialUsageEntries()->firstOrFail();
+        $this->assertSame('Cement', $entry->material_name);
+        $this->assertEquals(5, $entry->quantity);
+        $this->assertSame('Bag', $entry->unit);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()->assertSee('Cement');
+    }
 }

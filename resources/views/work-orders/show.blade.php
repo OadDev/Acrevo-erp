@@ -31,7 +31,7 @@
                 'team' => 'Team',
                 'checklist' => 'Daily Work with Checklist',
                 'progress' => 'Progress & Media',
-                'materials' => 'Materials & Labour',
+                'materials' => 'Material Inward and Daily Material Used Entry',
                 'mb' => 'Measurement Book & Ledger',
                 'qc' => 'QC',
                 'approvals' => 'Approval Requests',

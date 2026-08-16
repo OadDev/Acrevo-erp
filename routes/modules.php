@@ -33,6 +33,7 @@ use App\Http\Controllers\WorkOrder\DailyProgressController;
 use App\Http\Controllers\WorkOrder\LabourEntryController;
 use App\Http\Controllers\WorkOrder\LedgerController;
 use App\Http\Controllers\WorkOrder\MaterialEntryController;
+use App\Http\Controllers\WorkOrder\MaterialUsageEntryController;
 use App\Http\Controllers\WorkOrder\MeasurementBookController;
 use App\Http\Controllers\WorkOrder\MeasurementBookItemController;
 use App\Http\Controllers\WorkOrder\WorkOrderAttendanceController;
@@ -137,6 +138,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:site_records.manage')->group(function () {
         Route::get('materials', [MaterialEntryController::class, 'index'])->name('materials.index');
         Route::post('materials', [MaterialEntryController::class, 'store'])->name('materials.store');
+        Route::post('material-usage', [MaterialUsageEntryController::class, 'store'])->name('material-usage.store');
         Route::get('labour', [LabourEntryController::class, 'index'])->name('labour.index');
         Route::post('labour', [LabourEntryController::class, 'store'])->name('labour.store');
         Route::get('measurement-books', [MeasurementBookController::class, 'index'])->name('measurement-books.index');
