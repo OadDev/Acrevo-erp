@@ -38,6 +38,40 @@
                     <p class="text-sm text-gray-400">No updates yet.</p>
                 @endforelse
             </x-card>
+
+            <x-card :padded="false">
+                <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Monthly Summary</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                <th class="px-4 py-2">Date</th>
+                                <th class="px-4 py-2">Work Done/Not</th>
+                                <th class="px-4 py-2">Responsibility</th>
+                                <th class="px-4 py-2">Work Detail/Reason</th>
+                                <th class="px-4 py-2 text-right">Days in Client Bear</th>
+                                <th class="px-4 py-2 text-right">Remaining Construction Days</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @forelse ($workOrder->summaries as $entry)
+                                <tr>
+                                    <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date->format('d M Y') }}</td>
+                                    <td class="px-4 py-2">
+                                        <span class="{{ $entry->status === 'done' ? 'text-emerald-600' : 'text-gray-500' }}">{{ $entry->status === 'done' ? 'Done' : 'No' }}</span>
+                                    </td>
+                                    <td class="px-4 py-2 text-gray-500">{{ ucfirst($entry->responsibility) }}</td>
+                                    <td class="px-4 py-2">{{ $entry->work_detail ?? '—' }}</td>
+                                    <td class="px-4 py-2 text-right text-gray-500">{{ $entry->client_bear_days ?? '—' }}</td>
+                                    <td class="px-4 py-2 text-right text-gray-500">{{ $entry->remaining_construction_days ?? '—' }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No summary entries yet.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </x-card>
         </div>
 
         <div class="space-y-6">

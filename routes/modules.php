@@ -40,6 +40,7 @@ use App\Http\Controllers\WorkOrder\MeasurementBookController;
 use App\Http\Controllers\WorkOrder\MeasurementBookItemController;
 use App\Http\Controllers\WorkOrder\WorkOrderAttendanceController;
 use App\Http\Controllers\WorkOrder\WorkOrderMediaController;
+use App\Http\Controllers\WorkOrder\WorkOrderSummaryController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -180,6 +181,12 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::put('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'update'])->name('company-ledger.update');
     Route::delete('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'destroy'])->name('company-ledger.destroy');
     Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
+    // Monthly Summary is entered by the office (Sales/HR/Admin, enforced in
+    // the controller), not the site team, so it also skips the
+    // site_records.manage middleware the other WO entry routes use.
+    Route::post('summary', [WorkOrderSummaryController::class, 'store'])->name('summary.store');
+    Route::put('summary/{summary}', [WorkOrderSummaryController::class, 'update'])->name('summary.update');
+    Route::delete('summary/{summary}', [WorkOrderSummaryController::class, 'destroy'])->name('summary.destroy');
     Route::middleware('permission:work_orders.edit')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');

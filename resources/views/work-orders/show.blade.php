@@ -42,6 +42,7 @@
             'materials' => 'Material Inward and Daily Material Used Entry',
             'manpower' => 'Used Man Power Budget',
             'mb' => 'Measurement Book',
+            'summary' => 'Monthly Summary',
             'ledger' => 'Site Ledger',
         ];
         if ($canSeeCompanyLedger) {
@@ -89,6 +90,9 @@
         </div>
         <div x-show="tab === 'mb'" x-cloak>
             @include('work-orders.tabs.measurement-ledger')
+        </div>
+        <div x-show="tab === 'summary'" x-cloak>
+            @include('work-orders.tabs.summary')
         </div>
         <div x-show="tab === 'ledger'" x-cloak>
             @include('work-orders.tabs.ledger')

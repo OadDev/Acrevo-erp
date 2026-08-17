@@ -28,6 +28,7 @@ class PortalWorkOrderController extends Controller
         $workOrder->load([
             'dailyProgressReports' => fn ($q) => $q->latest(), 'media', 'tickets', 'clientReviews', 'completionCertificates',
             'approvalRequests.requestedBy', 'approvalRequests.respondedBy', 'approvalRequests.media',
+            'summaries' => fn ($q) => $q->orderBy('entry_date'),
         ]);
 
         return view('portal.work-orders.show', compact('workOrder'));

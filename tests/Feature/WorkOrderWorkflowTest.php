@@ -50,6 +50,19 @@ class WorkOrderWorkflowTest extends TestCase
 
     // Call only after admin() has already seeded roles/permissions in the
     // same test - reseeding here would duplicate the Role rows.
+    private function sales(): User
+    {
+        $user = User::create([
+            'name' => 'Sales User', 'email' => 'sales+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $user->syncRoles(['Sales']);
+
+        return $user;
+    }
+
+    // Call only after admin() has already seeded roles/permissions in the
+    // same test - reseeding here would duplicate the Role rows.
     private function finance(): User
     {
         $user = User::create([
@@ -1432,5 +1445,55 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/company-ledger/{$entries[0]->id}")->assertRedirect();
         $this->assertEquals(-1500, $entries[1]->fresh()->balance);
+    }
+
+    public function test_only_sales_hr_and_admin_can_edit_the_work_order_summary_and_client_can_view_it(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $sales = $this->sales();
+        $nonEditor = $this->executiveTeamLeader();
+
+        $this->actingAs($nonEditor)->post("/work-orders/{$workOrder->id}/summary", [
+            'entry_date' => '2026-08-01', 'status' => 'done', 'responsibility' => 'company', 'work_detail' => 'Marking and Excavation',
+        ])->assertForbidden();
+
+        $this->actingAs($sales)->post("/work-orders/{$workOrder->id}/summary", [
+            'entry_date' => '2026-08-01', 'status' => 'done', 'responsibility' => 'company',
+            'work_detail' => 'Marking and Excavation', 'client_bear_days' => 0, 'remaining_construction_days' => 179,
+        ])->assertRedirect();
+
+        $entry = $workOrder->fresh()->summaries()->firstOrFail();
+        $this->assertSame('Marking and Excavation', $entry->work_detail);
+
+        $this->actingAs($nonEditor)->put("/work-orders/{$workOrder->id}/summary/{$entry->id}", [
+            'entry_date' => '2026-08-01', 'status' => 'done', 'responsibility' => 'company',
+        ])->assertForbidden();
+        $this->actingAs($nonEditor)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertForbidden();
+
+        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/summary/{$entry->id}", [
+            'entry_date' => '2026-08-02', 'status' => 'not_done', 'responsibility' => 'client', 'work_detail' => 'Rain',
+        ])->assertRedirect();
+        $entry->refresh();
+        $this->assertSame('not_done', $entry->status);
+        $this->assertSame('client', $entry->responsibility);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=summary");
+        $response->assertOk()->assertSee('Rain');
+
+        // Client portal shows the summary read-only.
+        $this->actingAs($admin)->post("/clients/{$client->id}/portal-access")->assertRedirect();
+        $login = \App\Models\ClientLogin::where('client_id', $client->id)->firstOrFail();
+
+        $portalResponse = $this->actingAs($login->user)->get("/portal/work-orders/{$workOrder->id}");
+        $portalResponse->assertOk()->assertSee('Monthly Summary')->assertSee('Rain');
+
+        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertRedirect();
+        $this->assertSame(0, $workOrder->summaries()->count());
     }
 }

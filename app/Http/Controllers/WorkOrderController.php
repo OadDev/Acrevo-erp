@@ -231,6 +231,7 @@ class WorkOrderController extends Controller
             'dailyProgressReports' => fn ($q) => $q->latest(),
             'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'timeSchedules', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
             'companyLedgers.media', 'companyLedgers.createdBy',
+            'summaries' => fn ($q) => $q->orderBy('entry_date'),
             'attendances.employee', 'attendances.markedBy',
             'children', 'parent', 'clientReviews',
             'media',
