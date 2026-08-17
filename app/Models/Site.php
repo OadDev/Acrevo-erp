@@ -8,10 +8,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Site extends Model
+class Site extends Model implements HasMedia
 {
-    use HasFactory, HasSequenceNumber, HasUuids;
+    use HasFactory, HasSequenceNumber, HasUuids, InteractsWithMedia;
+
+    public const DOCUMENT_CATEGORIES = ['kyc', 'land_document', 'gov_record', 'other'];
 
     protected $sequencePrefix = 'ST';
 
@@ -42,5 +46,12 @@ class Site extends Model
     public function workOrders(): HasMany
     {
         return $this->hasMany(WorkOrder::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        foreach (self::DOCUMENT_CATEGORIES as $category) {
+            $this->addMediaCollection($category);
+        }
     }
 }

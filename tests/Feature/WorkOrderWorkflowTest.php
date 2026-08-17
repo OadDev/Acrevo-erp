@@ -1329,4 +1329,29 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($admin)->delete("/qc/{$inspection->id}")->assertRedirect();
         $this->assertNull(\App\Models\QcInspection::find($inspection->id));
     }
+
+    public function test_site_documents_can_be_uploaded_and_only_admin_can_remove_them(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $site = Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $nonAdmin = $this->executiveTeamLeader();
+
+        $this->actingAs($admin)->post("/sites/{$site->id}/documents", [
+            'category' => 'kyc',
+            'file' => \Illuminate\Http\UploadedFile::fake()->create('kyc.pdf', 100, 'application/pdf'),
+        ])->assertRedirect();
+
+        $document = $site->fresh()->getMedia('kyc')->first();
+        $this->assertNotNull($document);
+        $this->assertSame($site->id, $document->model_id);
+
+        $response = $this->actingAs($admin)->get("/sites/{$site->id}");
+        $response->assertOk()->assertSee('kyc.pdf');
+
+        $this->actingAs($nonAdmin)->delete("/sites/{$site->id}/documents/{$document->id}")->assertForbidden();
+
+        $this->actingAs($admin)->delete("/sites/{$site->id}/documents/{$document->id}")->assertRedirect();
+        $this->assertNull($site->fresh()->getMedia('kyc')->first());
+    }
 }

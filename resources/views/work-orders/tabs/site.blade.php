@@ -64,3 +64,7 @@
         @endforelse
     </x-card>
 </div>
+
+@if ($workOrder->site)
+    @include('sites.partials.documents', ['site' => $workOrder->site])
+@endif

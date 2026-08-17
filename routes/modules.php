@@ -24,6 +24,7 @@ use App\Http\Controllers\QcInspectionController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SiteDocumentController;
 use App\Http\Controllers\SiteVisitController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
@@ -75,6 +76,8 @@ Route::middleware('permission:enquiries.view')->group(function () {
 Route::middleware('permission:work_orders.edit')->group(function () {
     Route::resource('sites', SiteController::class)->only(['create', 'store', 'update']);
     Route::post('sites/{site}/complete', [SiteController::class, 'complete'])->name('sites.complete');
+    Route::post('sites/{site}/documents', [SiteDocumentController::class, 'store'])->name('sites.documents.store');
+    Route::delete('sites/{site}/documents/{media}', [SiteDocumentController::class, 'destroy'])->name('sites.documents.destroy');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {

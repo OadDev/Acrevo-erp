@@ -29,7 +29,7 @@ class SiteController extends Controller
 
     public function show(Site $site): View
     {
-        $site->load(['client', 'quotation']);
+        $site->load(['client', 'quotation', 'media']);
         $workOrders = $site->workOrders()->latest()->paginate(15);
 
         return view('sites.show', compact('site', 'workOrders'));

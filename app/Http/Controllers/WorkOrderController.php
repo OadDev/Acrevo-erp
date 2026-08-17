@@ -223,7 +223,7 @@ class WorkOrderController extends Controller
         $this->authorize('view', $workOrder);
 
         $workOrder->load([
-            'client', 'quotation', 'site', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
+            'client', 'quotation', 'site.media', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
             'tickets', 'qcInspections.inspectedBy',
             'dailyChecklists' => fn ($q) => $q->latest(),
             'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
