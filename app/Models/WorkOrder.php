@@ -82,11 +82,10 @@ class WorkOrder extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('before_images');
-        $this->addMediaCollection('during_images');
-        $this->addMediaCollection('completion_images');
-        $this->addMediaCollection('videos');
         $this->addMediaCollection('documents');
+        $this->addMediaCollection('images');
+        $this->addMediaCollection('videos');
+        $this->addMediaCollection('other');
     }
 
     /**

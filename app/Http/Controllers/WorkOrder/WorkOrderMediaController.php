@@ -11,7 +11,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class WorkOrderMediaController extends Controller
 {
-    private const COLLECTIONS = ['before_images', 'during_images', 'completion_images', 'videos', 'documents'];
+    private const COLLECTIONS = ['documents', 'images', 'videos', 'other'];
 
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {

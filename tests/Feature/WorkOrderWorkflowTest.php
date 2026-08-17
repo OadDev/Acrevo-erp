@@ -443,7 +443,7 @@ class WorkOrderWorkflowTest extends TestCase
         $file = \Illuminate\Http\UploadedFile::fake()->image('site.jpg')->size(500);
 
         $response = $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/media", [
-            'collection' => 'before_images',
+            'collection' => 'images',
             'file' => $file,
         ]);
         $response->assertRedirect();
@@ -454,7 +454,7 @@ class WorkOrderWorkflowTest extends TestCase
             ->where('model_id', $workOrder->id)
             ->first();
         $this->assertNotNull($media, 'Media should be attached with the work order\'s full UUID as model_id.');
-        $this->assertCount(1, $workOrder->fresh()->getMedia('before_images'));
+        $this->assertCount(1, $workOrder->fresh()->getMedia('images'));
     }
 
     public function test_daily_work_entries_can_be_added_multiple_times_a_day_with_tickable_items(): void

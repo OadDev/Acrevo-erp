@@ -63,10 +63,9 @@
                     @csrf
                     <x-select-input name="collection" class="text-sm">
                         <option value="documents">Document</option>
-                        <option value="before_images">Before</option>
-                        <option value="during_images">During</option>
-                        <option value="completion_images">Completion</option>
+                        <option value="images">Image</option>
                         <option value="videos">Video</option>
+                        <option value="other">Other</option>
                     </x-select-input>
                     <input type="file" name="file" class="col-span-2 text-sm sm:col-span-2" required>
                     <x-primary-button class="justify-center">Upload</x-primary-button>
@@ -145,11 +144,10 @@
                 <form method="POST" action="{{ route('work-orders.media.store', $workOrder) }}" enctype="multipart/form-data" class="space-y-3">
                     @csrf
                     <x-select-input name="collection" class="w-full">
-                        <option value="before_images">Before</option>
-                        <option value="during_images">During</option>
-                        <option value="completion_images">Completion</option>
-                        <option value="videos">Video</option>
                         <option value="documents">Document</option>
+                        <option value="images">Image</option>
+                        <option value="videos">Video</option>
+                        <option value="other">Other</option>
                     </x-select-input>
                     <input type="file" name="file" class="w-full text-sm" required>
                     <x-primary-button class="w-full justify-center">Upload</x-primary-button>
