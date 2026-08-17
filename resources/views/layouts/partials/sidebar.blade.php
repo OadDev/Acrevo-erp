@@ -30,6 +30,7 @@
                 <x-nav-group label="Sales & Marketing">
                     @can('enquiries.view')
                         <x-nav-link :href="route('enquiries.index')" :active="request()->routeIs('enquiries.*')" icon="inbox">Enquiries</x-nav-link>
+                        <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')" icon="users">Clients</x-nav-link>
                     @endcan
                     @can('site_visits.view')
                         <x-nav-link :href="route('site-visits.index')" :active="request()->routeIs('site-visits.*')" icon="map-pin">Site Visits</x-nav-link>
