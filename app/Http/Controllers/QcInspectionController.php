@@ -63,4 +63,39 @@ class QcInspectionController extends Controller
 
         return view('qc.show', compact('qcInspection'));
     }
+
+    public function edit(QcInspection $qcInspection): View
+    {
+        $this->authorizeAdminOnly();
+
+        $qcInspection->load('workOrder');
+
+        return view('qc.edit', compact('qcInspection'));
+    }
+
+    public function update(Request $request, QcInspection $qcInspection): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $data = $request->validate([
+            'inspection_type' => ['required', 'in:daily,final'],
+            'status' => ['required', 'in:passed,failed,rework_required'],
+            'remarks' => ['nullable', 'string'],
+        ]);
+
+        $qcInspection->update($data);
+
+        return redirect()->route('qc.show', $qcInspection)->with('success', 'QC inspection updated.');
+    }
+
+    public function destroy(QcInspection $qcInspection): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $workOrder = $qcInspection->workOrder;
+
+        $qcInspection->delete();
+
+        return redirect()->route('work-orders.show', $workOrder)->with('success', 'QC inspection removed.');
+    }
 }

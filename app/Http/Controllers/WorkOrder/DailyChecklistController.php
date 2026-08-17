@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\WorkOrder;
 
 use App\Http\Controllers\Controller;
+use App\Models\DailyChecklist;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,5 +45,29 @@ class DailyChecklistController extends Controller
         }
 
         return back()->with('success', 'Daily work entry saved.');
+    }
+
+    public function update(Request $request, WorkOrder $workOrder, DailyChecklist $checklist): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'executive_team_id' => ['required', 'exists:executive_teams,id'],
+        ]);
+
+        $checklist->update($data);
+
+        return back()->with('success', 'Daily work entry updated.');
+    }
+
+    public function destroy(WorkOrder $workOrder, DailyChecklist $checklist): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $checklist->checklistItems()->delete();
+        $checklist->delete();
+
+        return back()->with('success', 'Daily work entry removed.');
     }
 }

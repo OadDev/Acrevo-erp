@@ -55,7 +55,7 @@
     </x-card>
 @endif
 
-<x-card :padded="false">
+<x-card :padded="false" x-data="{ editLabour: null }">
     <div class="flex items-center justify-between p-4">
         <h3 class="text-sm font-semibold text-gray-500">Used Man Power</h3>
     </div>
@@ -70,6 +70,9 @@
                     <th class="px-4 py-2">Actual Time Taken</th>
                     <th class="px-4 py-2">Remark</th>
                     <th class="px-4 py-2 text-right">Amount</th>
+                    @if (auth()->user()->hasRole('Admin'))
+                        <th class="px-4 py-2">Actions</th>
+                    @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -82,9 +85,37 @@
                         <td class="px-4 py-2 text-gray-500">{{ $entry->total_time_to_finish ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
                         <td class="px-4 py-2 text-right font-medium">₹{{ number_format($entry->amount, 2) }}</td>
+                        @if (auth()->user()->hasRole('Admin'))
+                            <td class="whitespace-nowrap px-4 py-2">
+                                <button type="button" @click="editLabour === {{ $entry->id }} ? editLabour = null : editLabour = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                <form method="POST" action="{{ route('work-orders.labour.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this man power entry?')" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                </form>
+                            </td>
+                        @endif
                     </tr>
+                    @if (auth()->user()->hasRole('Admin'))
+                        <tr x-show="editLabour === {{ $entry->id }}" x-cloak>
+                            <td colspan="8" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
+                                <form method="POST" action="{{ route('work-orders.labour.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    @csrf
+                                    @method('PUT')
+                                    <x-text-input type="date" name="entry_date" value="{{ $entry->entry_date?->format('Y-m-d') }}" class="text-xs" required />
+                                    <x-text-input name="labour_type" value="{{ $entry->labour_type }}" class="text-xs" required />
+                                    <x-text-input type="number" name="count" value="{{ $entry->count }}" class="text-xs" required />
+                                    <x-text-input type="number" step="0.5" name="hours" value="{{ $entry->hours }}" class="text-xs" />
+                                    <x-text-input type="number" step="0.01" name="wage_rate" value="{{ $entry->wage_rate }}" class="text-xs" required />
+                                    <x-text-input name="total_time_to_finish" value="{{ $entry->total_time_to_finish }}" class="text-xs" />
+                                    <x-text-input name="remark" value="{{ $entry->remark }}" class="col-span-2 text-xs" />
+                                    <button class="col-span-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 sm:col-span-4">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endif
                 @empty
-                    <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">No labour entries yet.</td></tr>
+                    <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">No labour entries yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

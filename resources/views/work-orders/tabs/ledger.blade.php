@@ -13,7 +13,7 @@
     <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($currentBalance, 2) }}</p>
 </x-card>
 
-<x-card :padded="false">
+<x-card :padded="false" x-data="{ editLedger: null }">
     <div class="flex flex-wrap items-center justify-between gap-3 p-4">
         <h3 class="text-sm font-semibold text-gray-500">Site Ledger</h3>
         <a href="{{ route('work-orders.ledger.export', array_filter([
@@ -61,6 +61,9 @@
                     <th class="px-4 py-2 text-right">Balance</th>
                     <th class="px-4 py-2">Bill</th>
                     <th class="px-4 py-2">Remark</th>
+                    @if (auth()->user()->hasRole('Admin'))
+                        <th class="px-4 py-2">Actions</th>
+                    @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -82,9 +85,45 @@
                             @endif
                         </td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
+                        @if (auth()->user()->hasRole('Admin'))
+                            <td class="whitespace-nowrap px-4 py-2">
+                                <button type="button" @click="editLedger === {{ $entry->id }} ? editLedger = null : editLedger = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                <form method="POST" action="{{ route('work-orders.ledger.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this ledger entry? Balances will be recalculated.')" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                </form>
+                            </td>
+                        @endif
                     </tr>
+                    @if (auth()->user()->hasRole('Admin'))
+                        <tr x-show="editLedger === {{ $entry->id }}" x-cloak>
+                            <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
+                                <form method="POST" action="{{ route('work-orders.ledger.update', [$workOrder, $entry]) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    @csrf
+                                    @method('PUT')
+                                    <x-text-input type="date" name="entry_date" value="{{ $entry->entry_date->format('Y-m-d') }}" class="text-xs" required />
+                                    <x-select-input name="type" class="text-xs">
+                                        <option value="debit" @selected($entry->type === 'debit')>Debit</option>
+                                        <option value="credit" @selected($entry->type === 'credit')>Credit</option>
+                                        <option value="borrow" @selected($entry->type === 'borrow')>Borrow</option>
+                                        <option value="lended" @selected($entry->type === 'lended')>Lended</option>
+                                    </x-select-input>
+                                    <x-text-input type="number" step="0.01" name="amount" value="{{ $entry->amount }}" class="text-xs" required />
+                                    <x-text-input name="category" value="{{ $entry->category }}" class="text-xs" />
+                                    <x-text-input name="description" value="{{ $entry->description }}" class="col-span-2 text-xs" />
+                                    <x-text-input name="remark" value="{{ $entry->remark }}" class="col-span-2 text-xs" />
+                                    <div class="col-span-2 sm:col-span-4">
+                                        <x-input-label value="Replace bill (optional)" />
+                                        <input type="file" name="bill" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 w-full text-xs">
+                                    </div>
+                                    <button class="col-span-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 sm:col-span-4">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endif
                 @empty
-                    <tr><td colspan="10" class="px-4 py-6 text-center text-gray-400">No ledger entries match this filter.</td></tr>
+                    <tr><td colspan="11" class="px-4 py-6 text-center text-gray-400">No ledger entries match this filter.</td></tr>
                 @endforelse
             </tbody>
         </table>

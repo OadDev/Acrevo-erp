@@ -178,6 +178,46 @@ class WorkOrderController extends Controller
         return redirect()->route('work-orders.show', $workOrder)->with('success', 'Work order generated successfully.');
     }
 
+    public function edit(WorkOrder $workOrder): View
+    {
+        $this->authorizeAdminOnly();
+
+        return view('work-orders.edit', compact('workOrder'));
+    }
+
+    public function update(Request $request, WorkOrder $workOrder): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'scope' => ['nullable', 'string'],
+            'priority' => ['required', 'in:low,medium,high,urgent'],
+            'start_date' => ['nullable', 'date'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'estimated_material_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_labour_budget' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $materialBudget = $data['estimated_material_budget'] ?? 0;
+        $labourBudget = $data['estimated_labour_budget'] ?? 0;
+
+        $workOrder->update($data + [
+            'budget_amount' => $materialBudget + $labourBudget ?: null,
+        ]);
+
+        return redirect()->route('work-orders.show', $workOrder)->with('success', 'Work order updated.');
+    }
+
+    public function destroy(WorkOrder $workOrder): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $workOrder->delete();
+
+        return redirect()->route('work-orders.index')->with('success', 'Work order removed.');
+    }
+
     public function show(WorkOrder $workOrder): View
     {
         $this->authorize('view', $workOrder);

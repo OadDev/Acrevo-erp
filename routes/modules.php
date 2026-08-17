@@ -88,6 +88,7 @@ Route::middleware('permission:work_orders.view')->group(function () {
     Route::post('work-orders/{workOrder}/rework', [WorkOrderController::class, 'createRework'])->name('work-orders.rework');
     Route::post('work-orders/{workOrder}/next', [WorkOrderController::class, 'createNext'])->name('work-orders.next');
     Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete'])->name('work-orders.complete');
+    Route::delete('work-orders/{workOrder}', [WorkOrderController::class, 'destroy'])->name('work-orders.destroy');
 });
 
 // Feedback is submitted by the client who owns the work order, so it is
@@ -125,11 +126,16 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:daily_checklist.manage')->group(function () {
         Route::get('checklists', [DailyChecklistController::class, 'index'])->name('checklists.index');
         Route::post('checklists', [DailyChecklistController::class, 'store'])->name('checklists.store');
+        Route::put('checklists/{checklist}', [DailyChecklistController::class, 'update'])->name('checklists.update');
+        Route::delete('checklists/{checklist}', [DailyChecklistController::class, 'destroy'])->name('checklists.destroy');
         Route::post('checklist-items/{item}/done', [DailyChecklistItemController::class, 'markDone'])->name('checklist-items.done');
+        Route::delete('checklist-items/{item}', [DailyChecklistItemController::class, 'destroy'])->name('checklist-items.destroy');
     });
     Route::middleware('permission:daily_progress.manage')->group(function () {
         Route::get('progress', [DailyProgressController::class, 'index'])->name('progress.index');
         Route::post('progress', [DailyProgressController::class, 'store'])->name('progress.store');
+        Route::put('progress/{report}', [DailyProgressController::class, 'update'])->name('progress.update');
+        Route::delete('progress/{report}', [DailyProgressController::class, 'destroy'])->name('progress.destroy');
     });
     Route::middleware('permission:media.upload')->group(function () {
         Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');
@@ -138,20 +144,34 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:site_records.manage')->group(function () {
         Route::get('materials', [MaterialEntryController::class, 'index'])->name('materials.index');
         Route::post('materials', [MaterialEntryController::class, 'store'])->name('materials.store');
+        Route::put('materials/{material}', [MaterialEntryController::class, 'update'])->name('materials.update');
+        Route::delete('materials/{material}', [MaterialEntryController::class, 'destroy'])->name('materials.destroy');
         Route::post('material-usage', [MaterialUsageEntryController::class, 'store'])->name('material-usage.store');
+        Route::put('material-usage/{usage}', [MaterialUsageEntryController::class, 'update'])->name('material-usage.update');
+        Route::delete('material-usage/{usage}', [MaterialUsageEntryController::class, 'destroy'])->name('material-usage.destroy');
         Route::get('labour', [LabourEntryController::class, 'index'])->name('labour.index');
         Route::post('labour', [LabourEntryController::class, 'store'])->name('labour.store');
+        Route::put('labour/{labour}', [LabourEntryController::class, 'update'])->name('labour.update');
+        Route::delete('labour/{labour}', [LabourEntryController::class, 'destroy'])->name('labour.destroy');
         Route::get('measurement-books', [MeasurementBookController::class, 'index'])->name('measurement-books.index');
         Route::post('measurement-books', [MeasurementBookController::class, 'store'])->name('measurement-books.store');
+        Route::put('measurement-books/{measurementBook}', [MeasurementBookController::class, 'update'])->name('measurement-books.update');
+        Route::delete('measurement-books/{measurementBook}', [MeasurementBookController::class, 'destroy'])->name('measurement-books.destroy');
         Route::post('measurement-books/{measurementBook}/items', [MeasurementBookItemController::class, 'store'])->name('measurement-books.items.store');
+        Route::put('measurement-books/{measurementBook}/items/{item}', [MeasurementBookItemController::class, 'update'])->name('measurement-books.items.update');
+        Route::delete('measurement-books/{measurementBook}/items/{item}', [MeasurementBookItemController::class, 'destroy'])->name('measurement-books.items.destroy');
         Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
         Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+        Route::put('ledger/{ledger}', [LedgerController::class, 'update'])->name('ledger.update');
+        Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
     });
     Route::middleware('permission:work_orders.edit')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
+        Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
+        Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
     });
 });
 

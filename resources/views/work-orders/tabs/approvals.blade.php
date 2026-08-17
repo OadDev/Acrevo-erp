@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-3" x-data="{ editApproval: null }">
     <div class="space-y-3 lg:col-span-2">
         @forelse ($workOrder->approvalRequests as $approval)
             <x-card>
@@ -11,8 +11,28 @@
                             · {{ $approval->created_at->format('d M Y') }}
                         </p>
                     </div>
-                    <x-badge :status="$approval->status" />
+                    <div class="flex items-center gap-2">
+                        <x-badge :status="$approval->status" />
+                        @if (auth()->user()->hasRole('Admin'))
+                            <button type="button" @click="editApproval === '{{ $approval->id }}' ? editApproval = null : editApproval = '{{ $approval->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                            <form method="POST" action="{{ route('work-orders.approval-requests.destroy', [$workOrder, $approval]) }}" onsubmit="return confirm('Remove this approval request?')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
+
+                @if (auth()->user()->hasRole('Admin'))
+                    <form method="POST" action="{{ route('work-orders.approval-requests.update', [$workOrder, $approval]) }}" x-show="editApproval === '{{ $approval->id }}'" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
+                        @csrf
+                        @method('PUT')
+                        <x-text-input name="title" value="{{ $approval->title }}" class="w-full text-xs" required />
+                        <x-textarea-input name="description" rows="2" class="w-full text-xs">{{ $approval->description }}</x-textarea-input>
+                        <button class="w-full rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Save</button>
+                    </form>
+                @endif
 
                 @if ($approval->description)
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ $approval->description }}</p>

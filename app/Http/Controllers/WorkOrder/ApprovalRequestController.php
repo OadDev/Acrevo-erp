@@ -56,4 +56,31 @@ class ApprovalRequestController extends Controller
 
         return back()->with('success', 'Response recorded.');
     }
+
+    public function update(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $approvalRequest->update($data);
+
+        return back()->with('success', 'Approval request updated.');
+    }
+
+    public function destroy(WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $approvalRequest->delete();
+
+        return back()->with('success', 'Approval request removed.');
+    }
 }

@@ -30,4 +30,15 @@ class DailyChecklistItemController extends Controller
 
         return back()->with('success', 'Marked done.');
     }
+
+    public function destroy(WorkOrder $workOrder, DailyChecklistItem $item): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($item->dailyChecklist->work_order_id === $workOrder->id, 404);
+
+        $item->delete();
+
+        return back()->with('success', 'Checklist item removed.');
+    }
 }

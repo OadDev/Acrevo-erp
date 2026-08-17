@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\WorkOrder;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ledger;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,6 +52,68 @@ class LedgerController extends Controller
         }
 
         return back()->with('success', 'Ledger entry recorded.');
+    }
+
+    public function update(Request $request, WorkOrder $workOrder, Ledger $ledger): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($ledger->work_order_id === $workOrder->id, 404);
+
+        $data = $request->validate([
+            'entry_date' => ['required', 'date'],
+            'type' => ['required', 'in:credit,debit,borrow,lended'],
+            'category' => ['nullable', 'string', 'max:150'],
+            'description' => ['nullable', 'string'],
+            'remark' => ['nullable', 'string'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
+        ]);
+
+        $ledger->update([
+            'entry_date' => $data['entry_date'],
+            'type' => $data['type'],
+            'category' => $data['category'] ?? null,
+            'description' => $data['description'] ?? null,
+            'remark' => $data['remark'] ?? null,
+            'amount' => $data['amount'],
+        ]);
+
+        if ($request->hasFile('bill')) {
+            try {
+                $ledger->addMediaFromRequest('bill')->toMediaCollection('bill');
+            } catch (FileIsTooBig $e) {
+                return back()->withErrors(['bill' => 'That file is too large (max 20MB).']);
+            }
+        }
+
+        $this->recalculateBalances($workOrder);
+
+        return back()->with('success', 'Ledger entry updated.');
+    }
+
+    public function destroy(WorkOrder $workOrder, Ledger $ledger): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($ledger->work_order_id === $workOrder->id, 404);
+
+        $ledger->delete();
+
+        $this->recalculateBalances($workOrder);
+
+        return back()->with('success', 'Ledger entry removed.');
+    }
+
+    private function recalculateBalances(WorkOrder $workOrder): void
+    {
+        $balance = 0;
+
+        $workOrder->ledgers()->orderBy('entry_date')->orderBy('id')->get()->each(function (Ledger $ledger) use (&$balance) {
+            $increasesBalance = in_array($ledger->type, ['credit', 'borrow'], true);
+            $balance = $increasesBalance ? $balance + $ledger->amount : $balance - $ledger->amount;
+            $ledger->updateQuietly(['balance' => $balance]);
+        });
     }
 
     public function export(Request $request, WorkOrder $workOrder): StreamedResponse

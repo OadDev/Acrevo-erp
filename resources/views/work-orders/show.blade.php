@@ -19,6 +19,14 @@
                         </form>
                     @endif
                 @endcan
+                @if (auth()->user()->hasRole('Admin'))
+                    <a href="{{ route('work-orders.edit', $workOrder) }}" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Edit</a>
+                    <form method="POST" action="{{ route('work-orders.destroy', $workOrder) }}" onsubmit="return confirm('Permanently remove this work order? This cannot be undone.')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
+                    </form>
+                @endif
             </x-slot>
         </x-page-header>
     </x-slot>

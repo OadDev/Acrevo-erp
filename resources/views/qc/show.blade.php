@@ -1,6 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="QC Inspection" :subtitle="$qcInspection->workOrder->work_order_no" />
+        <x-page-header title="QC Inspection" :subtitle="$qcInspection->workOrder->work_order_no">
+            @if (auth()->user()->hasRole('Admin'))
+                <x-slot name="actions">
+                    <a href="{{ route('qc.edit', $qcInspection) }}" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Edit</a>
+                    <form method="POST" action="{{ route('qc.destroy', $qcInspection) }}" onsubmit="return confirm('Permanently remove this QC inspection?')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
+                    </form>
+                </x-slot>
+            @endif
+        </x-page-header>
     </x-slot>
 
     <x-card class="max-w-2xl">

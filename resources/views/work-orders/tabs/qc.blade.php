@@ -4,7 +4,17 @@
             <x-card>
                 <div class="flex items-center justify-between">
                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ Str::title($inspection->inspection_type) }} QC — {{ $inspection->inspection_date->format('d M Y') }}</p>
-                    <x-badge :status="$inspection->status" />
+                    <div class="flex items-center gap-2">
+                        <x-badge :status="$inspection->status" />
+                        @if (auth()->user()->hasRole('Admin'))
+                            <a href="{{ route('qc.edit', $inspection) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                            <form method="POST" action="{{ route('qc.destroy', $inspection) }}" onsubmit="return confirm('Remove this QC inspection?')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
                 <p class="mt-1 text-sm text-gray-500">{{ $inspection->remarks }}</p>
                 <p class="mt-1 text-xs text-gray-400">By {{ $inspection->inspectedBy?->name ?? 'Unknown' }}</p>
