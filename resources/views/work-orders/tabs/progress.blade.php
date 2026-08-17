@@ -58,6 +58,20 @@
                     <p class="px-4 py-6 text-center text-sm text-gray-400">No files uploaded yet.</p>
                 @endforelse
             </div>
+            @can('media.upload')
+                <form method="POST" action="{{ route('work-orders.media.store', $workOrder) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
+                    @csrf
+                    <x-select-input name="collection" class="text-sm">
+                        <option value="documents">Document</option>
+                        <option value="before_images">Before</option>
+                        <option value="during_images">During</option>
+                        <option value="completion_images">Completion</option>
+                        <option value="videos">Video</option>
+                    </x-select-input>
+                    <input type="file" name="file" class="col-span-2 text-sm sm:col-span-2" required>
+                    <x-primary-button class="justify-center">Upload</x-primary-button>
+                </form>
+            @endcan
         </x-card>
 
         <x-card>
