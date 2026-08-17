@@ -1148,6 +1148,9 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertForbidden();
         $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}")->assertForbidden();
 
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/edit")
+            ->assertOk()->assertSee('WO');
+
         $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
             'title' => 'Renamed WO', 'priority' => 'high',
         ])->assertRedirect();
@@ -1318,6 +1321,8 @@ class WorkOrderWorkflowTest extends TestCase
             'inspection_type' => 'daily', 'status' => 'failed',
         ])->assertForbidden();
         $this->actingAs($nonAdmin)->delete("/qc/{$inspection->id}")->assertForbidden();
+
+        $this->actingAs($admin)->get("/qc/{$inspection->id}/edit")->assertOk();
 
         $this->actingAs($admin)->put("/qc/{$inspection->id}", [
             'inspection_type' => 'final', 'status' => 'failed', 'remarks' => 'Corrected',

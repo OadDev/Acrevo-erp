@@ -61,3 +61,4 @@
             </div>
         </form>
     </x-card>
+</x-app-layout>
