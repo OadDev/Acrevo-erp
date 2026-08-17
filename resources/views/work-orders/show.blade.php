@@ -32,25 +32,32 @@
     </x-slot>
 
     @php
-        $validTabs = ['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'ledger', 'qc', 'approvals', 'tickets'];
+        $canSeeCompanyLedger = auth()->user()->hasAnyRole(['Admin', 'Finance']);
+        $tabs = [
+            'site' => 'Site',
+            'overview' => 'Overview',
+            'team' => 'Team',
+            'checklist' => 'Daily Work with Checklist',
+            'progress' => 'Progress & Media',
+            'materials' => 'Material Inward and Daily Material Used Entry',
+            'manpower' => 'Used Man Power Budget',
+            'mb' => 'Measurement Book',
+            'ledger' => 'Site Ledger',
+        ];
+        if ($canSeeCompanyLedger) {
+            $tabs['company-ledger'] = 'Company Ledger';
+        }
+        $tabs += [
+            'qc' => 'QC',
+            'approvals' => 'Approval Requests',
+            'tickets' => 'Tickets',
+        ];
+        $validTabs = array_keys($tabs);
         $initialTab = in_array(request('tab'), $validTabs, true) ? request('tab') : 'site';
     @endphp
     <div x-data="{ tab: '{{ $initialTab }}' }">
         <div class="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
-            @foreach ([
-                'site' => 'Site',
-                'overview' => 'Overview',
-                'team' => 'Team',
-                'checklist' => 'Daily Work with Checklist',
-                'progress' => 'Progress & Media',
-                'materials' => 'Material Inward and Daily Material Used Entry',
-                'manpower' => 'Used Man Power Budget',
-                'mb' => 'Measurement Book',
-                'ledger' => 'Site Ledger',
-                'qc' => 'QC',
-                'approvals' => 'Approval Requests',
-                'tickets' => 'Tickets',
-            ] as $key => $label)
+            @foreach ($tabs as $key => $label)
                 <button
                     @click="tab = '{{ $key }}'"
                     :class="tab === '{{ $key }}' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
@@ -86,6 +93,11 @@
         <div x-show="tab === 'ledger'" x-cloak>
             @include('work-orders.tabs.ledger')
         </div>
+        @if ($canSeeCompanyLedger)
+            <div x-show="tab === 'company-ledger'" x-cloak>
+                @include('work-orders.tabs.company-ledger')
+            </div>
+        @endif
         <div x-show="tab === 'qc'" x-cloak>
             @include('work-orders.tabs.qc')
         </div>

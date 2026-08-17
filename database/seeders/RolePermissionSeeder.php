@@ -116,6 +116,7 @@ class RolePermissionSeeder extends Seeder
             'hr' => ['payroll.view'],
             'reports' => '*',
             'management' => ['client_records.view'],
+            'sales' => ['work_orders.view'],
         ],
         'Management' => [
             'finance' => ['finance.view'],

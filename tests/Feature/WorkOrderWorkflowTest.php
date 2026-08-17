@@ -48,6 +48,19 @@ class WorkOrderWorkflowTest extends TestCase
         return $user;
     }
 
+    // Call only after admin() has already seeded roles/permissions in the
+    // same test - reseeding here would duplicate the Role rows.
+    private function finance(): User
+    {
+        $user = User::create([
+            'name' => 'Finance User', 'email' => 'finance+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $user->syncRoles(['Finance']);
+
+        return $user;
+    }
+
     public function test_work_orders_index_loads_with_and_without_a_site(): void
     {
         $admin = $this->admin();
@@ -1358,5 +1371,66 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->actingAs($admin)->delete("/sites/{$site->id}/documents/{$document->id}")->assertRedirect();
         $this->assertNull($site->fresh()->getMedia('kyc')->first());
+    }
+
+    public function test_company_ledger_is_only_reachable_by_finance_and_admin(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $finance = $this->finance();
+        // Worker has no work_orders.view and isn't assigned to this WO's
+        // team, so WorkOrderPolicy::view() refuses it outright - unlike
+        // Executive Team Leader, which already holds work_orders.view.
+        $nonFinance = User::create([
+            'name' => 'Worker', 'email' => 'worker+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $nonFinance->syncRoles(['Worker']);
+
+        // A non-Finance, non-Admin user can't even open the work order page
+        // to reach the tab.
+        $this->actingAs($nonFinance)->get("/work-orders/{$workOrder->id}")->assertForbidden();
+
+        $this->actingAs($nonFinance)->post("/work-orders/{$workOrder->id}/company-ledger", [
+            'entry_date' => now()->toDateString(), 'type' => 'debit', 'amount' => '500',
+        ])->assertForbidden();
+
+        // Finance can open the work order and see the tab's data in the
+        // response - but not the data from unrelated permission-gated tabs.
+        $response = $this->actingAs($finance)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()->assertSee('Company Ledger');
+
+        $this->actingAs($finance)->post("/work-orders/{$workOrder->id}/company-ledger", [
+            'entry_date' => now()->toDateString(), 'type' => 'credit', 'category' => 'Office', 'amount' => '10000',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/company-ledger", [
+            'entry_date' => now()->toDateString(), 'type' => 'debit', 'category' => 'Site Visit', 'amount' => '1500',
+        ])->assertRedirect();
+
+        $entries = $workOrder->fresh()->companyLedgers()->orderBy('id')->get();
+        $this->assertCount(2, $entries);
+        $this->assertEquals(10000, $entries[0]->balance);
+        $this->assertEquals(8500, $entries[1]->balance);
+
+        // The site ledger (a separate table entirely) is untouched.
+        $this->assertSame(0, $workOrder->ledgers()->count());
+
+        $this->actingAs($nonFinance)->delete("/work-orders/{$workOrder->id}/company-ledger/{$entries[0]->id}")
+            ->assertForbidden();
+
+        $this->actingAs($finance)->put("/work-orders/{$workOrder->id}/company-ledger/{$entries[0]->id}", [
+            'entry_date' => now()->toDateString(), 'type' => 'credit', 'amount' => '5000',
+        ])->assertRedirect();
+
+        $this->assertEquals(5000, $entries[0]->fresh()->balance);
+        $this->assertEquals(3500, $entries[1]->fresh()->balance);
+
+        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/company-ledger/{$entries[0]->id}")->assertRedirect();
+        $this->assertEquals(-1500, $entries[1]->fresh()->balance);
     }
 }

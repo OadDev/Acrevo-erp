@@ -17,4 +17,14 @@ abstract class Controller
     {
         abort_unless(Auth::user()?->hasRole('Admin'), 403, 'Only Admins can edit or remove this record.');
     }
+
+    /**
+     * The Company Ledger tracks company-side expenses against a work order
+     * and is restricted to Finance and Admin only - no other role should
+     * even see it exists.
+     */
+    protected function authorizeFinanceOrAdmin(): void
+    {
+        abort_unless(Auth::user()?->hasAnyRole(['Admin', 'Finance']), 403, 'Only Finance and Admin can access the company ledger.');
+    }
 }

@@ -28,6 +28,7 @@ use App\Http\Controllers\SiteDocumentController;
 use App\Http\Controllers\SiteVisitController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
+use App\Http\Controllers\WorkOrder\CompanyLedgerController;
 use App\Http\Controllers\WorkOrder\DailyChecklistController;
 use App\Http\Controllers\WorkOrder\DailyChecklistItemController;
 use App\Http\Controllers\WorkOrder\DailyProgressController;
@@ -170,6 +171,15 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
     });
+    // Company Ledger tracks the company's own expenses against a work order
+    // and is restricted to Finance and Admin only (enforced in the
+    // controller) - it deliberately has no permission:* middleware here,
+    // since Finance doesn't hold the site_records.manage permission the
+    // other WO entry routes use.
+    Route::post('company-ledger', [CompanyLedgerController::class, 'store'])->name('company-ledger.store');
+    Route::put('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'update'])->name('company-ledger.update');
+    Route::delete('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'destroy'])->name('company-ledger.destroy');
+    Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
     Route::middleware('permission:work_orders.edit')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
