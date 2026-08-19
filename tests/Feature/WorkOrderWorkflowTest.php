@@ -1496,4 +1496,85 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertRedirect();
         $this->assertSame(0, $workOrder->summaries()->count());
     }
+
+    public function test_internal_approval_request_shows_raised_by_sent_to_and_downloads_as_pdf(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'Natana Kamaraj', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Approve elevation change', 'description' => 'Client requested a design tweak.',
+        ])->assertRedirect();
+        $approval = $workOrder->fresh()->approvalRequests()->firstOrFail();
+
+        $this->assertSame('Admin', $approval->raisedByName());
+        $this->assertSame('Natana Kamaraj', $approval->sentToName());
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=approvals");
+        $response->assertOk()
+            ->assertSee('Raised By:')
+            ->assertSee('Sent To:')
+            ->assertSee('Admin')
+            ->assertSee('Natana Kamaraj');
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/pdf")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        // No approved requests yet - the bulk link shouldn't appear.
+        $response->assertDontSee('Download All Approved');
+
+        $approval->update(['status' => 'approved', 'responded_by' => $admin->id, 'responded_at' => now()]);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/approval-requests/approved-pdf")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_client_portal_shows_approval_request_details_and_pdf_downloads(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'Natana Kamaraj', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $this->actingAs($admin)->post("/clients/{$client->id}/portal-access")->assertRedirect();
+        $clientUser = ClientLogin::where('client_id', $client->id)->firstOrFail()->user;
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Approve elevation change', 'description' => 'Client requested a design tweak.',
+        ])->assertRedirect();
+        $approval = $workOrder->fresh()->approvalRequests()->firstOrFail();
+
+        $response = $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}");
+        $response->assertOk()
+            ->assertSee('Raised By:')
+            ->assertSee('Sent To:')
+            ->assertSee('Admin')
+            ->assertSee('Natana Kamaraj');
+
+        $this->actingAs($clientUser)->post("/portal/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/respond", [
+            'status' => 'approved', 'response_note' => 'Looks good.',
+        ])->assertRedirect();
+
+        $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/pdf")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}/approval-requests/approved-pdf")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        // A client can't reach another client's work order PDFs.
+        $otherClient = Client::create(['name' => 'Other', 'email' => 'other@example.com', 'phone' => '2', 'is_active' => true, 'created_by' => $admin->id]);
+        $this->actingAs($admin)->post("/clients/{$otherClient->id}/portal-access")->assertRedirect();
+        $otherClientUser = ClientLogin::where('client_id', $otherClient->id)->firstOrFail()->user;
+
+        $this->actingAs($otherClientUser)->get("/portal/work-orders/{$workOrder->id}/approval-requests/{$approval->id}/pdf")
+            ->assertForbidden();
+        $this->actingAs($otherClientUser)->get("/portal/work-orders/{$workOrder->id}/approval-requests/approved-pdf")
+            ->assertForbidden();
+    }
 }

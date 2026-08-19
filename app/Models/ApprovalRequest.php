@@ -65,4 +65,18 @@ class ApprovalRequest extends Model implements HasMedia
     {
         return $this->belongsTo(User::class, 'responded_by');
     }
+
+    public function raisedByName(): string
+    {
+        return $this->direction === 'company_to_client'
+            ? ($this->requestedBy?->name ?? 'Our Team')
+            : ($this->requestedByClient?->name ?? 'Client');
+    }
+
+    public function sentToName(): string
+    {
+        return $this->direction === 'company_to_client'
+            ? ($this->workOrder?->client?->name ?? 'Client')
+            : 'Our Team';
+    }
 }

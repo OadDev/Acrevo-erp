@@ -235,7 +235,7 @@ class WorkOrderController extends Controller
             'attendances.employee', 'attendances.markedBy',
             'children', 'parent', 'clientReviews',
             'media',
-            'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media',
+            'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',
         ]);
 
         $availableTeams = ExecutiveTeam::where('is_active', true)->get();

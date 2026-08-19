@@ -194,6 +194,8 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
         Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
         Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
+        Route::get('approval-requests/approved-pdf', [ApprovalRequestController::class, 'approvedPdf'])->name('approval-requests.approved-pdf');
+        Route::get('approval-requests/{approvalRequest}/pdf', [ApprovalRequestController::class, 'pdf'])->name('approval-requests.pdf');
     });
 });
 
@@ -341,6 +343,8 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::post('work-orders/{workOrder}/accept', [PortalWorkOrderController::class, 'accept'])->name('work-orders.accept');
     Route::post('work-orders/{workOrder}/approval-requests', [PortalApprovalRequestController::class, 'store'])->name('work-orders.approval-requests.store');
     Route::post('work-orders/{workOrder}/approval-requests/{approvalRequest}/respond', [PortalApprovalRequestController::class, 'respond'])->name('work-orders.approval-requests.respond');
+    Route::get('work-orders/{workOrder}/approval-requests/approved-pdf', [PortalApprovalRequestController::class, 'approvedPdf'])->name('work-orders.approval-requests.approved-pdf');
+    Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/pdf', [PortalApprovalRequestController::class, 'pdf'])->name('work-orders.approval-requests.pdf');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');

@@ -107,13 +107,25 @@
             @endif
 
             <x-card>
-                <h3 class="mb-3 text-sm font-semibold text-gray-500">Approval Requests</h3>
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <h3 class="text-sm font-semibold text-gray-500">Approval Requests</h3>
+                    @if ($workOrder->approvalRequests->where('status', 'approved')->isNotEmpty())
+                        <a href="{{ route('portal.work-orders.approval-requests.approved-pdf', $workOrder) }}" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
+                            <x-icon name="download" class="h-3.5 w-3.5" /> All Approved (PDF)
+                        </a>
+                    @endif
+                </div>
                 @forelse ($workOrder->approvalRequests as $approval)
                     <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                         <div class="flex items-center justify-between gap-2">
                             <span class="font-medium text-gray-800 dark:text-gray-200">{{ $approval->title }}</span>
                             <x-badge :status="$approval->status" />
                         </div>
+                        <dl class="mt-1 grid grid-cols-1 gap-x-4 gap-y-0.5 text-xs text-gray-400 sm:grid-cols-3">
+                            <div><dt class="inline text-gray-400">Raised By:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->raisedByName() }}</dd></div>
+                            <div><dt class="inline text-gray-400">Sent To:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->sentToName() }}</dd></div>
+                            <div><dt class="inline text-gray-400">Requested:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->created_at->format('d M Y') }}</dd></div>
+                        </dl>
                         @if ($approval->description)
                             <p class="mt-1 text-gray-500">{{ $approval->description }}</p>
                         @endif
@@ -123,16 +135,27 @@
                             </a>
                         @endif
 
-                        @if ($approval->status === 'pending' && $approval->direction === 'company_to_client')
+                        @if ($approval->status !== 'pending')
+                            <div class="mt-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs dark:border-gray-800 dark:bg-gray-900">
+                                <p class="font-medium text-gray-700 dark:text-gray-300">{{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }} on {{ $approval->responded_at?->format('d M Y') }}</p>
+                                @if ($approval->response_note)
+                                    <p class="text-gray-500">{{ $approval->response_note }}</p>
+                                @endif
+                            </div>
+                        @elseif ($approval->direction === 'company_to_client')
                             <form method="POST" action="{{ route('portal.work-orders.approval-requests.respond', [$workOrder, $approval]) }}" class="mt-2 flex flex-wrap items-end gap-2">
                                 @csrf
                                 <x-text-input name="response_note" placeholder="Note (optional)" class="flex-1" />
                                 <button name="status" value="approved" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500">Approve</button>
                                 <button name="status" value="rejected" class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Reject</button>
                             </form>
-                        @elseif ($approval->status === 'pending')
+                        @else
                             <p class="mt-1 text-xs text-gray-400">Awaiting our team's response.</p>
                         @endif
+
+                        <a href="{{ route('portal.work-orders.approval-requests.pdf', [$workOrder, $approval]) }}" class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
+                            <x-icon name="download" class="h-3.5 w-3.5" /> Download PDF
+                        </a>
                     </div>
                 @empty
                     <p class="text-sm text-gray-400">No approval requests yet.</p>

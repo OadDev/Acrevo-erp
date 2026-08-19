@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
 use App\Models\WorkOrder;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
@@ -62,5 +63,36 @@ class PortalApprovalRequestController extends Controller
         ]);
 
         return back()->with('success', 'Your response has been recorded.');
+    }
+
+    public function pdf(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest)
+    {
+        $client = $request->user()->client();
+
+        abort_unless($client && $workOrder->client_id === $client->id, 403);
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy']);
+
+        $pdf = Pdf::loadView('work-orders.approval-requests.pdf', compact('approvalRequest'));
+
+        return $pdf->download("{$approvalRequest->approval_no}.pdf");
+    }
+
+    public function approvedPdf(Request $request, WorkOrder $workOrder)
+    {
+        $client = $request->user()->client();
+
+        abort_unless($client && $workOrder->client_id === $client->id, 403);
+
+        $approvalRequests = $workOrder->approvalRequests()
+            ->where('status', 'approved')
+            ->with(['requestedBy', 'requestedByClient', 'respondedBy'])
+            ->orderBy('responded_at')
+            ->get();
+
+        $pdf = Pdf::loadView('work-orders.approval-requests.approved-pdf', compact('workOrder', 'approvalRequests'));
+
+        return $pdf->download("{$workOrder->work_order_no}-approved-requests.pdf");
     }
 }

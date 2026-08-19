@@ -1,18 +1,31 @@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3" x-data="{ editApproval: null }">
     <div class="space-y-3 lg:col-span-2">
+        @can('work_orders.edit')
+            @if ($workOrder->approvalRequests->where('status', 'approved')->isNotEmpty())
+                <div class="flex justify-end">
+                    <a href="{{ route('work-orders.approval-requests.approved-pdf', $workOrder) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                        <x-icon name="download" class="h-4 w-4" /> Download All Approved (PDF)
+                    </a>
+                </div>
+            @endif
+        @endcan
+
         @forelse ($workOrder->approvalRequests as $approval)
             <x-card>
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $approval->approval_no }} — {{ $approval->title }}</p>
-                        <p class="text-xs text-gray-400">
-                            {{ $approval->direction === 'company_to_client' ? 'Sent to client for approval' : 'Client requesting our approval' }}
-                            · {{ $approval->requestedBy?->name ?? $approval->requestedByClient?->name ?? 'Unknown' }}
-                            · {{ $approval->created_at->format('d M Y') }}
-                        </p>
+                        <dl class="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-gray-400 sm:grid-cols-4">
+                            <div><dt class="inline text-gray-400">Raised By:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->raisedByName() }}</dd></div>
+                            <div><dt class="inline text-gray-400">Sent To:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->sentToName() }}</dd></div>
+                            <div><dt class="inline text-gray-400">Requested:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->created_at->format('d M Y') }}</dd></div>
+                        </dl>
                     </div>
                     <div class="flex items-center gap-2">
                         <x-badge :status="$approval->status" />
+                        @can('work_orders.edit')
+                            <a href="{{ route('work-orders.approval-requests.pdf', [$workOrder, $approval]) }}" class="text-xs font-medium text-indigo-600 hover:underline">PDF</a>
+                        @endcan
                         @if (auth()->user()->hasRole('Admin'))
                             <button type="button" @click="editApproval === '{{ $approval->id }}' ? editApproval = null : editApproval = '{{ $approval->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                             <form method="POST" action="{{ route('work-orders.approval-requests.destroy', [$workOrder, $approval]) }}" onsubmit="return confirm('Remove this approval request?')">
