@@ -1693,4 +1693,77 @@ class WorkOrderWorkflowTest extends TestCase
         $fullPdf = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf");
         $fullPdf->assertOk()->assertHeader('content-type', 'application/pdf');
     }
+
+    public function test_a_work_order_zip_download_includes_details_and_every_attachment_organised_by_type(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'images', 'file' => \Illuminate\Http\UploadedFile::fake()->image('site-photo.jpg', 200, 200),
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'documents', 'file' => \Illuminate\Http\UploadedFile::fake()->create('contract.pdf', 50),
+        ])->assertRedirect();
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/zip");
+        $response->assertOk()->assertHeader('content-type', 'application/zip');
+
+        $tmpZip = tempnam(sys_get_temp_dir(), 'zip-test-').'.zip';
+        file_put_contents($tmpZip, $response->streamedContent());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tmpZip) === true);
+        $names = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $names[] = $zip->getNameIndex($i);
+        }
+        $zip->close();
+        unlink($tmpZip);
+
+        $this->assertContains('WO Details.pdf', $names);
+        $this->assertTrue(collect($names)->contains(fn ($n) => str_starts_with($n, 'Images/')));
+        $this->assertTrue(collect($names)->contains(fn ($n) => str_starts_with($n, 'Documents/')));
+    }
+
+    public function test_a_site_zip_download_bundles_every_work_order_in_its_own_folder(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $site = Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+
+        $workOrder1 = WorkOrder::create([
+            'client_id' => $client->id, 'site_id' => $site->id, 'title' => 'WO 1', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $workOrder2 = WorkOrder::create([
+            'client_id' => $client->id, 'site_id' => $site->id, 'title' => 'WO 2', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($admin)->get("/sites/{$site->id}/zip");
+        $response->assertOk()->assertHeader('content-type', 'application/zip');
+
+        $tmpZip = tempnam(sys_get_temp_dir(), 'zip-test-').'.zip';
+        file_put_contents($tmpZip, $response->streamedContent());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tmpZip) === true);
+        $names = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $names[] = $zip->getNameIndex($i);
+        }
+        $zip->close();
+        unlink($tmpZip);
+
+        $this->assertTrue(collect($names)->contains("{$workOrder1->work_order_no}/WO Details.pdf"));
+        $this->assertTrue(collect($names)->contains("{$workOrder2->work_order_no}/WO Details.pdf"));
+    }
 }

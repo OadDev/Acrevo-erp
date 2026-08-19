@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-card class="max-w-2xl">
-        <form method="POST" action="{{ route('admin.task-schedules.store') }}" x-data="{ assigneeType: '{{ $prefillRole ? 'role' : 'user' }}', frequency: 'daily' }">
+        <form method="POST" action="{{ route('admin.task-schedules.store') }}" x-data="{ assigneeType: '{{ $prefillRole ? 'role' : 'user' }}', frequency: '{{ $prefillFrequency ?? 'daily' }}' }">
             @csrf
 
             <div class="space-y-5">
@@ -48,10 +48,10 @@
                 <div>
                     <x-input-label for="frequency" value="Frequency" />
                     <x-select-input id="frequency" name="frequency" x-model="frequency" class="mt-1 block w-full">
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
+                        <option value="daily" @selected(old('frequency', $prefillFrequency) === 'daily')>Daily</option>
+                        <option value="weekly" @selected(old('frequency', $prefillFrequency) === 'weekly')>Weekly</option>
+                        <option value="monthly" @selected(old('frequency', $prefillFrequency) === 'monthly')>Monthly</option>
+                        <option value="yearly" @selected(old('frequency', $prefillFrequency) === 'yearly')>Yearly</option>
                     </x-select-input>
                 </div>
 

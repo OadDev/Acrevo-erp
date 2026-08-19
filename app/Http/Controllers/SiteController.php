@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\LoadsWorkOrderPdfRelations;
 use App\Models\Client;
 use App\Models\Site;
+use App\Services\WorkOrderZipExporter;
 use App\Support\WorkOrderPdfSections;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class SiteController extends Controller
 {
@@ -93,6 +97,37 @@ class SiteController extends Controller
         $pdf = Pdf::loadView('sites.pdf', compact('site', 'workOrders', 'sections'));
 
         return $pdf->download("{$site->site_no}-work-orders.pdf");
+    }
+
+    public function zip(Request $request, Site $site, WorkOrderZipExporter $exporter): BinaryFileResponse
+    {
+        $site->load('client');
+
+        $workOrders = $site->workOrders()->orderBy('created_at')->get();
+        $workOrders->each(fn ($workOrder) => $this->loadWorkOrderPdfRelations($workOrder));
+
+        $sections = array_keys(WorkOrderPdfSections::forUser($request->user()));
+
+        $zipPath = sys_get_temp_dir().'/site-zip-'.Str::random(20).'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+        $usedFolders = [];
+        foreach ($workOrders as $workOrder) {
+            $folder = $exporter->safeName($workOrder->work_order_no);
+            $suffix = 1;
+            while (in_array($folder, $usedFolders, true)) {
+                $folder = $exporter->safeName($workOrder->work_order_no).' ('.(++$suffix).')';
+            }
+            $usedFolders[] = $folder;
+
+            $exporter->addWorkOrder($zip, $workOrder, $sections, $folder);
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, "{$site->site_no}-work-orders.zip")->deleteFileAfterSend();
     }
 
     public function complete(Site $site): RedirectResponse

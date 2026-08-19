@@ -219,6 +219,28 @@ class TaskManagementTest extends TestCase
         $prefilled->assertSee('selected', false);
     }
 
+    public function test_admin_can_filter_calendar_tasks_by_frequency(): void
+    {
+        $admin = $this->admin();
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        TaskSchedule::create([
+            'title' => 'HR daily check', 'assigned_to_user_id' => $hr->id,
+            'frequency' => 'daily', 'verifier_user_id' => $admin->id, 'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        TaskSchedule::create([
+            'title' => 'HR monthly report', 'assigned_to_user_id' => $hr->id,
+            'frequency' => 'monthly', 'day_of_month' => 1, 'verifier_user_id' => $admin->id, 'is_active' => true, 'created_by' => $admin->id,
+        ]);
+
+        $byFrequency = $this->actingAs($admin)->get('/admin/task-schedules?frequency=monthly');
+        $byFrequency->assertOk()->assertSee('HR monthly report')->assertDontSee('HR daily check');
+
+        // "+ New Calendar Task" from a frequency-filtered view should pre-select that frequency.
+        $prefilled = $this->actingAs($admin)->get('/admin/task-schedules/create?frequency=weekly');
+        $prefilled->assertOk();
+    }
+
     public function test_a_daily_calendar_task_is_generated_once_per_day_for_its_assignee(): void
     {
         $admin = $this->admin();

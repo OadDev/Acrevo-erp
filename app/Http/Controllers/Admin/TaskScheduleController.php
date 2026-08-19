@@ -16,23 +16,26 @@ class TaskScheduleController extends Controller
     {
         $userId = $request->get('user_id');
         $role = $request->get('role');
+        $frequency = in_array($request->get('frequency'), ['daily', 'weekly', 'monthly', 'yearly'], true) ? $request->get('frequency') : null;
 
         $schedules = TaskSchedule::with(['assignedToUser', 'verifier'])
             ->when($userId, fn ($q) => $q->where('assigned_to_user_id', $userId))
             ->when($role, fn ($q) => $q->where('assignee_role', $role))
+            ->when($frequency, fn ($q) => $q->where('frequency', $frequency))
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.task-schedules.index', compact('schedules', 'userId', 'role') + $this->formData());
+        return view('admin.task-schedules.index', compact('schedules', 'userId', 'role', 'frequency') + $this->formData());
     }
 
     public function create(Request $request): View
     {
         $prefillUserId = $request->get('user_id');
         $prefillRole = $request->get('role');
+        $prefillFrequency = in_array($request->get('frequency'), ['daily', 'weekly', 'monthly', 'yearly'], true) ? $request->get('frequency') : null;
 
-        return view('admin.task-schedules.create', compact('prefillUserId', 'prefillRole') + $this->formData());
+        return view('admin.task-schedules.create', compact('prefillUserId', 'prefillRole', 'prefillFrequency') + $this->formData());
     }
 
     public function store(Request $request): RedirectResponse

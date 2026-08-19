@@ -46,6 +46,8 @@
                         @foreach ($tabs as $key => $label)
                             <x-dropdown-link href="{{ route('work-orders.pdf.section', [$workOrder, $key]) }}">{{ $label }}</x-dropdown-link>
                         @endforeach
+                        <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
+                        <x-dropdown-link href="{{ route('work-orders.zip', $workOrder) }}" class="font-semibold">ZIP — Details + All Attachments</x-dropdown-link>
                     </x-slot>
                 </x-dropdown>
             </x-slot>

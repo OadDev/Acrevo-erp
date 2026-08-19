@@ -43,6 +43,7 @@ use App\Http\Controllers\WorkOrder\MeasurementBookItemController;
 use App\Http\Controllers\WorkOrder\WorkOrderAttendanceController;
 use App\Http\Controllers\WorkOrder\WorkOrderMediaController;
 use App\Http\Controllers\WorkOrder\WorkOrderPdfController;
+use App\Http\Controllers\WorkOrder\WorkOrderZipController;
 use App\Http\Controllers\WorkOrder\WorkOrderSummaryController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -88,6 +89,7 @@ Route::middleware('permission:work_orders.edit')->group(function () {
 Route::middleware('permission:work_orders.view')->group(function () {
     Route::resource('sites', SiteController::class)->only(['index', 'show']);
     Route::get('sites/{site}/pdf', [SiteController::class, 'pdf'])->name('sites.pdf');
+    Route::get('sites/{site}/zip', [SiteController::class, 'zip'])->name('sites.zip');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
@@ -117,6 +119,7 @@ Route::get('work-orders/{workOrder}', [WorkOrderController::class, 'show'])->nam
 // show route above, checked inside WorkOrderPdfController itself.
 Route::get('work-orders/{workOrder}/pdf', [WorkOrderPdfController::class, 'full'])->name('work-orders.pdf');
 Route::get('work-orders/{workOrder}/pdf/{section}', [WorkOrderPdfController::class, 'section'])->name('work-orders.pdf.section');
+Route::get('work-orders/{workOrder}/zip', WorkOrderZipController::class)->name('work-orders.zip');
 
 Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');
