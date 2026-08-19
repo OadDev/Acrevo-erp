@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    protected $fillable = ['invoice_id', 'work_order_id', 'client_id', 'amount', 'payment_date', 'mode', 'reference_no', 'received_by'];
+    protected $fillable = ['invoice_id', 'work_order_id', 'site_id', 'client_id', 'amount', 'payment_date', 'mode', 'reference_no', 'received_by'];
 
     protected function casts(): array
     {
@@ -22,6 +22,11 @@ class Payment extends Model
     public function workOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function client(): BelongsTo

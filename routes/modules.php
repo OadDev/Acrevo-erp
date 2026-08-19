@@ -273,10 +273,25 @@ Route::middleware('permission:tickets.view')->group(function () {
 */
 Route::middleware('permission:finance.view')->group(function () {
     Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
+});
+// Writing finance records requires finance.manage (Finance role + Admin), not
+// just finance.view - Management/Auditor can see this module but not edit it.
+Route::middleware('permission:finance.manage')->group(function () {
     Route::post('finance/invoices', [FinanceController::class, 'storeInvoice'])->name('finance.invoices.store');
+    Route::put('finance/invoices/{invoice}/status', [FinanceController::class, 'updateInvoiceStatus'])->name('finance.invoices.status');
+    Route::delete('finance/invoices/{invoice}', [FinanceController::class, 'destroyInvoice'])->name('finance.invoices.destroy');
+
     Route::post('finance/payments', [FinanceController::class, 'storePayment'])->name('finance.payments.store');
+    Route::put('finance/payments/{payment}', [FinanceController::class, 'updatePayment'])->name('finance.payments.update');
+    Route::delete('finance/payments/{payment}', [FinanceController::class, 'destroyPayment'])->name('finance.payments.destroy');
+
     Route::post('finance/vendor-payments', [FinanceController::class, 'storeVendorPayment'])->name('finance.vendor-payments.store');
+    Route::put('finance/vendor-payments/{vendorPayment}', [FinanceController::class, 'updateVendorPayment'])->name('finance.vendor-payments.update');
+    Route::delete('finance/vendor-payments/{vendorPayment}', [FinanceController::class, 'destroyVendorPayment'])->name('finance.vendor-payments.destroy');
+
     Route::post('finance/expenses', [FinanceController::class, 'storeExpense'])->name('finance.expenses.store');
+    Route::put('finance/expenses/{expense}', [FinanceController::class, 'updateExpense'])->name('finance.expenses.update');
+    Route::delete('finance/expenses/{expense}', [FinanceController::class, 'destroyExpense'])->name('finance.expenses.destroy');
 });
 
 Route::middleware('permission:legal.view')->group(function () {

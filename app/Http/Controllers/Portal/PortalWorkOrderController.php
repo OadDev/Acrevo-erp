@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invoice;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,13 @@ class PortalWorkOrderController extends Controller
 
         $workOrders = WorkOrder::where('client_id', $client->id)->latest()->paginate(10);
 
-        return view('portal.work-orders.index', compact('workOrders'));
+        $pendingInvoices = Invoice::where('client_id', $client->id)
+            ->whereNotIn('status', ['paid', 'cancelled', 'draft'])
+            ->with('payments')
+            ->get()
+            ->filter(fn (Invoice $invoice) => $invoice->balanceDue() > 0);
+
+        return view('portal.work-orders.index', compact('workOrders', 'pendingInvoices'));
     }
 
     public function show(WorkOrder $workOrder): View

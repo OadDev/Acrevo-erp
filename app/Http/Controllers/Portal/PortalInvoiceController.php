@@ -15,7 +15,7 @@ class PortalInvoiceController extends Controller
 
         abort_unless($client, 403, 'No client account linked to this login.');
 
-        $invoices = Invoice::where('client_id', $client->id)->with('payments')->latest()->paginate(10);
+        $invoices = Invoice::where('client_id', $client->id)->with(['payments', 'workOrder'])->latest()->paginate(10);
 
         return view('portal.invoices.index', compact('invoices'));
     }

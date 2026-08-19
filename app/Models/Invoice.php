@@ -42,4 +42,14 @@ class Invoice extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function paidAmount(): float
+    {
+        return (float) $this->payments->sum('amount');
+    }
+
+    public function balanceDue(): float
+    {
+        return max(0, (float) $this->total_amount - $this->paidAmount());
+    }
 }
