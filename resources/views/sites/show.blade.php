@@ -11,6 +11,9 @@
                         </form>
                     @endif
                 @endcan
+                <a href="{{ route('sites.pdf', $site) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                    <x-icon name="download" class="h-4 w-4" /> Download All Work Orders (PDF)
+                </a>
             </x-slot>
         </x-page-header>
     </x-slot>

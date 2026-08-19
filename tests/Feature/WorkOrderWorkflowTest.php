@@ -1577,4 +1577,79 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($otherClientUser)->get("/portal/work-orders/{$workOrder->id}/approval-requests/approved-pdf")
             ->assertForbidden();
     }
+
+    public function test_work_order_section_and_full_pdfs_can_be_downloaded(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        foreach (['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'summary', 'ledger', 'company-ledger', 'qc', 'approvals', 'tickets'] as $section) {
+            $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/{$section}")
+                ->assertOk()->assertHeader('content-type', 'application/pdf');
+        }
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/not-a-real-section")->assertNotFound();
+    }
+
+    public function test_company_ledger_pdf_section_is_hidden_from_non_finance_admin(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $sales = $this->sales();
+
+        $this->actingAs($sales)->get("/work-orders/{$workOrder->id}/pdf/company-ledger")->assertNotFound();
+        $this->actingAs($sales)->get("/work-orders/{$workOrder->id}/pdf/overview")->assertOk();
+        $this->actingAs($sales)->get("/work-orders/{$workOrder->id}/pdf")->assertOk();
+    }
+
+    public function test_a_user_without_view_access_cannot_download_a_work_order_pdf(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $worker = User::create([
+            'name' => 'Worker', 'email' => 'worker+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $worker->syncRoles(['Worker']);
+
+        $this->actingAs($worker)->get("/work-orders/{$workOrder->id}/pdf")->assertForbidden();
+        $this->actingAs($worker)->get("/work-orders/{$workOrder->id}/pdf/overview")->assertForbidden();
+    }
+
+    public function test_site_pdf_downloads_all_its_work_orders_together(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $site = Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        WorkOrder::create([
+            'client_id' => $client->id, 'site_id' => $site->id, 'title' => 'WO 1', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        WorkOrder::create([
+            'client_id' => $client->id, 'site_id' => $site->id, 'title' => 'WO 2', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get("/sites/{$site->id}/pdf")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
 }

@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LoadsWorkOrderPdfRelations;
 use App\Models\Client;
 use App\Models\Site;
+use App\Support\WorkOrderPdfSections;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class SiteController extends Controller
 {
+    use LoadsWorkOrderPdfRelations;
+
     public function index(Request $request): View
     {
         $sites = Site::query()
@@ -74,6 +79,20 @@ class SiteController extends Controller
         $site->update($data);
 
         return back()->with('success', 'Site details updated.');
+    }
+
+    public function pdf(Request $request, Site $site)
+    {
+        $site->load('client');
+
+        $workOrders = $site->workOrders()->orderBy('created_at')->get();
+        $workOrders->each(fn ($workOrder) => $this->loadWorkOrderPdfRelations($workOrder));
+
+        $sections = array_keys(WorkOrderPdfSections::forUser($request->user()));
+
+        $pdf = Pdf::loadView('sites.pdf', compact('site', 'workOrders', 'sections'));
+
+        return $pdf->download("{$site->site_no}-work-orders.pdf");
     }
 
     public function complete(Site $site): RedirectResponse

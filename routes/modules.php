@@ -42,6 +42,7 @@ use App\Http\Controllers\WorkOrder\MeasurementBookController;
 use App\Http\Controllers\WorkOrder\MeasurementBookItemController;
 use App\Http\Controllers\WorkOrder\WorkOrderAttendanceController;
 use App\Http\Controllers\WorkOrder\WorkOrderMediaController;
+use App\Http\Controllers\WorkOrder\WorkOrderPdfController;
 use App\Http\Controllers\WorkOrder\WorkOrderSummaryController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +87,7 @@ Route::middleware('permission:work_orders.edit')->group(function () {
 
 Route::middleware('permission:work_orders.view')->group(function () {
     Route::resource('sites', SiteController::class)->only(['index', 'show']);
+    Route::get('sites/{site}/pdf', [SiteController::class, 'pdf'])->name('sites.pdf');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
@@ -110,6 +112,11 @@ Route::middleware('permission:work_orders.view|client_portal.access')->group(fun
 // above. Registered last so the static segments (create/completed/{id}/edit)
 // still win over this catch-all {workOrder} wildcard.
 Route::get('work-orders/{workOrder}', [WorkOrderController::class, 'show'])->name('work-orders.show');
+
+// PDF exports share the same WorkOrderPolicy 'view' authorization as the
+// show route above, checked inside WorkOrderPdfController itself.
+Route::get('work-orders/{workOrder}/pdf', [WorkOrderPdfController::class, 'full'])->name('work-orders.pdf');
+Route::get('work-orders/{workOrder}/pdf/{section}', [WorkOrderPdfController::class, 'section'])->name('work-orders.pdf.section');
 
 Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');

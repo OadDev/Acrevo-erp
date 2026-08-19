@@ -1,3 +1,9 @@
+@php
+    $tabs = \App\Support\WorkOrderPdfSections::forUser(auth()->user());
+    $canSeeCompanyLedger = array_key_exists('company-ledger', $tabs);
+    $validTabs = array_keys($tabs);
+    $initialTab = in_array(request('tab'), $validTabs, true) ? request('tab') : 'site';
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <x-page-header :title="($workOrder->site?->site_no ? $workOrder->site->site_no.' — ' : '').$workOrder->work_order_no" :subtitle="$workOrder->title">
@@ -27,35 +33,25 @@
                         <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
                     </form>
                 @endif
+
+                <x-dropdown align="right" width="64">
+                    <x-slot name="trigger">
+                        <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                            <x-icon name="download" class="h-4 w-4" /> Download PDF
+                        </button>
+                    </x-slot>
+                    <x-slot name="content">
+                        <x-dropdown-link href="{{ route('work-orders.pdf', $workOrder) }}" class="font-semibold">Full Work Order</x-dropdown-link>
+                        <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
+                        @foreach ($tabs as $key => $label)
+                            <x-dropdown-link href="{{ route('work-orders.pdf.section', [$workOrder, $key]) }}">{{ $label }}</x-dropdown-link>
+                        @endforeach
+                    </x-slot>
+                </x-dropdown>
             </x-slot>
         </x-page-header>
     </x-slot>
 
-    @php
-        $canSeeCompanyLedger = auth()->user()->hasAnyRole(['Admin', 'Finance']);
-        $tabs = [
-            'site' => 'Site',
-            'overview' => 'Overview',
-            'team' => 'Team',
-            'checklist' => 'Daily Work with Checklist',
-            'progress' => 'Progress & Media',
-            'materials' => 'Material Inward and Daily Material Used Entry',
-            'manpower' => 'Used Man Power Budget',
-            'mb' => 'Measurement Book',
-            'summary' => 'Monthly Summary',
-            'ledger' => 'Site Ledger',
-        ];
-        if ($canSeeCompanyLedger) {
-            $tabs['company-ledger'] = 'Company Ledger';
-        }
-        $tabs += [
-            'qc' => 'QC',
-            'approvals' => 'Approval Requests',
-            'tickets' => 'Tickets',
-        ];
-        $validTabs = array_keys($tabs);
-        $initialTab = in_array(request('tab'), $validTabs, true) ? request('tab') : 'site';
-    @endphp
     <div x-data="{ tab: '{{ $initialTab }}' }">
         <div class="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
             @foreach ($tabs as $key => $label)

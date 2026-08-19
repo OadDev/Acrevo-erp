@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\LoadsWorkOrderPdfRelations;
 use App\Http\Requests\WorkOrderRequest;
 use App\Models\Employee;
 use App\Models\ExecutiveTeam;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class WorkOrderController extends Controller
 {
+    use LoadsWorkOrderPdfRelations;
+
     public function index(Request $request): View
     {
         $workOrders = WorkOrder::query()
@@ -222,21 +225,7 @@ class WorkOrderController extends Controller
     {
         $this->authorize('view', $workOrder);
 
-        $workOrder->load([
-            'client', 'quotation', 'site.media', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
-            'tickets', 'qcInspections.inspectedBy',
-            'dailyChecklists' => fn ($q) => $q->latest(),
-            'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
-            'dailyChecklists.executiveTeam',
-            'dailyProgressReports' => fn ($q) => $q->latest(),
-            'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'timeSchedules', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
-            'companyLedgers.media', 'companyLedgers.createdBy',
-            'summaries' => fn ($q) => $q->orderBy('entry_date'),
-            'attendances.employee', 'attendances.markedBy',
-            'children', 'parent', 'clientReviews',
-            'media',
-            'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',
-        ]);
+        $this->loadWorkOrderPdfRelations($workOrder);
 
         $availableTeams = ExecutiveTeam::where('is_active', true)->get();
         $activeEmployees = Employee::where('status', 'active')->orderBy('name')->get();
