@@ -34,6 +34,6 @@ abstract class Controller
      */
     protected function authorizeSummaryEditors(): void
     {
-        abort_unless(Auth::user()?->hasAnyRole(['Admin', 'Sales', 'HR']), 403, 'Only Sales, HR, and Admin can edit the work order summary.');
+        abort_unless(Auth::user()?->hasAnyRole(['Admin', 'Sales', 'HR', 'Executive Team Leader']), 403, 'Only Sales, HR, Admin, and the Executive Team Leader can edit the work order summary.');
     }
 }

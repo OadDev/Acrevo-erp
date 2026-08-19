@@ -48,6 +48,7 @@ class RolePermissionSeeder extends Seeder
             'daily_progress.manage',
             'site_records.manage',
             'media.upload',
+            'approval_requests.manage',
         ],
         'qc' => [
             'qc.view', 'qc.perform', 'qc.reports.view',
@@ -151,6 +152,11 @@ class RolePermissionSeeder extends Seeder
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
         ],
+        // Deliberately scoped to Progress & Media only - no daily_checklist.manage,
+        // site_records.manage, approval_requests.manage, or tickets.create, so a
+        // Sub Contractor cannot enter Daily Checklist, Materials, Manpower, M.Book,
+        // Ledger, Approval Requests, or Tickets. Those stay with the Executive
+        // Team Leader (or Admin/Sales/HR for Monthly Summary).
         'Sub Contractor' => [
             'executive' => ['assigned_work.view', 'daily_progress.manage', 'media.upload'],
             'tasks' => ['tasks.view', 'tasks.create'],

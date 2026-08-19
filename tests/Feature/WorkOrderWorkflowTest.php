@@ -1475,7 +1475,7 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertEquals(-1500, $entries[1]->fresh()->balance);
     }
 
-    public function test_only_sales_hr_and_admin_can_edit_the_work_order_summary_and_client_can_view_it(): void
+    public function test_only_sales_hr_admin_and_the_team_leader_can_edit_the_work_order_summary_and_client_can_view_it(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -1485,7 +1485,8 @@ class WorkOrderWorkflowTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
         $sales = $this->sales();
-        $nonEditor = $this->executiveTeamLeader();
+        $teamLeader = $this->executiveTeamLeader();
+        $nonEditor = $this->qcOfficer();
 
         $this->actingAs($nonEditor)->post("/work-orders/{$workOrder->id}/summary", [
             'entry_date' => '2026-08-01', 'status' => 'done', 'responsibility' => 'company', 'work_detail' => 'Marking and Excavation',
@@ -1504,7 +1505,8 @@ class WorkOrderWorkflowTest extends TestCase
         ])->assertForbidden();
         $this->actingAs($nonEditor)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertForbidden();
 
-        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/summary/{$entry->id}", [
+        // The Executive Team Leader is also responsible for site-level entries now.
+        $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/summary/{$entry->id}", [
             'entry_date' => '2026-08-02', 'status' => 'not_done', 'responsibility' => 'client', 'work_detail' => 'Rain',
         ])->assertRedirect();
         $entry->refresh();
@@ -1521,7 +1523,7 @@ class WorkOrderWorkflowTest extends TestCase
         $portalResponse = $this->actingAs($login->user)->get("/portal/work-orders/{$workOrder->id}");
         $portalResponse->assertOk()->assertSee('Monthly Summary')->assertSee('Rain');
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertRedirect();
         $this->assertSame(0, $workOrder->summaries()->count());
     }
 
@@ -1923,5 +1925,64 @@ class WorkOrderWorkflowTest extends TestCase
 
         $mediaUrl = $workOrder->fresh()->getFirstMedia('images')->getUrl();
         $response->assertSee('<a href="'.$mediaUrl.'"', false);
+    }
+
+    public function test_sub_contractor_is_limited_to_progress_and_media_while_team_leader_can_enter_everything_else(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $admin->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+
+        $subContractor = $this->subContractor();
+        $teamLeader = $this->executiveTeamLeader();
+
+        // Sub Contractor: allowed - Progress & Media only.
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/progress", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'completed_work' => 'Plastering done',
+        ])->assertRedirect();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'images', 'file' => \Illuminate\Http\UploadedFile::fake()->image('site.jpg', 200, 200),
+        ])->assertRedirect();
+
+        // Sub Contractor: blocked from every other entry point.
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => 'Lay bricks',
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/materials", [
+            'material_name' => 'Cement', 'quantity' => 10, 'rate' => 400,
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/material-usage", [
+            'material_name' => 'Cement', 'quantity' => 5,
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/labour", [
+            'labour_type' => 'Mason', 'count' => 2, 'wage_rate' => 800,
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/measurement-books", [
+            'type' => 'actual', 'description' => 'Foundation',
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'debit', 'category' => 'Materials', 'amount' => '500',
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/summary", [
+            'entry_date' => now()->toDateString(), 'status' => 'done', 'responsibility' => 'company',
+        ])->assertForbidden();
+        $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Need extra material',
+        ])->assertForbidden();
+
+        // Executive Team Leader: can enter everything the Sub Contractor is blocked from.
+        $this->actingAs($teamLeader)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => 'Lay bricks',
+        ])->assertRedirect();
+        $this->actingAs($teamLeader)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Need extra material',
+        ])->assertRedirect();
+        $this->assertSame(1, \App\Models\ApprovalRequest::where('title', 'Need extra material')->count());
     }
 }

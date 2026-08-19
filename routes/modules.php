@@ -201,13 +201,17 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::post('summary', [WorkOrderSummaryController::class, 'store'])->name('summary.store');
     Route::put('summary/{summary}', [WorkOrderSummaryController::class, 'update'])->name('summary.update');
     Route::delete('summary/{summary}', [WorkOrderSummaryController::class, 'destroy'])->name('summary.destroy');
-    Route::middleware('permission:work_orders.edit')->group(function () {
+    Route::middleware('permission:work_orders.edit|approval_requests.manage')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
-        Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
-        Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
         Route::get('approval-requests/approved-pdf', [ApprovalRequestController::class, 'approvedPdf'])->name('approval-requests.approved-pdf');
         Route::get('approval-requests/{approvalRequest}/pdf', [ApprovalRequestController::class, 'pdf'])->name('approval-requests.pdf');
+    });
+    // Editing/removing an existing approval request record stays Admin-only
+    // (data-integrity action, not part of the raise/respond entry workflow).
+    Route::middleware('permission:work_orders.edit')->group(function () {
+        Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
+        Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
     });
 });
 
