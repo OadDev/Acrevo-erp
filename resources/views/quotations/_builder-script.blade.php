@@ -12,8 +12,10 @@
                 if (this.items.length > 1) this.items.splice(index, 1);
             },
             lineTotal(item) {
-                const base = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0) - (parseFloat(item.discount) || 0);
-                return base + (base * (this.taxPercent / 100));
+                // Pre-tax line total - matches subtotal below and what the
+                // server stores per item. Tax is applied once, at the
+                // quotation level, in the Pricing Summary.
+                return (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0) - (parseFloat(item.discount) || 0);
             },
             get subtotal() {
                 return this.items.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0) - (parseFloat(item.discount) || 0)), 0);

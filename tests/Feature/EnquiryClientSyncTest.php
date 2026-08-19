@@ -62,4 +62,28 @@ class EnquiryClientSyncTest extends TestCase
 
         $this->assertSame('original@example.com', $client->fresh()->email);
     }
+
+    public function test_only_admin_can_remove_an_enquiry(): void
+    {
+        $admin = $this->admin();
+        $sales = User::create([
+            'name' => 'Sales User', 'email' => 'sales+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $sales->syncRoles(['Sales']);
+
+        $client = Client::create(['name' => 'C', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create([
+            'client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1',
+            'status' => 'new', 'source' => 'website', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($sales)->get('/enquiries')->assertOk()->assertDontSee('Remove');
+        $this->actingAs($sales)->delete("/enquiries/{$enquiry->id}")->assertForbidden();
+        $this->assertNotSoftDeleted('enquiries', ['id' => $enquiry->id]);
+
+        $this->actingAs($admin)->get('/enquiries')->assertOk()->assertSee('Remove');
+        $this->actingAs($admin)->delete("/enquiries/{$enquiry->id}")->assertRedirect();
+        $this->assertSoftDeleted('enquiries', ['id' => $enquiry->id]);
+    }
 }

@@ -43,7 +43,7 @@ class QuotationController extends Controller
                 'client_id' => $data['client_id'],
                 'discount_type' => $data['discount_type'],
                 'discount_value' => $data['discount_value'] ?? 0,
-                'tax_percent' => $data['tax_percent'],
+                'tax_percent' => $data['tax_percent'] ?? 0,
                 'terms' => $data['terms'] ?? null,
                 'valid_until' => $data['valid_until'] ?? null,
                 'status' => 'draft',
@@ -83,7 +83,7 @@ class QuotationController extends Controller
             $quotation->update([
                 'discount_type' => $data['discount_type'],
                 'discount_value' => $data['discount_value'] ?? 0,
-                'tax_percent' => $data['tax_percent'],
+                'tax_percent' => $data['tax_percent'] ?? 0,
                 'terms' => $data['terms'] ?? null,
                 'valid_until' => $data['valid_until'] ?? null,
             ]);
@@ -175,14 +175,16 @@ class QuotationController extends Controller
     private function syncItems(Quotation $quotation, array $items): void
     {
         foreach ($items as $index => $item) {
+            // Pre-tax line total - tax is applied once, at the quotation
+            // level, in recalculateTotals(). Baking it in here too would
+            // double-apply it (subtotal would already be tax-inclusive).
             $lineTotal = ($item['quantity'] * $item['unit_price']) - ($item['discount'] ?? 0);
             $taxPercent = $item['tax_percent'] ?? $quotation->tax_percent;
-            $total = round($lineTotal + ($lineTotal * $taxPercent / 100), 2);
 
             $quotation->items()->create($item + [
                 'discount' => $item['discount'] ?? 0,
                 'tax_percent' => $taxPercent,
-                'total' => $total,
+                'total' => round($lineTotal, 2),
                 'sort_order' => $index,
             ]);
         }

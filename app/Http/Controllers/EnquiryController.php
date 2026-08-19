@@ -98,6 +98,8 @@ class EnquiryController extends Controller
 
     public function destroy(Enquiry $enquiry): RedirectResponse
     {
+        $this->authorizeAdminOnly();
+
         $enquiry->delete();
 
         return redirect()->route('enquiries.index')->with('success', 'Enquiry deleted.');

@@ -33,6 +33,7 @@
                             <th class="px-5 py-3">Source</th>
                             <th class="px-5 py-3">Assigned To</th>
                             <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -49,6 +50,18 @@
                                 <td class="px-5 py-3"><x-badge color="indigo" :status="$enquiry->source" /></td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $enquiry->assignedTo?->name ?? '—' }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$enquiry->status" /></td>
+                                <td class="whitespace-nowrap px-5 py-3 text-sm" onclick="event.stopPropagation()">
+                                    @can('enquiries.edit')
+                                        <a href="{{ route('enquiries.edit', $enquiry) }}" class="font-medium text-indigo-600 hover:underline">Edit</a>
+                                    @endcan
+                                    @if (auth()->user()->hasRole('Admin'))
+                                        <form method="POST" action="{{ route('enquiries.destroy', $enquiry) }}" onsubmit="return confirm('Remove this enquiry? This cannot be undone.')" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="ml-2 font-medium text-rose-600 hover:underline">Remove</button>
+                                        </form>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -19,7 +19,6 @@ class QuotationItem extends Model
 
     public function recalculateTotal(): void
     {
-        $base = ($this->quantity * $this->unit_price) - $this->discount;
-        $this->total = round($base + ($base * $this->tax_percent / 100), 2);
+        $this->total = round(($this->quantity * $this->unit_price) - $this->discount, 2);
     }
 }
