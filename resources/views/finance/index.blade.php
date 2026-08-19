@@ -347,7 +347,12 @@
             </x-card>
 
             <x-card :padded="false">
-                <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Expenses</h3></div>
+                <div class="flex flex-wrap items-center justify-between gap-3 p-4">
+                    <h3 class="text-sm font-semibold text-gray-500">Expenses</h3>
+                    <a href="{{ route('finance.expenses.pdf', request()->only(['expense_from', 'expense_to', 'expense_category', 'expense_type'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                        <x-icon name="download" class="h-4 w-4" /> Download PDF
+                    </a>
+                </div>
                 <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-5">
                     <input type="hidden" name="tab" value="expenses">
                     <x-text-input type="date" name="expense_from" value="{{ request('expense_from') }}" class="text-sm" />

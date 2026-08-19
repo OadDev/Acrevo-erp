@@ -234,4 +234,76 @@ class FinanceWorkflowTest extends TestCase
         $this->actingAs($admin)->delete("/finance/expenses/{$expenses[1]->id}")->assertRedirect();
         $this->assertEquals(-20000, $expenses[0]->fresh()->balance);
     }
+
+    public function test_new_invoice_can_be_created_with_no_tax_amount_entered_at_all(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+
+        // Regression test: leaving Tax Amount blank sends an empty string,
+        // which middleware converts to null - tax_amount is a NOT NULL
+        // column, so this used to 500 instead of defaulting to 0.
+        $response = $this->actingAs($admin)->post('/finance/invoices', [
+            'client_id' => $client->id,
+            'amount' => '10000',
+        ]);
+        $response->assertRedirect();
+        $response->assertSessionDoesntHaveErrors();
+
+        $invoice = Invoice::firstOrFail();
+        $this->assertEquals(0, $invoice->tax_amount);
+        $this->assertEquals(10000, $invoice->total_amount);
+
+        // And it now shows up as a Payment Requested banner on the client's
+        // dashboard, since creation actually succeeded.
+        $this->actingAs($clientUser)->get('/portal/work-orders')->assertOk()->assertSee('Payment Requested');
+    }
+
+    public function test_an_invoice_can_be_marked_cancelled_without_a_db_error(): void
+    {
+        $admin = $this->admin();
+        [$client] = $this->clientWithLogin($admin);
+
+        $invoice = Invoice::create([
+            'client_id' => $client->id, 'amount' => 5000, 'tax_amount' => 0, 'total_amount' => 5000,
+            'status' => 'sent', 'issued_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put("/finance/invoices/{$invoice->id}/status", ['status' => 'cancelled'])->assertRedirect();
+        $this->assertSame('cancelled', $invoice->fresh()->status);
+    }
+
+    public function test_sub_contractor_sees_their_own_payments_on_their_work_orders_dashboard(): void
+    {
+        $admin = $this->admin();
+        $subContractor = $this->subContractor();
+
+        $this->actingAs($admin)->post('/finance/vendor-payments', [
+            'user_id' => $subContractor->id, 'amount' => '15000', 'payment_date' => now()->toDateString(),
+            'mode' => 'bank_transfer', 'category' => 'Labour', 'remark' => 'Advance',
+        ])->assertRedirect();
+
+        $response = $this->actingAs($subContractor)->get('/my-work-orders');
+        $response->assertOk()->assertSee('My Payments')->assertSee('15,000.00')->assertSee('Advance');
+    }
+
+    public function test_expenses_pdf_downloads_with_filters_and_embeds_the_bill_image(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/finance/expenses', [
+            'type' => 'debit', 'category' => 'Salary', 'description' => 'Sales staff salary',
+            'amount' => '30000', 'expense_date' => now()->toDateString(),
+            'bill' => \Illuminate\Http\UploadedFile::fake()->image('bill.jpg', 200, 200),
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->post('/finance/expenses', [
+            'type' => 'debit', 'category' => 'Office', 'description' => 'Office rent',
+            'amount' => '12000', 'expense_date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $pdf = $this->actingAs($admin)->get('/finance/expenses/pdf?expense_category=Salary');
+        $pdf->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertGreaterThan(1000, strlen($pdf->getContent()));
+    }
 }

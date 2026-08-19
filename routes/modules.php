@@ -273,6 +273,7 @@ Route::middleware('permission:tickets.view')->group(function () {
 */
 Route::middleware('permission:finance.view')->group(function () {
     Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('finance/expenses/pdf', [FinanceController::class, 'expensesPdf'])->name('finance.expenses.pdf');
 });
 // Writing finance records requires finance.manage (Finance role + Admin), not
 // just finance.view - Management/Auditor can see this module but not edit it.

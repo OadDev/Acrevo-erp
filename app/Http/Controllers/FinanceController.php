@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Models\VendorPayment;
 use App\Models\WorkOrder;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -75,8 +76,15 @@ class FinanceController extends Controller
             'due_date' => ['nullable', 'date'],
         ]);
 
-        Invoice::create($data + [
-            'total_amount' => $data['amount'] + ($data['tax_amount'] ?? 0),
+        $taxAmount = $data['tax_amount'] ?? 0;
+
+        Invoice::create([
+            'client_id' => $data['client_id'],
+            'work_order_id' => $data['work_order_id'] ?? null,
+            'amount' => $data['amount'],
+            'tax_amount' => $taxAmount,
+            'total_amount' => $data['amount'] + $taxAmount,
+            'due_date' => $data['due_date'] ?? null,
             'status' => 'sent',
             'issued_by' => $request->user()->id,
         ]);
@@ -296,6 +304,28 @@ class FinanceController extends Controller
         $this->recalculateExpenseBalances();
 
         return back()->with('success', 'Expense removed.');
+    }
+
+    public function expensesPdf(Request $request)
+    {
+        $filters = [
+            'from' => $request->get('expense_from'),
+            'to' => $request->get('expense_to'),
+            'category' => $request->get('expense_category'),
+            'type' => $request->get('expense_type'),
+        ];
+
+        $expenses = Expense::with('media')
+            ->when($filters['category'], fn ($q, $v) => $q->where('category', $v))
+            ->when($filters['type'], fn ($q, $v) => $q->where('type', $v))
+            ->when($filters['from'], fn ($q, $v) => $q->whereDate('expense_date', '>=', $v))
+            ->when($filters['to'], fn ($q, $v) => $q->whereDate('expense_date', '<=', $v))
+            ->orderBy('expense_date')->orderBy('id')
+            ->get();
+
+        $pdf = Pdf::loadView('finance.expenses-pdf', compact('expenses', 'filters'));
+
+        return $pdf->download('expenses-'.now()->format('Y-m-d').'.pdf');
     }
 
     private function recalculateExpenseBalances(): void

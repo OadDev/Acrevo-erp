@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\VendorPayment;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +16,13 @@ class MyWorkOrderController extends Controller
             ->whereNotIn('work_orders.status', ['completed', 'cancelled'])
             ->paginate(15);
 
-        return view('my-work-orders.index', compact('workOrders'));
+        $user = $request->user();
+        $isSubContractor = $user->hasRole('Sub Contractor');
+        $myPayments = $isSubContractor
+            ? VendorPayment::where('user_id', $user->id)->with('workOrder')->latest('payment_date')->get()
+            : collect();
+
+        return view('my-work-orders.index', compact('workOrders', 'isSubContractor', 'myPayments'));
     }
 
     public function show(WorkOrder $workOrder): RedirectResponse
