@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClientController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDocumentController;
 use App\Http\Controllers\SiteVisitController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
 use App\Http\Controllers\WorkOrder\CompanyLedgerController;
@@ -270,6 +272,30 @@ Route::middleware('permission:audit.view')->group(function () {
 
 Route::middleware('permission:company_records.view')->group(function () {
     Route::resource('company-records', CompanyRecordController::class)->except('show');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Task Management (Common Task + Calendar Task)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:tasks.create')->group(function () {
+    Route::get('tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+    Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+});
+Route::middleware('permission:tasks.view')->group(function () {
+    Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+    Route::post('tasks/{task}/complete', [TaskController::class, 'complete'])->name('tasks.complete');
+    Route::post('tasks/{task}/delay', [TaskController::class, 'reportDelay'])->name('tasks.delay');
+    Route::post('tasks/{task}/verify', [TaskController::class, 'verify'])->name('tasks.verify');
+    Route::post('tasks/{task}/retask', [TaskController::class, 'retask'])->name('tasks.retask');
+});
+Route::middleware('permission:tasks.manage')->group(function () {
+    Route::resource('admin/task-schedules', TaskScheduleController::class)
+        ->except('show')
+        ->names('admin.task-schedules')
+        ->parameters(['task-schedules' => 'taskSchedule']);
 });
 
 /*

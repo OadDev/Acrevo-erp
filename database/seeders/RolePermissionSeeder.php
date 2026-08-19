@@ -74,6 +74,9 @@ class RolePermissionSeeder extends Seeder
         'client_portal' => [
             'client_portal.access',
         ],
+        'tasks' => [
+            'tasks.view', 'tasks.create', 'tasks.manage',
+        ],
     ];
 
     /**
@@ -86,30 +89,36 @@ class RolePermissionSeeder extends Seeder
             'tickets' => '*',
             'reports' => '*',
             'admin' => ['global_search.use'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'HR' => [
             'hr' => '*',
             'sales' => ['work_orders.view'],
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Executive Team Leader' => [
             'executive' => '*',
             'tickets' => ['tickets.view', 'tickets.create'],
             'sales' => ['work_orders.view'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'QC Officer' => [
             'qc' => '*',
             'sales' => ['work_orders.view'],
             'tickets' => ['tickets.view'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Finance' => [
             'finance' => '*',
@@ -117,6 +126,7 @@ class RolePermissionSeeder extends Seeder
             'reports' => '*',
             'management' => ['client_records.view'],
             'sales' => ['work_orders.view'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Management' => [
             'finance' => ['finance.view'],
@@ -126,20 +136,24 @@ class RolePermissionSeeder extends Seeder
             'sales' => ['work_orders.view', 'ongoing_sites.view', 'completed_sites.view'],
             'tickets' => ['tickets.view'],
             'reports' => '*',
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Legal' => [
             'legal' => '*',
             'management' => ['company_records.view', 'company_records.manage'],
             'reports' => ['reports.view'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Auditor' => [
             'audit' => '*',
             'finance' => ['finance.view'],
             'reports' => ['reports.view'],
             'sales' => ['work_orders.view'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Sub Contractor' => [
             'executive' => ['assigned_work.view', 'daily_progress.manage', 'media.upload'],
+            'tasks' => ['tasks.view', 'tasks.create'],
         ],
         'Client' => [
             'client_portal' => '*',

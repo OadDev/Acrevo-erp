@@ -81,6 +81,13 @@
                 </x-nav-group>
             @endcan
 
+            @can('tasks.view')
+                <x-nav-group label="Task">
+                    <x-nav-link :href="route('tasks.index', ['type' => 'common'])" :active="request()->routeIs('tasks.*') && request('type') !== 'calendar'" icon="clipboard">Common Task</x-nav-link>
+                    <x-nav-link :href="route('tasks.index', ['type' => 'calendar'])" :active="request()->routeIs('tasks.*') && request('type') === 'calendar'" icon="calendar-check">Calendar Task</x-nav-link>
+                </x-nav-group>
+            @endcan
+
             @canany(['finance.view', 'legal.view', 'audit.view', 'company_records.view'])
                 <x-nav-group label="Management">
                     @can('finance.view')
@@ -104,13 +111,16 @@
                 </x-nav-group>
             @endcan
 
-            @canany(['users.view', 'roles.view', 'activity_logs.view'])
+            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage'])
                 <x-nav-group label="Administration">
                     @can('users.view')
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')" icon="user-cog">Users</x-nav-link>
                     @endcan
                     @can('roles.view')
                         <x-nav-link :href="route('admin.roles.index')" :active="request()->routeIs('admin.roles.*')" icon="key">Roles &amp; Permissions</x-nav-link>
+                    @endcan
+                    @can('tasks.manage')
+                        <x-nav-link :href="route('admin.task-schedules.index')" :active="request()->routeIs('admin.task-schedules.*')" icon="calendar-check">Calendar Task Management</x-nav-link>
                     @endcan
                     @can('activity_logs.view')
                         <x-nav-link :href="route('admin.activity-logs.index')" :active="request()->routeIs('admin.activity-logs.*')" icon="history">Activity Logs</x-nav-link>
