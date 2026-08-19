@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-card class="max-w-2xl">
-        <form method="POST" action="{{ route('admin.task-schedules.store') }}" x-data="{ assigneeType: 'user', frequency: 'daily' }">
+        <form method="POST" action="{{ route('admin.task-schedules.store') }}" x-data="{ assigneeType: '{{ $prefillRole ? 'role' : 'user' }}', frequency: 'daily' }">
             @csrf
 
             <div class="space-y-5">
@@ -30,7 +30,7 @@
                     <x-select-input name="assigned_to_user_id" class="w-full">
                         <option value="">Select user</option>
                         @foreach ($users as $user)
-                            <option value="{{ $user->id }}" @selected(old('assigned_to_user_id') == $user->id)>{{ $user->name }} @if ($user->designation) ({{ $user->designation }}) @endif</option>
+                            <option value="{{ $user->id }}" @selected(old('assigned_to_user_id', $prefillUserId) == $user->id)>{{ $user->name }} @if ($user->designation) ({{ $user->designation }}) @endif</option>
                         @endforeach
                     </x-select-input>
                 </div>
@@ -38,8 +38,8 @@
                 <div x-show="assigneeType === 'role'" x-cloak>
                     <x-select-input name="assignee_role" class="w-full">
                         <option value="">Select designation</option>
-                        @foreach ($roles as $role)
-                            <option value="{{ $role }}" @selected(old('assignee_role') === $role)>{{ $role }}</option>
+                        @foreach ($roles as $roleOption)
+                            <option value="{{ $roleOption }}" @selected(old('assignee_role', $prefillRole) === $roleOption)>{{ $roleOption }}</option>
                         @endforeach
                     </x-select-input>
                     <p class="mt-1 text-xs text-gray-400">Generates one task per active user holding this role, each period.</p>

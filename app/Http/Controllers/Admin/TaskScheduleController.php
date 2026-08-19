@@ -12,16 +12,27 @@ use Spatie\Permission\Models\Role;
 
 class TaskScheduleController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $schedules = TaskSchedule::with(['assignedToUser', 'verifier'])->latest()->paginate(20);
+        $userId = $request->get('user_id');
+        $role = $request->get('role');
 
-        return view('admin.task-schedules.index', compact('schedules'));
+        $schedules = TaskSchedule::with(['assignedToUser', 'verifier'])
+            ->when($userId, fn ($q) => $q->where('assigned_to_user_id', $userId))
+            ->when($role, fn ($q) => $q->where('assignee_role', $role))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.task-schedules.index', compact('schedules', 'userId', 'role') + $this->formData());
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('admin.task-schedules.create', $this->formData());
+        $prefillUserId = $request->get('user_id');
+        $prefillRole = $request->get('role');
+
+        return view('admin.task-schedules.create', compact('prefillUserId', 'prefillRole') + $this->formData());
     }
 
     public function store(Request $request): RedirectResponse

@@ -2,14 +2,45 @@
     <x-slot name="header">
         <x-page-header title="Calendar Task Management" subtitle="Daily, weekly, monthly, and yearly recurring tasks per user or designation.">
             <x-slot name="actions">
-                <x-link-button :href="route('admin.task-schedules.create')">+ New Calendar Task</x-link-button>
+                <x-link-button :href="route('admin.task-schedules.create', array_filter(['user_id' => $userId, 'role' => $role]))">+ New Calendar Task</x-link-button>
             </x-slot>
         </x-page-header>
     </x-slot>
 
+    <x-card class="mb-6">
+        <h3 class="mb-3 text-sm font-semibold text-gray-500">Filter by Employee or Role/Designation</h3>
+        <form method="GET" action="{{ route('admin.task-schedules.index') }}" class="flex flex-wrap items-end gap-3">
+            <div>
+                <x-input-label value="Employee" class="text-xs" />
+                <x-select-input name="user_id" class="mt-1 text-sm" onchange="this.form.role.value=''; this.form.submit()">
+                    <option value="">All Employees</option>
+                    @foreach ($users as $user)
+                        <option value="{{ $user->id }}" @selected((string) $userId === (string) $user->id)>{{ $user->name }} @if ($user->designation) ({{ $user->designation }}) @endif</option>
+                    @endforeach
+                </x-select-input>
+            </div>
+            <div>
+                <x-input-label value="Role / Designation" class="text-xs" />
+                <x-select-input name="role" class="mt-1 text-sm" onchange="this.form.user_id.value=''; this.form.submit()">
+                    <option value="">All Roles</option>
+                    @foreach ($roles as $roleOption)
+                        <option value="{{ $roleOption }}" @selected($role === $roleOption)>{{ $roleOption }}</option>
+                    @endforeach
+                </x-select-input>
+            </div>
+            @if ($userId || $role)
+                <a href="{{ route('admin.task-schedules.index') }}" class="text-sm font-medium text-gray-500 hover:underline">Clear Filter</a>
+            @endif
+        </form>
+    </x-card>
+
     <x-card :padded="false">
         @if ($schedules->isEmpty())
-            <div class="p-6"><x-empty-state icon="calendar-check" title="No calendar tasks configured" description="Create a recurring task for a user or an entire designation." /></div>
+            <div class="p-6">
+                <x-empty-state icon="calendar-check"
+                    title="{{ $userId || $role ? 'No calendar tasks for this filter' : 'No calendar tasks configured' }}"
+                    description="{{ $userId || $role ? 'Nothing assigned yet for this employee or role.' : 'Create a recurring task for a user or an entire designation.' }}" />
+            </div>
         @else
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">

@@ -190,6 +190,35 @@ class TaskManagementTest extends TestCase
         $this->assertSame('Sales', $schedule->assignee_role);
     }
 
+    public function test_admin_can_filter_calendar_tasks_by_employee_or_role(): void
+    {
+        $admin = $this->admin();
+        $hr = $this->userWithRole('HR', 'HR Person');
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+
+        TaskSchedule::create([
+            'title' => 'HR daily check', 'assigned_to_user_id' => $hr->id,
+            'frequency' => 'daily', 'verifier_user_id' => $admin->id, 'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        TaskSchedule::create([
+            'title' => 'Sales weekly report', 'assignee_role' => 'Sales',
+            'frequency' => 'weekly', 'day_of_week' => 1, 'verifier_user_id' => $admin->id, 'is_active' => true, 'created_by' => $admin->id,
+        ]);
+
+        $byUser = $this->actingAs($admin)->get('/admin/task-schedules?user_id='.$hr->id);
+        $byUser->assertOk()->assertSee('HR daily check')->assertDontSee('Sales weekly report');
+
+        $byRole = $this->actingAs($admin)->get('/admin/task-schedules?role=Sales');
+        $byRole->assertOk()->assertSee('Sales weekly report')->assertDontSee('HR daily check');
+
+        $this->actingAs($admin)->get('/admin/task-schedules')->assertOk()->assertSee('HR daily check')->assertSee('Sales weekly report');
+
+        // "+ New Calendar Task" from a filtered view should pre-select that employee.
+        $prefilled = $this->actingAs($admin)->get('/admin/task-schedules/create?user_id='.$hr->id);
+        $prefilled->assertOk();
+        $prefilled->assertSee('selected', false);
+    }
+
     public function test_a_daily_calendar_task_is_generated_once_per_day_for_its_assignee(): void
     {
         $admin = $this->admin();
