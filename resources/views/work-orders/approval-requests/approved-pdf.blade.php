@@ -42,6 +42,9 @@
                 @if ($approval->description)
                     <tr><td></td><td colspan="6" class="muted">{{ $approval->description }}</td></tr>
                 @endif
+                @if ($approval->getFirstMedia('attachment'))
+                    <tr><td></td><td colspan="6">@include('work-orders.pdf._media', ['media' => $approval->getFirstMedia('attachment'), 'label' => $approval->getFirstMedia('attachment')->file_name])</td></tr>
+                @endif
             @empty
                 <tr><td colspan="7">No approved requests yet.</td></tr>
             @endforelse

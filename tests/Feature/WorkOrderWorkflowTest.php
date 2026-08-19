@@ -1652,4 +1652,43 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($admin)->get("/sites/{$site->id}/pdf")
             ->assertOk()->assertHeader('content-type', 'application/pdf');
     }
+
+    public function test_ledger_and_checklist_pdf_sections_embed_uploaded_images_without_erroring(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'debit', 'category' => 'Materials', 'amount' => '500',
+            'bill' => \Illuminate\Http\UploadedFile::fake()->image('bill.jpg', 200, 200),
+        ])->assertRedirect();
+
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $admin->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'title' => 'Day 1', 'items' => "Lay bricks",
+        ])->assertRedirect();
+        $item = \App\Models\DailyChecklistItem::firstOrFail();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [
+            'proof' => \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 200, 200),
+        ])->assertRedirect();
+
+        // A large fake image (base64-embedded) shouldn't blow up rendering,
+        // and the sections must still come back as valid, sizeable PDFs.
+        $ledgerPdf = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/ledger");
+        $ledgerPdf->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertGreaterThan(1000, strlen($ledgerPdf->getContent()));
+
+        $checklistPdf = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/checklist");
+        $checklistPdf->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertGreaterThan(1000, strlen($checklistPdf->getContent()));
+
+        $fullPdf = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf");
+        $fullPdf->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
 }

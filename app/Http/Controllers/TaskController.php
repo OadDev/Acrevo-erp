@@ -152,6 +152,50 @@ class TaskController extends Controller
         return back()->with('success', 'Task verified as completed.');
     }
 
+    public function edit(Request $request, Task $task): View
+    {
+        $this->authorizeTaskManager($task, $request->user());
+        abort_unless($task->task_schedule_id === null, 404, 'Calendar task instances follow their schedule - edit the calendar task itself instead.');
+
+        $users = $this->assignableUsers();
+
+        return view('tasks.edit', compact('task', 'users'));
+    }
+
+    public function update(Request $request, Task $task): RedirectResponse
+    {
+        $this->authorizeTaskManager($task, $request->user());
+        abort_unless($task->task_schedule_id === null, 404);
+
+        $data = $request->validate([
+            'assigned_to' => ['required', 'exists:users,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'due_date' => ['required', 'date'],
+        ]);
+
+        $task->update($data);
+
+        return redirect()->route('tasks.show', $task)->with('success', 'Task updated.');
+    }
+
+    public function destroy(Request $request, Task $task): RedirectResponse
+    {
+        $this->authorizeTaskManager($task, $request->user());
+
+        $task->delete();
+
+        return redirect()->route('tasks.index')->with('success', 'Task removed.');
+    }
+
+    private function authorizeTaskManager(Task $task, User $user): void
+    {
+        abort_unless(
+            in_array($user->id, [$task->assigned_by, $task->verifier_id], true) || $user->hasRole('Admin'),
+            403
+        );
+    }
+
     public function retask(Request $request, Task $task): RedirectResponse
     {
         $user = $request->user();

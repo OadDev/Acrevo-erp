@@ -53,10 +53,14 @@
                             <th class="px-5 py-3">Task Description</th>
                             <th class="px-5 py-3">Due Date</th>
                             <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($tasks as $task)
+                            @php
+                                $canManageRow = in_array(auth()->id(), [$task->assigned_by, $task->verifier_id], true) || auth()->user()->hasRole('Admin');
+                            @endphp
                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('tasks.show', $task) }}'">
                                 <td class="px-5 py-3 text-sm text-gray-500">{{ $task->created_at->format('d M Y') }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $task->assignedBy?->name ?? 'System (Calendar)' }}</td>
@@ -73,6 +77,18 @@
                                         <x-badge status="overdue" />
                                     @else
                                         <x-badge :status="$task->status" />
+                                    @endif
+                                </td>
+                                <td class="px-5 py-3 whitespace-nowrap text-sm" onclick="event.stopPropagation()">
+                                    @if ($canManageRow)
+                                        @if (! $task->schedule)
+                                            <a href="{{ route('tasks.edit', $task) }}" class="font-medium text-indigo-600 hover:underline">Edit</a>
+                                        @endif
+                                        <form method="POST" action="{{ route('tasks.destroy', $task) }}" onsubmit="return confirm('Remove this task?')" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="ml-2 font-medium text-rose-600 hover:underline">Remove</button>
+                                        </form>
                                     @endif
                                 </td>
                             </tr>

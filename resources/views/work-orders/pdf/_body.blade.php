@@ -77,6 +77,10 @@
                 @endforeach
             </tbody>
         </table>
+        @php $checklistProof = $checklist->checklistItems->flatMap(fn ($i) => $i->media); @endphp
+        @foreach ($checklistProof as $media)
+            @include('work-orders.pdf._media', ['media' => $media, 'label' => 'Proof'])
+        @endforeach
     @empty
         <p class="empty">No daily work entries yet.</p>
     @endforelse
@@ -85,19 +89,10 @@
 @if (in_array('progress', $sections, true))
     <h2 class="section-title">{{ $sectionLabels['progress'] }}</h2>
     @if ($workOrder->media->isNotEmpty())
-        <p><strong>Files Stored on This Work Order</strong></p>
-        <table>
-            <thead><tr><th>File</th><th>Category</th><th>Uploaded</th></tr></thead>
-            <tbody>
-                @foreach ($workOrder->media as $item)
-                    <tr>
-                        <td>{{ $item->file_name }}</td>
-                        <td>{{ Str::title(str_replace('_', ' ', $item->collection_name)) }}</td>
-                        <td>{{ $item->created_at->format('d M Y') }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+        <p><strong>Files Stored on This Work Order</strong> (videos are not included in this PDF)</p>
+        @foreach ($workOrder->media as $item)
+            @include('work-orders.pdf._media', ['media' => $item, 'label' => Str::title(str_replace('_', ' ', $item->collection_name)).' ('.$item->created_at->format('d M Y').')'])
+        @endforeach
     @endif
     @forelse ($workOrder->dailyProgressReports as $report)
         <p style="margin-top:8px; margin-bottom:2px;"><strong>{{ $report->date->format('d M Y') }}</strong> — {{ $report->executiveTeam?->name ?? '—' }}</p>
@@ -283,6 +278,13 @@
                 @endforeach
             </tbody>
         </table>
+        @php $ledgerBills = $workOrder->ledgers->filter(fn ($e) => $e->getFirstMedia('bill')); @endphp
+        @if ($ledgerBills->isNotEmpty())
+            <p style="margin-top:8px;"><strong>Bills &amp; Supporting Documents</strong></p>
+            @foreach ($ledgerBills as $entry)
+                @include('work-orders.pdf._media', ['media' => $entry->getFirstMedia('bill'), 'label' => $entry->entry_date->format('d M Y').' — '.($entry->category ?? $entry->description ?? 'Bill')])
+            @endforeach
+        @endif
     @else
         <p class="empty">No ledger entries yet.</p>
     @endif
@@ -306,6 +308,13 @@
                 @endforeach
             </tbody>
         </table>
+        @php $companyLedgerBills = $workOrder->companyLedgers->filter(fn ($e) => $e->getFirstMedia('bill')); @endphp
+        @if ($companyLedgerBills->isNotEmpty())
+            <p style="margin-top:8px;"><strong>Bills &amp; Supporting Documents</strong></p>
+            @foreach ($companyLedgerBills as $entry)
+                @include('work-orders.pdf._media', ['media' => $entry->getFirstMedia('bill'), 'label' => $entry->entry_date->format('d M Y').' — '.($entry->category ?? $entry->description ?? 'Bill')])
+            @endforeach
+        @endif
     @else
         <p class="empty">No company ledger entries yet.</p>
     @endif
@@ -351,6 +360,13 @@
                 @endforeach
             </tbody>
         </table>
+        @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getFirstMedia('attachment')); @endphp
+        @if ($approvalAttachments->isNotEmpty())
+            <p style="margin-top:8px;"><strong>Attachments</strong></p>
+            @foreach ($approvalAttachments as $approval)
+                @include('work-orders.pdf._media', ['media' => $approval->getFirstMedia('attachment'), 'label' => $approval->approval_no.' — '.$approval->title])
+            @endforeach
+        @endif
     @else
         <p class="empty">No approval requests yet.</p>
     @endif

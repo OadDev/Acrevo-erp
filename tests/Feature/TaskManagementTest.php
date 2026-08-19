@@ -250,4 +250,65 @@ class TaskManagementTest extends TestCase
         $late = \Carbon\Carbon::parse('first day of next month')->addDays(25);
         $this->assertNotNull($monthlySchedule->dueDateFor($late));
     }
+
+    public function test_a_common_task_can_be_edited_and_removed_by_its_assigner(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+        $stranger = $this->userWithRole('QC Officer', 'Stranger');
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id,
+            'title' => 'Collect document',
+            'due_date' => now()->addDay()->toDateString(),
+        ])->assertRedirect();
+        $task = Task::firstOrFail();
+
+        $this->actingAs($stranger)->get("/tasks/{$task->id}/edit")->assertForbidden();
+        $this->actingAs($stranger)->delete("/tasks/{$task->id}")->assertForbidden();
+
+        $this->actingAs($sales)->get("/tasks/{$task->id}/edit")->assertOk();
+        $this->actingAs($sales)->put("/tasks/{$task->id}", [
+            'assigned_to' => $hr->id,
+            'title' => 'Collect the correct document',
+            'due_date' => now()->addDays(2)->toDateString(),
+        ])->assertRedirect();
+
+        $task->refresh();
+        $this->assertSame('Collect the correct document', $task->title);
+
+        $this->actingAs($sales)->delete("/tasks/{$task->id}")->assertRedirect();
+        $this->assertNull(Task::find($task->id));
+    }
+
+    public function test_a_verified_calendar_task_instance_can_be_removed_but_not_edited(): void
+    {
+        $admin = $this->admin();
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        TaskSchedule::create([
+            'title' => 'Check enquiry status', 'assigned_to_user_id' => $hr->id,
+            'frequency' => 'daily', 'verifier_user_id' => $admin->id, 'is_active' => true, 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($hr)->get('/tasks')->assertOk();
+        $task = Task::where('assigned_to', $hr->id)->firstOrFail();
+
+        // Calendar instances follow their schedule - not directly editable.
+        $this->actingAs($admin)->get("/tasks/{$task->id}/edit")->assertNotFound();
+        $this->actingAs($admin)->put("/tasks/{$task->id}", ['assigned_to' => $hr->id, 'title' => 'x', 'due_date' => now()->toDateString()])->assertNotFound();
+
+        $this->actingAs($hr)->post("/tasks/{$task->id}/complete", ['completion_notes' => 'Checked.'])->assertRedirect();
+        $this->actingAs($admin)->post("/tasks/{$task->id}/verify")->assertRedirect();
+
+        $task->refresh();
+        $this->assertSame('verified', $task->status);
+
+        // Still visible in the list until explicitly removed.
+        $this->actingAs($hr)->get('/tasks?status=verified')->assertOk()->assertSee('Check enquiry status');
+
+        $this->actingAs($admin)->delete("/tasks/{$task->id}")->assertRedirect();
+        $this->assertNull(Task::find($task->id));
+    }
 }

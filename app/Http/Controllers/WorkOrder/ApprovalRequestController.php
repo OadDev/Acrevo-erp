@@ -100,7 +100,7 @@ class ApprovalRequestController extends Controller
     {
         $approvalRequests = $workOrder->approvalRequests()
             ->where('status', 'approved')
-            ->with(['requestedBy', 'requestedByClient', 'respondedBy'])
+            ->with(['requestedBy', 'requestedByClient', 'respondedBy', 'media'])
             ->orderBy('responded_at')
             ->get();
 
