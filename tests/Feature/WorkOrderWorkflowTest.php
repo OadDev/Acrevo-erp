@@ -500,12 +500,14 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
             'executive_team_id' => $team->id,
+            'date' => now()->toDateString(),
             'title' => 'Plastering - Ground floor',
             'items' => "Mix cement\nApply first coat",
         ])->assertRedirect();
 
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
             'executive_team_id' => $team->id,
+            'date' => now()->toDateString(),
             'title' => 'Painting - First floor',
             'items' => "Prime the wall",
         ])->assertRedirect();
@@ -1244,7 +1246,7 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertForbidden();
 
         $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/checklists/{$checklist->id}", [
-            'title' => 'Day 1 - Corrected', 'executive_team_id' => $team->id,
+            'title' => 'Day 1 - Corrected', 'executive_team_id' => $team->id, 'date' => now()->toDateString(),
         ])->assertRedirect();
         $this->assertSame('Day 1 - Corrected', $checklist->fresh()->title);
 
@@ -1344,14 +1346,14 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->actingAs($nonAdmin)->get("/qc/{$inspection->id}/edit")->assertForbidden();
         $this->actingAs($nonAdmin)->put("/qc/{$inspection->id}", [
-            'inspection_type' => 'daily', 'status' => 'failed',
+            'inspection_type' => 'daily', 'status' => 'failed', 'inspection_date' => now()->toDateString(),
         ])->assertForbidden();
         $this->actingAs($nonAdmin)->delete("/qc/{$inspection->id}")->assertForbidden();
 
         $this->actingAs($admin)->get("/qc/{$inspection->id}/edit")->assertOk();
 
         $this->actingAs($admin)->put("/qc/{$inspection->id}", [
-            'inspection_type' => 'final', 'status' => 'failed', 'remarks' => 'Corrected',
+            'inspection_type' => 'final', 'status' => 'failed', 'remarks' => 'Corrected', 'inspection_date' => now()->toDateString(),
         ])->assertRedirect();
         $inspection->refresh();
         $this->assertSame('final', $inspection->inspection_type);
@@ -1671,7 +1673,7 @@ class WorkOrderWorkflowTest extends TestCase
         $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $admin->id, 'is_active' => true]);
         WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
-            'executive_team_id' => $team->id, 'title' => 'Day 1', 'items' => "Lay bricks",
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => "Lay bricks",
         ])->assertRedirect();
         $item = \App\Models\DailyChecklistItem::firstOrFail();
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [

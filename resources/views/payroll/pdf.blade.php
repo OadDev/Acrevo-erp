@@ -44,19 +44,19 @@
             <tr><th>Component</th><th class="text-right">Amount</th></tr>
         </thead>
         <tbody>
-            <tr><td>Basic Salary</td><td class="text-right">₹{{ number_format($payroll->basic_salary, 2) }}</td></tr>
-            <tr><td>Allowances</td><td class="text-right">₹{{ number_format($payroll->allowances, 2) }}</td></tr>
-            <tr><td>Overtime</td><td class="text-right">₹{{ number_format($payroll->overtime_amount, 2) }}</td></tr>
-            <tr><td>Incentive</td><td class="text-right">₹{{ number_format($payroll->incentive, 2) }}</td></tr>
-            <tr><td>Deductions</td><td class="text-right">-₹{{ number_format($payroll->deductions, 2) }}</td></tr>
-            <tr><td>Advance Deducted</td><td class="text-right">-₹{{ number_format($payroll->advance_deducted, 2) }}</td></tr>
+            <tr><td>Basic Salary</td><td class="text-right">Rs. {{ number_format($payroll->basic_salary, 2) }}</td></tr>
+            <tr><td>Allowances</td><td class="text-right">Rs. {{ number_format($payroll->allowances, 2) }}</td></tr>
+            <tr><td>Overtime</td><td class="text-right">Rs. {{ number_format($payroll->overtime_amount, 2) }}</td></tr>
+            <tr><td>Incentive</td><td class="text-right">Rs. {{ number_format($payroll->incentive, 2) }}</td></tr>
+            <tr><td>Deductions</td><td class="text-right">-Rs. {{ number_format($payroll->deductions, 2) }}</td></tr>
+            <tr><td>Advance Deducted</td><td class="text-right">-Rs. {{ number_format($payroll->advance_deducted, 2) }}</td></tr>
         </tbody>
     </table>
 
     <table class="totals">
-        <tr class="grand"><td>Net Salary</td><td class="text-right">₹{{ number_format($payroll->net_salary, 2) }}</td></tr>
-        <tr><td>Paid So Far</td><td class="text-right">₹{{ number_format($payroll->paid_amount, 2) }}</td></tr>
-        <tr><td>Held / Remaining</td><td class="text-right">₹{{ number_format($payroll->remaining(), 2) }}</td></tr>
+        <tr class="grand"><td>Net Salary</td><td class="text-right">Rs. {{ number_format($payroll->net_salary, 2) }}</td></tr>
+        <tr><td>Paid So Far</td><td class="text-right">Rs. {{ number_format($payroll->paid_amount, 2) }}</td></tr>
+        <tr><td>Held / Remaining</td><td class="text-right">Rs. {{ number_format($payroll->remaining(), 2) }}</td></tr>
     </table>
 
     @if ($payroll->payments->isNotEmpty())
@@ -68,7 +68,7 @@
                 @foreach ($payroll->payments as $payment)
                     <tr>
                         <td>{{ $payment->paid_on->format('d M Y') }}</td>
-                        <td class="text-right">₹{{ number_format($payment->amount, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($payment->amount, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>

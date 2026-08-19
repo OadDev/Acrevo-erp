@@ -35,9 +35,9 @@
                     <td>{{ $approval->title }}</td>
                     <td>{{ $approval->raisedByName() }}</td>
                     <td>{{ $approval->sentToName() }}</td>
-                    <td>{{ $approval->created_at->format('d M Y') }}</td>
+                    <td>{{ $approval->requestedAtIst() }}</td>
                     <td>{{ $approval->respondedBy?->name ?? '—' }}</td>
-                    <td>{{ $approval->responded_at?->format('d M Y') ?? '—' }}</td>
+                    <td>{{ $approval->respondedAtIst() ?? '—' }}</td>
                 </tr>
                 @if ($approval->description)
                     <tr><td></td><td colspan="6" class="muted">{{ $approval->description }}</td></tr>

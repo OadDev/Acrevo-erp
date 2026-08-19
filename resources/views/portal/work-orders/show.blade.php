@@ -124,7 +124,7 @@
                         <dl class="mt-1 grid grid-cols-1 gap-x-4 gap-y-0.5 text-xs text-gray-400 sm:grid-cols-3">
                             <div><dt class="inline text-gray-400">Raised By:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->raisedByName() }}</dd></div>
                             <div><dt class="inline text-gray-400">Sent To:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->sentToName() }}</dd></div>
-                            <div><dt class="inline text-gray-400">Requested:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->created_at->format('d M Y') }}</dd></div>
+                            <div><dt class="inline text-gray-400">Requested:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->requestedAtIst() }}</dd></div>
                         </dl>
                         @if ($approval->description)
                             <p class="mt-1 text-gray-500">{{ $approval->description }}</p>
@@ -137,7 +137,7 @@
 
                         @if ($approval->status !== 'pending')
                             <div class="mt-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs dark:border-gray-800 dark:bg-gray-900">
-                                <p class="font-medium text-gray-700 dark:text-gray-300">{{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }} on {{ $approval->responded_at?->format('d M Y') }}</p>
+                                <p class="font-medium text-gray-700 dark:text-gray-300">{{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }} on {{ $approval->respondedAtIst() }}</p>
                                 @if ($approval->response_note)
                                     <p class="text-gray-500">{{ $approval->response_note }}</p>
                                 @endif

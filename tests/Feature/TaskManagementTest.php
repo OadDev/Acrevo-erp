@@ -311,4 +311,33 @@ class TaskManagementTest extends TestCase
         $this->actingAs($admin)->delete("/tasks/{$task->id}")->assertRedirect();
         $this->assertNull(Task::find($task->id));
     }
+
+    public function test_only_admin_can_download_the_task_performance_pdf(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id,
+            'title' => 'Collect document',
+            'due_date' => now()->addDay()->toDateString(),
+        ])->assertRedirect();
+
+        $this->actingAs($sales)->get('/tasks/pdf')->assertForbidden();
+        $this->actingAs($hr)->get('/tasks/pdf')->assertForbidden();
+
+        $pdf = $this->actingAs($admin)->get('/tasks/pdf?user_id='.$hr->id);
+        $pdf->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertGreaterThan(500, strlen($pdf->getContent()));
+    }
+
+    public function test_the_admin_only_filter_is_hidden_from_non_admin_users(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+
+        $this->actingAs($admin)->get('/tasks')->assertOk()->assertSee('Admin Filter');
+        $this->actingAs($sales)->get('/tasks')->assertOk()->assertDontSee('Admin Filter');
+    }
 }

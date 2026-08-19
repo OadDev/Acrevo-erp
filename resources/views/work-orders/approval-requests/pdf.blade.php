@@ -24,7 +24,7 @@
         <tr><th>Work Order</th><td>{{ $approvalRequest->workOrder->work_order_no }} &mdash; {{ $approvalRequest->workOrder->title }}</td></tr>
         <tr><th>Raised By</th><td>{{ $approvalRequest->raisedByName() }}</td></tr>
         <tr><th>Sent To</th><td>{{ $approvalRequest->sentToName() }}</td></tr>
-        <tr><th>Request Date</th><td>{{ $approvalRequest->created_at->format('d M Y, h:i A') }}</td></tr>
+        <tr><th>Request Date</th><td>{{ $approvalRequest->requestedAtIst() }}</td></tr>
         <tr><th>Status</th><td><span class="status status-{{ $approvalRequest->status }}">{{ Str::title($approvalRequest->status) }}</span></td></tr>
         @if ($approvalRequest->description)
             <tr><th>Details</th><td>{{ $approvalRequest->description }}</td></tr>
@@ -34,7 +34,7 @@
         @endif
         @if ($approvalRequest->status !== 'pending')
             <tr><th>Responded By</th><td>{{ $approvalRequest->respondedBy?->name ?? '—' }}</td></tr>
-            <tr><th>Response Date</th><td>{{ $approvalRequest->responded_at?->format('d M Y, h:i A') ?? '—' }}</td></tr>
+            <tr><th>Response Date</th><td>{{ $approvalRequest->respondedAtIst() ?? '—' }}</td></tr>
             @if ($approvalRequest->response_note)
                 <tr><th>Response Note</th><td>{{ $approvalRequest->response_note }}</td></tr>
             @endif

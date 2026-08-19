@@ -79,4 +79,18 @@ class ApprovalRequest extends Model implements HasMedia
             ? ($this->workOrder?->client?->name ?? 'Client')
             : 'Our Team';
     }
+
+    public function requestedAtIst(): string
+    {
+        return $this->created_at->timezone('Asia/Kolkata')->format('d-M-Y, h:i A').' IST';
+    }
+
+    public function respondedAtIst(): ?string
+    {
+        if (! $this->responded_at) {
+            return null;
+        }
+
+        return $this->responded_at->timezone('Asia/Kolkata')->format('d-M-Y, h:i A').' IST';
+    }
 }

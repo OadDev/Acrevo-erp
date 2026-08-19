@@ -114,6 +114,7 @@ class ClientPortalWorkflowTest extends TestCase
         // A final QC pass must reach client review too, not skip straight to internal completion.
         $this->actingAs($admin)->post('/qc', [
             'work_order_id' => $workOrder->id,
+            'inspection_date' => now()->toDateString(),
             'inspection_type' => 'final',
             'status' => 'passed',
         ])->assertRedirect();

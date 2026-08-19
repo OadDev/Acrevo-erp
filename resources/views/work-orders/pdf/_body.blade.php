@@ -19,7 +19,7 @@
     <h2 class="section-title">{{ $sectionLabels['overview'] }}</h2>
     <table class="meta-table">
         <tr><td class="muted">Client</td><td>{{ $workOrder->client?->name ?? '—' }}</td><td class="muted">Priority</td><td>{{ Str::title($workOrder->priority) }}</td></tr>
-        <tr><td class="muted">Deadline</td><td>{{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</td><td class="muted">Budget</td><td>₹{{ number_format($workOrder->budget_amount ?? 0, 2) }}</td></tr>
+        <tr><td class="muted">Deadline</td><td>{{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</td><td class="muted">Budget</td><td>Rs. {{ number_format($workOrder->budget_amount ?? 0, 2) }}</td></tr>
         <tr><td class="muted">Execution Method</td><td colspan="3">{{ \App\Models\WorkOrder::EXECUTION_WAYS[$workOrder->execution_way] ?? '—' }}</td></tr>
     </table>
     <p style="margin-top:8px;"><strong>Scope of Work</strong><br>{{ $workOrder->scope ?: 'No scope defined.' }}</p>
@@ -107,7 +107,7 @@
 @if (in_array('materials', $sections, true))
     <h2 class="section-title">{{ $sectionLabels['materials'] }}</h2>
     <table class="meta-table">
-        <tr><td class="muted">Allocated Material Budget</td><td>₹{{ number_format($workOrder->estimated_material_budget ?? 0, 2) }}</td><td class="muted">Material Inward Total</td><td>₹{{ number_format($workOrder->materialEntries->sum('amount'), 2) }}</td></tr>
+        <tr><td class="muted">Allocated Material Budget</td><td>Rs. {{ number_format($workOrder->estimated_material_budget ?? 0, 2) }}</td><td class="muted">Material Inward Total</td><td>Rs. {{ number_format($workOrder->materialEntries->sum('amount'), 2) }}</td></tr>
     </table>
     @if ($workOrder->materialEntries->isNotEmpty())
         <table>
@@ -119,8 +119,8 @@
                         <td>{{ $entry->material_name }}</td>
                         <td>{{ $entry->quantity }}</td>
                         <td>{{ $entry->unit }}</td>
-                        <td>₹{{ number_format($entry->rate, 2) }}</td>
-                        <td class="text-right">₹{{ number_format($entry->amount, 2) }}</td>
+                        <td>Rs. {{ number_format($entry->rate, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($entry->amount, 2) }}</td>
                         <td>{{ $entry->vendor ?? '—' }}</td>
                     </tr>
                 @endforeach
@@ -150,7 +150,7 @@
 @if (in_array('manpower', $sections, true))
     <h2 class="section-title">{{ $sectionLabels['manpower'] }}</h2>
     <table class="meta-table">
-        <tr><td class="muted">Allocated Man Power Budget</td><td>₹{{ number_format($workOrder->estimated_labour_budget ?? 0, 2) }}</td><td class="muted">Used Man Power Total</td><td>₹{{ number_format($workOrder->labourEntries->sum('amount'), 2) }}</td></tr>
+        <tr><td class="muted">Allocated Man Power Budget</td><td>Rs. {{ number_format($workOrder->estimated_labour_budget ?? 0, 2) }}</td><td class="muted">Used Man Power Total</td><td>Rs. {{ number_format($workOrder->labourEntries->sum('amount'), 2) }}</td></tr>
     </table>
     @if ($workOrder->timeSchedules->isNotEmpty())
         <p style="margin-top:8px;"><strong>Allocated Time Schedule</strong></p>
@@ -171,10 +171,10 @@
                     <tr>
                         <td>{{ $entry->entry_date?->format('d M Y') ?? '—' }}</td>
                         <td>{{ $entry->labour_type }}</td>
-                        <td>{{ $entry->count }} × ₹{{ $entry->wage_rate }}</td>
+                        <td>{{ $entry->count }} × Rs. {{ $entry->wage_rate }}</td>
                         <td>{{ $entry->hours ?? '—' }}</td>
                         <td>{{ $entry->total_time_to_finish ?? '—' }}</td>
-                        <td class="text-right">₹{{ number_format($entry->amount, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($entry->amount, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -212,7 +212,7 @@
                 @foreach ($mb->items as $item)
                     <tr>
                         <td>{{ $item->item_description }}</td><td>{{ $item->length ?? '—' }}</td><td>{{ $item->breadth ?? '—' }}</td><td>{{ $item->height ?? '—' }}</td>
-                        <td>{{ $item->quantity }}</td><td>{{ $item->unit }}</td><td class="text-right">₹{{ number_format($item->rate, 2) }}</td><td class="text-right">₹{{ number_format($item->amount, 2) }}</td>
+                        <td>{{ $item->quantity }}</td><td>{{ $item->unit }}</td><td class="text-right">Rs. {{ number_format($item->rate, 2) }}</td><td class="text-right">Rs. {{ number_format($item->amount, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -229,7 +229,7 @@
                     <tr>
                         <td>{{ $attendance->employee?->name }}</td><td>{{ $attendance->date->format('d M Y') }}</td>
                         <td>{{ $attendance->check_in ?? '—' }}</td><td>{{ $attendance->check_out ?? '—' }}</td>
-                        <td>{{ $attendance->hours_worked ?? '—' }}</td><td class="text-right">{{ $attendance->salary ? '₹'.number_format($attendance->salary, 2) : '—' }}</td>
+                        <td>{{ $attendance->hours_worked ?? '—' }}</td><td class="text-right">{{ $attendance->salary ? 'Rs. '.number_format($attendance->salary, 2) : '—' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -272,8 +272,8 @@
                         <td>{{ $entry->category ?? '—' }}</td>
                         <td>{{ $entry->description ?? '—' }}</td>
                         <td>{{ Str::title($entry->type) }}</td>
-                        <td class="text-right">₹{{ number_format($entry->amount, 2) }}</td>
-                        <td class="text-right">₹{{ number_format($entry->balance, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($entry->amount, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($entry->balance, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -302,8 +302,8 @@
                         <td>{{ $entry->category ?? '—' }}</td>
                         <td>{{ $entry->description ?? '—' }}</td>
                         <td>{{ Str::title($entry->type) }}</td>
-                        <td class="text-right">₹{{ number_format($entry->amount, 2) }}</td>
-                        <td class="text-right">₹{{ number_format($entry->balance, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($entry->amount, 2) }}</td>
+                        <td class="text-right">Rs. {{ number_format($entry->balance, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -354,7 +354,7 @@
                         <td>{{ $approval->title }}</td>
                         <td>{{ $approval->raisedByName() }}</td>
                         <td>{{ $approval->sentToName() }}</td>
-                        <td>{{ $approval->created_at->format('d M Y') }}</td>
+                        <td>{{ $approval->requestedAtIst() }}</td>
                         <td>{{ Str::title($approval->status) }}</td>
                     </tr>
                 @endforeach

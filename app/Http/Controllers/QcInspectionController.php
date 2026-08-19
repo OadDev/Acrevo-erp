@@ -33,6 +33,7 @@ class QcInspectionController extends Controller
     {
         $data = $request->validate([
             'work_order_id' => ['required', 'exists:work_orders,id'],
+            'inspection_date' => ['required', 'date'],
             'inspection_type' => ['required', 'in:daily,final'],
             'status' => ['required', 'in:passed,failed,rework_required'],
             'remarks' => ['nullable', 'string'],
@@ -41,7 +42,6 @@ class QcInspectionController extends Controller
         $workOrder = WorkOrder::findOrFail($data['work_order_id']);
 
         $workOrder->qcInspections()->create($data + [
-            'inspection_date' => now()->toDateString(),
             'inspected_by' => $request->user()->id,
         ]);
 
@@ -78,6 +78,7 @@ class QcInspectionController extends Controller
         $this->authorizeAdminOnly();
 
         $data = $request->validate([
+            'inspection_date' => ['required', 'date'],
             'inspection_type' => ['required', 'in:daily,final'],
             'status' => ['required', 'in:passed,failed,rework_required'],
             'remarks' => ['nullable', 'string'],

@@ -50,17 +50,17 @@
                     <td>{{ $item->name }}<br><span class="muted">{{ $item->description }}</span></td>
                     <td>{{ $item->unit }}</td>
                     <td>{{ $item->quantity }}</td>
-                    <td>₹{{ number_format($item->unit_price, 2) }}</td>
-                    <td class="text-right">₹{{ number_format($item->total, 2) }}</td>
+                    <td>Rs. {{ number_format($item->unit_price, 2) }}</td>
+                    <td class="text-right">Rs. {{ number_format($item->total, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
     <table class="totals">
-        <tr><td>Subtotal</td><td class="text-right">₹{{ number_format($quotation->subtotal, 2) }}</td></tr>
-        <tr><td>Tax ({{ $quotation->tax_percent }}%)</td><td class="text-right">₹{{ number_format($quotation->tax_amount, 2) }}</td></tr>
-        <tr class="grand"><td>Grand Total</td><td class="text-right">₹{{ number_format($quotation->total_amount, 2) }}</td></tr>
+        <tr><td>Subtotal</td><td class="text-right">Rs. {{ number_format($quotation->subtotal, 2) }}</td></tr>
+        <tr><td>Tax ({{ $quotation->tax_percent }}%)</td><td class="text-right">Rs. {{ number_format($quotation->tax_amount, 2) }}</td></tr>
+        <tr class="grand"><td>Grand Total</td><td class="text-right">Rs. {{ number_format($quotation->total_amount, 2) }}</td></tr>
     </table>
 
     @if ($quotation->terms)

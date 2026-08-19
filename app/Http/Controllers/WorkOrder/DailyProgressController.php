@@ -19,6 +19,7 @@ class DailyProgressController extends Controller
     {
         $data = $request->validate([
             'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'date' => ['required', 'date'],
             'completed_work' => ['required', 'string'],
             'pending_work' => ['nullable', 'string'],
             'problems' => ['nullable', 'string'],
@@ -26,7 +27,6 @@ class DailyProgressController extends Controller
         ]);
 
         $workOrder->dailyProgressReports()->create($data + [
-            'date' => now()->toDateString(),
             'submitted_by' => $request->user()->id,
         ]);
 
@@ -41,6 +41,7 @@ class DailyProgressController extends Controller
 
         $data = $request->validate([
             'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'date' => ['required', 'date'],
             'completed_work' => ['required', 'string'],
             'pending_work' => ['nullable', 'string'],
             'problems' => ['nullable', 'string'],

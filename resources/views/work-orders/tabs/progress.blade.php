@@ -104,6 +104,7 @@
                                     <option value="{{ $assignment->executive_team_id }}" @selected($assignment->executive_team_id === $report->executive_team_id)>{{ $assignment->executiveTeam?->name ?? '—' }}</option>
                                 @endforeach
                             </x-select-input>
+                            <x-text-input type="date" name="date" value="{{ $report->date->format('Y-m-d') }}" class="w-full text-xs" required />
                             <x-textarea-input name="completed_work" rows="2" class="w-full text-xs" required>{{ $report->completed_work }}</x-textarea-input>
                             <x-textarea-input name="pending_work" rows="2" class="w-full text-xs">{{ $report->pending_work }}</x-textarea-input>
                             <x-textarea-input name="problems" rows="2" class="w-full text-xs">{{ $report->problems }}</x-textarea-input>
@@ -129,6 +130,7 @@
                             <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
                         @endforeach
                     </x-select-input>
+                    <x-text-input type="date" name="date" value="{{ now()->toDateString() }}" class="w-full" required />
                     <x-textarea-input name="completed_work" rows="2" class="w-full" placeholder="Completed work" required></x-textarea-input>
                     <x-textarea-input name="pending_work" rows="2" class="w-full" placeholder="Pending work"></x-textarea-input>
                     <x-textarea-input name="problems" rows="2" class="w-full" placeholder="Problems encountered"></x-textarea-input>

@@ -10,6 +10,11 @@
 
             <div class="space-y-4">
                 <div>
+                    <x-input-label for="inspection_date" value="Inspection Date" />
+                    <x-text-input type="date" id="inspection_date" name="inspection_date" value="{{ old('inspection_date', $qcInspection->inspection_date->format('Y-m-d')) }}" class="mt-1 block w-full" required />
+                </div>
+
+                <div>
                     <x-input-label for="inspection_type" value="Inspection Type" />
                     <x-select-input id="inspection_type" name="inspection_type" class="mt-1 block w-full">
                         <option value="daily" @selected(old('inspection_type', $qcInspection->inspection_type) === 'daily')>Daily QC</option>

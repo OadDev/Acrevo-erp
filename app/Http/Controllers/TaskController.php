@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\TaskScheduleGenerator;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,6 +29,58 @@ class TaskController extends Controller
             abort_unless($user->can('tasks.manage'), 403);
         }
 
+        $isAdmin = $user->hasRole('Admin');
+        $filterUserId = $isAdmin ? $request->get('user_id') : null;
+        $filterFrom = $isAdmin ? $request->get('from') : null;
+        $filterTo = $isAdmin ? $request->get('to') : null;
+
+        $query = $this->filteredTaskQuery($request, $user, $scope, $type, $status, $filterUserId, $filterFrom, $filterTo);
+
+        $tasks = $query->orderByDesc('due_date')->paginate(20)->withQueryString();
+
+        $assignableUsers = $isAdmin ? $this->assignableUsers() : collect();
+
+        return view('tasks.index', compact('tasks', 'scope', 'type', 'status', 'isAdmin', 'assignableUsers', 'filterUserId', 'filterFrom', 'filterTo'));
+    }
+
+    public function pdf(Request $request)
+    {
+        $this->authorizeAdminOnly();
+
+        $user = $request->user();
+
+        $scope = in_array($request->get('scope'), ['mine', 'assigned', 'all'], true) ? $request->get('scope') : 'all';
+        $type = in_array($request->get('type'), ['common', 'calendar'], true) ? $request->get('type') : null;
+        $status = $request->get('status');
+        $filterUserId = $request->get('user_id');
+        $filterFrom = $request->get('from');
+        $filterTo = $request->get('to');
+
+        $query = $this->filteredTaskQuery($request, $user, $scope, $type, $status, $filterUserId, $filterFrom, $filterTo);
+
+        $tasks = $query->orderBy('assigned_to')->orderByDesc('due_date')->get();
+
+        $performance = $tasks->groupBy('assigned_to')->map(function ($userTasks) {
+            return [
+                'user' => $userTasks->first()->assignedTo,
+                'total' => $userTasks->count(),
+                'verified' => $userTasks->where('status', 'verified')->count(),
+                'submitted' => $userTasks->where('status', 'submitted')->count(),
+                'pending' => $userTasks->where('status', 'pending')->count(),
+                'retasked' => $userTasks->where('status', 'retasked')->count(),
+                'overdue' => $userTasks->filter(fn ($t) => $t->isOverdue())->count(),
+            ];
+        })->values();
+
+        $filterUser = $filterUserId ? User::find($filterUserId) : null;
+
+        $pdf = Pdf::loadView('tasks.pdf', compact('tasks', 'performance', 'filterUser', 'filterFrom', 'filterTo', 'status'));
+
+        return $pdf->download('task-performance-'.now()->format('Y-m-d').'.pdf');
+    }
+
+    private function filteredTaskQuery(Request $request, User $user, string $scope, ?string $type, ?string $status, ?string $filterUserId, ?string $filterFrom, ?string $filterTo): Builder
+    {
         $query = Task::query()->with(['assignedBy', 'assignedTo', 'verifier', 'schedule']);
 
         if ($scope === 'assigned') {
@@ -49,9 +103,19 @@ class TaskController extends Controller
             $query->where('status', $status);
         }
 
-        $tasks = $query->orderByDesc('due_date')->paginate(20)->withQueryString();
+        if ($filterUserId) {
+            $query->where('assigned_to', $filterUserId);
+        }
 
-        return view('tasks.index', compact('tasks', 'scope', 'type', 'status'));
+        if ($filterFrom) {
+            $query->whereDate('due_date', '>=', $filterFrom);
+        }
+
+        if ($filterTo) {
+            $query->whereDate('due_date', '<=', $filterTo);
+        }
+
+        return $query;
     }
 
     public function create(): View

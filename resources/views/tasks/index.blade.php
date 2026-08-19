@@ -39,6 +39,38 @@
         </x-select-input>
     </div>
 
+    @if ($isAdmin)
+        <x-card class="mb-6">
+            <h3 class="mb-3 text-sm font-semibold text-gray-500">Admin Filter &mdash; Review Task Performance by User</h3>
+            <form method="GET" action="{{ route('tasks.index') }}" class="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="scope" value="{{ $scope }}">
+                <input type="hidden" name="type" value="{{ $type }}">
+                <input type="hidden" name="status" value="{{ $status }}">
+                <div>
+                    <x-input-label value="User" class="text-xs" />
+                    <x-select-input name="user_id" class="mt-1 text-sm">
+                        <option value="">All Users</option>
+                        @foreach ($assignableUsers as $assignable)
+                            <option value="{{ $assignable->id }}" @selected((string) $filterUserId === (string) $assignable->id)>{{ $assignable->name }}</option>
+                        @endforeach
+                    </x-select-input>
+                </div>
+                <div>
+                    <x-input-label value="From" class="text-xs" />
+                    <x-text-input type="date" name="from" value="{{ $filterFrom }}" class="mt-1 text-sm" />
+                </div>
+                <div>
+                    <x-input-label value="To" class="text-xs" />
+                    <x-text-input type="date" name="to" value="{{ $filterTo }}" class="mt-1 text-sm" />
+                </div>
+                <x-primary-button>Apply Filter</x-primary-button>
+                <a href="{{ route('tasks.pdf', request()->query()) }}" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+                    <x-icon name="download" class="h-4 w-4" /> Download PDF
+                </a>
+            </form>
+        </x-card>
+    @endif
+
     <x-card :padded="false">
         @if ($tasks->isEmpty())
             <div class="p-6"><x-empty-state icon="clipboard" title="No tasks" description="Nothing here yet." /></div>

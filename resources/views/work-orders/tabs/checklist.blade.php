@@ -34,7 +34,8 @@
                                 <option value="{{ $assignment->executive_team_id }}" @selected($assignment->executive_team_id === $checklist->executive_team_id)>{{ $assignment->executiveTeam?->name ?? '—' }}</option>
                             @endforeach
                         </x-select-input>
-                        <x-text-input name="title" value="{{ $checklist->title }}" class="text-xs" required />
+                        <x-text-input type="date" name="date" value="{{ $checklist->date->format('Y-m-d') }}" class="text-xs" required />
+                        <x-text-input name="title" value="{{ $checklist->title }}" class="col-span-2 text-xs" required />
                         <button class="col-span-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Save</button>
                     </form>
                 @endif
@@ -101,6 +102,7 @@
                         <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
                     @endforeach
                 </x-select-input>
+                <x-text-input type="date" name="date" value="{{ now()->toDateString() }}" class="w-full" required />
                 <x-text-input name="title" class="w-full" placeholder="Daily work (e.g. Plastering - Ground floor)" required />
                 <x-textarea-input name="items" rows="5" class="w-full" placeholder="One checklist item per line..." required></x-textarea-input>
                 <x-primary-button class="w-full justify-center">Save Daily Work</x-primary-button>
