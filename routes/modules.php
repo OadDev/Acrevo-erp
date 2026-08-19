@@ -124,6 +124,8 @@ Route::get('work-orders/{workOrder}/zip', WorkOrderZipController::class)->name('
 Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');
     Route::delete('work-orders/{workOrder}/unassign-team/{assignment}', [WorkOrderController::class, 'unassignTeam'])->name('work-orders.unassign-team');
+    Route::post('work-orders/{workOrder}/assign-sub-contractor', [WorkOrderController::class, 'assignSubContractor'])->name('work-orders.assign-sub-contractor');
+    Route::delete('work-orders/{workOrder}/unassign-sub-contractor/{assignment}', [WorkOrderController::class, 'unassignSubContractor'])->name('work-orders.unassign-sub-contractor');
 });
 
 Route::middleware('permission:work_orders.edit')->group(function () {

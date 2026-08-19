@@ -1,6 +1,7 @@
 @php
     $tabs = \App\Support\WorkOrderPdfSections::forUser(auth()->user());
     $canSeeCompanyLedger = array_key_exists('company-ledger', $tabs);
+    $canSeeLedger = array_key_exists('ledger', $tabs);
     $validTabs = array_keys($tabs);
     $initialTab = in_array(request('tab'), $validTabs, true) ? request('tab') : 'site';
 @endphp
@@ -92,9 +93,11 @@
         <div x-show="tab === 'summary'" x-cloak>
             @include('work-orders.tabs.summary')
         </div>
-        <div x-show="tab === 'ledger'" x-cloak>
-            @include('work-orders.tabs.ledger')
-        </div>
+        @if ($canSeeLedger)
+            <div x-show="tab === 'ledger'" x-cloak>
+                @include('work-orders.tabs.ledger')
+            </div>
+        @endif
         @if ($canSeeCompanyLedger)
             <div x-show="tab === 'company-ledger'" x-cloak>
                 @include('work-orders.tabs.company-ledger')

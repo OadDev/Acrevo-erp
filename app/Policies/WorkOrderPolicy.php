@@ -27,7 +27,8 @@ class WorkOrderPolicy
                 ->exists()
                 || $workOrder->executiveTeams()->whereNull('unassigned_at')
                     ->whereHas('executiveTeam', fn ($q) => $q->where('team_leader_id', $user->id))
-                    ->exists();
+                    ->exists()
+                || $workOrder->subContractors()->whereNull('unassigned_at')->where('user_id', $user->id)->exists();
         }
 
         if ($user->can('client_portal.access')) {

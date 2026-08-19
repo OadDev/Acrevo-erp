@@ -154,6 +154,11 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(WorkOrderExecutiveTeam::class);
     }
 
+    public function subContractors(): HasMany
+    {
+        return $this->hasMany(WorkOrderSubContractor::class);
+    }
+
     public function dailyChecklists(): HasMany
     {
         return $this->hasMany(DailyChecklist::class);

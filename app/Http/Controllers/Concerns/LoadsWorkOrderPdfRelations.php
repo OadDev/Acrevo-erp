@@ -15,6 +15,7 @@ trait LoadsWorkOrderPdfRelations
     {
         return $workOrder->load([
             'client', 'quotation', 'site.media', 'statusLogs.changedBy', 'executiveTeams.executiveTeam.teamLeader',
+            'subContractors.user',
             'tickets', 'qcInspections.inspectedBy',
             'dailyChecklists' => fn ($q) => $q->latest(),
             'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',

@@ -58,6 +58,20 @@
     @else
         <p class="empty">No executive team assigned.</p>
     @endif
+    @if ($workOrder->subContractors->isNotEmpty())
+        <table>
+            <thead><tr><th>Sub-Contractor</th><th>Email</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach ($workOrder->subContractors as $assignment)
+                    <tr>
+                        <td>{{ $assignment->user?->name ?? 'Unknown user' }}</td>
+                        <td>{{ $assignment->user?->email ?? '—' }}</td>
+                        <td>{{ $assignment->unassigned_at ? 'Unassigned' : 'Active' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 @endif
 
 @if (in_array('checklist', $sections, true))

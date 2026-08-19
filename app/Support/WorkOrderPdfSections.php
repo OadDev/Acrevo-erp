@@ -35,6 +35,10 @@ class WorkOrderPdfSections
             unset($sections['company-ledger']);
         }
 
+        if ($user && $user->hasRole('QC Officer') && ! $user->hasAnyRole(['Admin', 'Finance'])) {
+            unset($sections['ledger']);
+        }
+
         return $sections;
     }
 }

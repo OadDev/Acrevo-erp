@@ -74,6 +74,32 @@ class WorkOrderWorkflowTest extends TestCase
         return $user;
     }
 
+    // Call only after admin() has already seeded roles/permissions in the
+    // same test - reseeding here would duplicate the Role rows.
+    private function qcOfficer(): User
+    {
+        $user = User::create([
+            'name' => 'QC Officer', 'email' => 'qc+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $user->syncRoles(['QC Officer']);
+
+        return $user;
+    }
+
+    // Call only after admin() has already seeded roles/permissions in the
+    // same test - reseeding here would duplicate the Role rows.
+    private function subContractor(string $name = 'Sub Contractor User'): User
+    {
+        $user = User::create([
+            'name' => $name, 'email' => strtolower(str_replace(' ', '', $name)).'+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $user->syncRoles(['Sub Contractor']);
+
+        return $user;
+    }
+
     public function test_work_orders_index_loads_with_and_without_a_site(): void
     {
         $admin = $this->admin();
@@ -1765,5 +1791,137 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->assertTrue(collect($names)->contains("{$workOrder1->work_order_no}/WO Details.pdf"));
         $this->assertTrue(collect($names)->contains("{$workOrder2->work_order_no}/WO Details.pdf"));
+    }
+
+    public function test_a_way_2_work_order_can_have_sub_contractors_assigned_and_they_gain_access(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'pending_hr_assignment', 'created_by' => $admin->id,
+        ]);
+
+        $subContractor = $this->subContractor();
+        $stranger = $this->executiveTeamLeader();
+
+        // Not yet assigned - no access to the work order, and it should not
+        // yet show up in their "My Work Orders" list.
+        $this->actingAs($subContractor)->get("/work-orders/{$workOrder->id}")->assertForbidden();
+        $this->actingAs($subContractor)->get('/my-work-orders')->assertOk()->assertDontSee($workOrder->work_order_no);
+
+        // Only Sales/HR/Admin (worker_assignment.manage|work_orders.edit) can assign.
+        $this->actingAs($stranger)->post("/work-orders/{$workOrder->id}/assign-sub-contractor", [
+            'sub_contractor_user_id' => $subContractor->id,
+        ])->assertForbidden();
+
+        // Assigning a non-Sub-Contractor user is rejected.
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/assign-sub-contractor", [
+            'sub_contractor_user_id' => $stranger->id,
+        ])->assertStatus(422);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/assign-sub-contractor", [
+            'sub_contractor_user_id' => $subContractor->id,
+        ])->assertRedirect();
+
+        $workOrder->refresh();
+        $this->assertSame('team_assigned', $workOrder->status);
+        $assignment = \App\Models\WorkOrderSubContractor::firstOrFail();
+        $this->assertSame($subContractor->id, $assignment->user_id);
+
+        // Now assigned - full view access, appears in their dashboard list,
+        // and the dashboard route redirects them straight there.
+        $this->actingAs($subContractor)->get("/work-orders/{$workOrder->id}")->assertOk();
+        $this->actingAs($subContractor)->get('/my-work-orders')->assertOk()->assertSee($workOrder->work_order_no);
+        $this->actingAs($subContractor)->get('/dashboard')->assertRedirect('/my-work-orders');
+
+        // Unassigning revokes access again.
+        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/unassign-sub-contractor/{$assignment->id}")->assertRedirect();
+        $this->actingAs($subContractor)->get("/work-orders/{$workOrder->id}")->assertForbidden();
+    }
+
+    public function test_qc_officer_cannot_see_the_site_ledger_tab_but_other_roles_still_can(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $qc = $this->qcOfficer();
+
+        $this->actingAs($qc)->get("/work-orders/{$workOrder->id}")->assertOk()->assertDontSee('Site Ledger');
+        $this->actingAs($qc)->get("/work-orders/{$workOrder->id}/pdf/ledger")->assertNotFound();
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")->assertOk()->assertSee('Site Ledger');
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/ledger")->assertOk();
+    }
+
+    public function test_checklist_proof_is_viewable_by_qc_after_marking_an_item_done(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $admin->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => "Lay bricks",
+        ])->assertRedirect();
+        $item = \App\Models\DailyChecklistItem::firstOrFail();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [
+            'proof' => \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 200, 200),
+        ])->assertRedirect();
+
+        $qc = $this->qcOfficer();
+        $this->actingAs($qc)->get("/work-orders/{$workOrder->id}")->assertOk()->assertSee('View Proof');
+    }
+
+    public function test_client_portal_shows_daily_checklist_and_clickable_progress_media(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $admin->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => "Lay bricks",
+        ])->assertRedirect();
+        $item = \App\Models\DailyChecklistItem::firstOrFail();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [
+            'proof' => \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 200, 200),
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'images', 'file' => \Illuminate\Http\UploadedFile::fake()->image('site.jpg', 200, 200),
+        ])->assertRedirect();
+
+        $clientUser = User::create([
+            'name' => $client->name, 'email' => $client->email,
+            'password' => bcrypt('password'), 'is_active' => true, 'must_change_password' => false,
+        ]);
+        $clientUser->syncRoles(['Client']);
+        ClientLogin::create(['client_id' => $client->id, 'user_id' => $clientUser->id]);
+
+        $response = $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}");
+        $response->assertOk()
+            ->assertSee('Daily Work &amp; Checklist', false)
+            ->assertSee('View Proof')
+            ->assertSee('Lay bricks');
+
+        $mediaUrl = $workOrder->fresh()->getFirstMedia('images')->getUrl();
+        $response->assertSee('<a href="'.$mediaUrl.'"', false);
     }
 }

@@ -46,9 +46,6 @@
                                 <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                                     <x-icon name="check-circle" class="h-4 w-4 shrink-0 text-emerald-500" />
                                     <span class="flex-1 line-through decoration-gray-300">{{ $item->description }}</span>
-                                    @if ($item->getFirstMedia('proof'))
-                                        <a href="{{ $item->getFirstMediaUrl('proof') }}" target="_blank" class="text-xs text-indigo-600 hover:underline">Proof</a>
-                                    @endif
                                     @if (auth()->user()->hasRole('Admin'))
                                         <form method="POST" action="{{ route('work-orders.checklist-items.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this checklist item?')">
                                             @csrf
@@ -58,6 +55,19 @@
                                     @endif
                                 </div>
                                 <p class="mt-1 text-xs text-gray-400">Done by {{ $item->doneBy?->name ?? '—' }} · {{ $item->done_at?->diffForHumans() }}</p>
+                                @if ($item->getFirstMedia('proof'))
+                                    @php $proof = $item->getFirstMedia('proof'); @endphp
+                                    <a href="{{ $proof->getUrl() }}" target="_blank" class="mt-2 flex items-center gap-2 rounded-lg border border-gray-100 p-1.5 hover:border-indigo-300 dark:border-gray-800">
+                                        @if (str_starts_with($proof->mime_type, 'image'))
+                                            <img src="{{ $proof->getUrl() }}" class="h-12 w-12 shrink-0 rounded object-cover">
+                                        @elseif (str_starts_with($proof->mime_type, 'video'))
+                                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-800"><x-icon name="video" class="h-5 w-5 text-gray-400" /></div>
+                                        @else
+                                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-800"><x-icon name="file-text" class="h-5 w-5 text-gray-400" /></div>
+                                        @endif
+                                        <span class="text-xs font-medium text-indigo-600">View Proof</span>
+                                    </a>
+                                @endif
                             @else
                                 <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                     <x-icon name="clock" class="h-4 w-4 shrink-0 text-amber-500" />

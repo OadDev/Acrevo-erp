@@ -27,6 +27,10 @@ class DashboardController extends Controller
             return redirect()->route('portal.work-orders.index');
         }
 
+        if ($user->hasRole('Sub Contractor')) {
+            return redirect()->route('my-work-orders.index');
+        }
+
         $widgets = [];
 
         if ($user->can('enquiries.view')) {

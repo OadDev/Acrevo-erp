@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="My Work Orders" subtitle="Work orders assigned to your executive team." />
+        <x-page-header title="My Work Orders" subtitle="Work orders assigned to you." />
     </x-slot>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

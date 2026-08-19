@@ -11,6 +11,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderExecutiveTeam;
+use App\Models\WorkOrderSubContractor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -229,8 +230,9 @@ class WorkOrderController extends Controller
 
         $availableTeams = ExecutiveTeam::where('is_active', true)->get();
         $activeEmployees = Employee::where('status', 'active')->orderBy('name')->get();
+        $subContractorUsers = User::role('Sub Contractor')->where('is_active', true)->orderBy('name')->get();
 
-        return view('work-orders.show', compact('workOrder', 'availableTeams', 'activeEmployees'));
+        return view('work-orders.show', compact('workOrder', 'availableTeams', 'activeEmployees', 'subContractorUsers'));
     }
 
     public function cancel(Request $request, WorkOrder $workOrder): RedirectResponse
@@ -293,6 +295,34 @@ class WorkOrderController extends Controller
         $assignment->update(['unassigned_at' => now()]);
 
         return back()->with('success', 'Executive team unassigned.');
+    }
+
+    public function assignSubContractor(Request $request, WorkOrder $workOrder): RedirectResponse
+    {
+        $data = $request->validate(['sub_contractor_user_id' => ['required', 'exists:users,id']]);
+
+        $subContractor = User::findOrFail($data['sub_contractor_user_id']);
+        abort_unless($subContractor->hasRole('Sub Contractor'), 422, 'Selected user is not a Sub Contractor.');
+
+        WorkOrderSubContractor::create([
+            'work_order_id' => $workOrder->id,
+            'user_id' => $subContractor->id,
+            'assigned_by' => $request->user()->id,
+            'assigned_at' => now(),
+        ]);
+
+        if ($workOrder->status === 'pending_hr_assignment') {
+            $workOrder->transitionTo('team_assigned', 'Sub-contractor assigned.');
+        }
+
+        return back()->with('success', 'Sub-contractor assigned.');
+    }
+
+    public function unassignSubContractor(WorkOrder $workOrder, WorkOrderSubContractor $assignment): RedirectResponse
+    {
+        $assignment->update(['unassigned_at' => now()]);
+
+        return back()->with('success', 'Sub-contractor unassigned.');
     }
 
     public function createRework(Request $request, WorkOrder $workOrder): RedirectResponse

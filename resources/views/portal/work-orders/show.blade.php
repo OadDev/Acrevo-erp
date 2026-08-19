@@ -14,17 +14,39 @@
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Photos &amp; Videos</h3>
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     @forelse ($workOrder->media as $item)
-                        <div class="aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                        <a href="{{ $item->getUrl() }}" target="_blank" class="block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
                             @if (str_starts_with($item->mime_type, 'image'))
                                 <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
                             @else
                                 <div class="flex h-full w-full items-center justify-center"><x-icon name="video" class="h-6 w-6 text-gray-400" /></div>
                             @endif
-                        </div>
+                        </a>
                     @empty
                         <p class="col-span-full text-sm text-gray-400">No media shared yet.</p>
                     @endforelse
                 </div>
+            </x-card>
+
+            <x-card>
+                <h3 class="mb-4 text-sm font-semibold text-gray-500">Daily Work &amp; Checklist</h3>
+                @forelse ($workOrder->dailyChecklists as $checklist)
+                    <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                        <p class="font-medium text-gray-800 dark:text-gray-200">{{ $checklist->title ?? 'Daily Work' }} <span class="font-normal text-gray-400">— {{ $checklist->date->format('d M Y') }}</span></p>
+                        <ul class="mt-2 space-y-2">
+                            @foreach ($checklist->checklistItems as $item)
+                                <li class="flex items-center gap-2">
+                                    <x-icon :name="$item->is_done ? 'check-circle' : 'clock'" class="h-4 w-4 shrink-0 {{ $item->is_done ? 'text-emerald-500' : 'text-amber-500' }}" />
+                                    <span class="flex-1 text-gray-600 dark:text-gray-300 {{ $item->is_done ? 'line-through decoration-gray-300' : '' }}">{{ $item->description }}</span>
+                                    @if ($item->is_done && $item->getFirstMedia('proof'))
+                                        <a href="{{ $item->getFirstMediaUrl('proof') }}" target="_blank" class="text-xs font-medium text-indigo-600 hover:underline">View Proof</a>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @empty
+                    <p class="text-sm text-gray-400">No daily work entries yet.</p>
+                @endforelse
             </x-card>
 
             <x-card>

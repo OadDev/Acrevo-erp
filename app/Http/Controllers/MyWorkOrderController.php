@@ -32,10 +32,14 @@ class MyWorkOrderController extends Controller
 
         return WorkOrder::query()
             ->with('client')
-            ->whereHas('executiveTeams', function ($q) use ($employeeId, $user) {
-                $q->whereNull('unassigned_at')->whereHas('executiveTeam', function ($q2) use ($employeeId, $user) {
-                    $q2->where('team_leader_id', $user->id)
-                        ->when($employeeId, fn ($q3) => $q3->orWhereHas('members', fn ($q4) => $q4->where('employee_id', $employeeId)));
+            ->where(function ($outer) use ($employeeId, $user) {
+                $outer->whereHas('executiveTeams', function ($q) use ($employeeId, $user) {
+                    $q->whereNull('unassigned_at')->whereHas('executiveTeam', function ($q2) use ($employeeId, $user) {
+                        $q2->where('team_leader_id', $user->id)
+                            ->when($employeeId, fn ($q3) => $q3->orWhereHas('members', fn ($q4) => $q4->where('employee_id', $employeeId)));
+                    });
+                })->orWhereHas('subContractors', function ($q) use ($user) {
+                    $q->whereNull('unassigned_at')->where('user_id', $user->id);
                 });
             })
             ->latest();
