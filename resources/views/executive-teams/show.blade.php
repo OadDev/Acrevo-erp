@@ -37,10 +37,17 @@
 
             <h3 class="mb-4 mt-6 text-sm font-semibold text-gray-500">Work Order Assignments</h3>
             @forelse ($executiveTeam->workOrderAssignments as $assignment)
-                <a href="{{ route('work-orders.show', $assignment->workOrder) }}" class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
-                    <span class="text-gray-700 dark:text-gray-300">{{ $assignment->workOrder->work_order_no }} — {{ $assignment->workOrder->title }}</span>
-                    <x-badge :status="$assignment->unassigned_at ? 'cancelled' : 'active'" />
-                </a>
+                @if ($assignment->workOrder)
+                    <a href="{{ route('work-orders.show', $assignment->workOrder) }}" class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
+                        <span class="text-gray-700 dark:text-gray-300">{{ $assignment->workOrder->work_order_no }} — {{ $assignment->workOrder->title }}</span>
+                        <x-badge :status="$assignment->unassigned_at ? 'cancelled' : 'active'" />
+                    </a>
+                @else
+                    <div class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
+                        <span class="text-gray-400">Deleted work order</span>
+                        <x-badge :status="$assignment->unassigned_at ? 'cancelled' : 'active'" />
+                    </div>
+                @endif
             @empty
                 <p class="text-sm text-gray-400">Not currently assigned to any work order.</p>
             @endforelse

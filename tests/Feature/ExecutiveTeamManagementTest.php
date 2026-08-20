@@ -71,6 +71,34 @@ class ExecutiveTeamManagementTest extends TestCase
         $this->assertNull($team->fresh()->deleted_at);
     }
 
+    public function test_a_teams_show_page_survives_a_deleted_work_order_assignment(): void
+    {
+        // Regression test: WorkOrderController::destroy() soft-deletes the work
+        // order but leaves the executive team's assignment row in place, so
+        // $assignment->workOrder resolves to null - the show page crashed
+        // building a route() with it instead of showing a "Deleted" fallback.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $team = ExecutiveTeam::create([
+            'team_number' => 'TEAM-004', 'name' => 'Team D', 'team_leader_id' => $admin->id,
+            'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        WorkOrderExecutiveTeam::create([
+            'work_order_id' => $workOrder->id, 'executive_team_id' => $team->id,
+            'assigned_by' => $admin->id, 'assigned_at' => now(),
+        ]);
+
+        $workOrder->delete();
+
+        $this->withoutExceptionHandling();
+        $this->actingAs($admin)->get("/executive-teams/{$team->id}")->assertOk()->assertSee('Deleted work order');
+    }
+
     public function test_a_removed_teams_members_no_longer_500_the_employee_page(): void
     {
         $admin = $this->admin();
