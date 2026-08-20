@@ -67,8 +67,66 @@ class ExecutiveTeamManagementTest extends TestCase
             'assigned_by' => $admin->id, 'assigned_at' => now(),
         ]);
 
-        $this->actingAs($admin)->delete("/executive-teams/{$team->id}")->assertStatus(422);
+        $response = $this->actingAs($admin)->delete("/executive-teams/{$team->id}");
+        $response->assertStatus(422)->assertSee('This team is still assigned to 1 work order(s)', false);
         $this->assertNull($team->fresh()->deleted_at);
+    }
+
+    public function test_deleting_a_work_order_frees_up_its_executive_team_for_removal(): void
+    {
+        // Regression test: deleting a work order used to leave its team
+        // assignment "active" (unassigned_at null) forever, since the only
+        // page that could unassign it - the work order's own Team tab - is
+        // gone along with the work order. That silently blocked the team
+        // from ever being removed, surfacing as a bare 422 error page.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $team = ExecutiveTeam::create([
+            'team_number' => 'TEAM-005', 'name' => 'Team E', 'team_leader_id' => $admin->id,
+            'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        $assignment = WorkOrderExecutiveTeam::create([
+            'work_order_id' => $workOrder->id, 'executive_team_id' => $team->id,
+            'assigned_by' => $admin->id, 'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}")->assertRedirect();
+        $this->assertNotNull($assignment->fresh()->unassigned_at);
+
+        $this->actingAs($admin)->delete("/executive-teams/{$team->id}")->assertRedirect('/executive-teams');
+        $this->assertNotNull($team->fresh()->deleted_at);
+    }
+
+    public function test_removing_a_team_with_a_legacy_dangling_assignment_to_an_already_deleted_work_order_still_works(): void
+    {
+        // Covers data that went bad before the fix above existed: an
+        // assignment still marked active whose work order was deleted
+        // directly (not through the controller), so unassigned_at was
+        // never set. The removal guard must not count it.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $team = ExecutiveTeam::create([
+            'team_number' => 'TEAM-006', 'name' => 'Team F', 'team_leader_id' => $admin->id,
+            'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        WorkOrderExecutiveTeam::create([
+            'work_order_id' => $workOrder->id, 'executive_team_id' => $team->id,
+            'assigned_by' => $admin->id, 'assigned_at' => now(),
+        ]);
+        $workOrder->delete();
+
+        $this->actingAs($admin)->delete("/executive-teams/{$team->id}")->assertRedirect('/executive-teams');
+        $this->assertNotNull($team->fresh()->deleted_at);
     }
 
     public function test_a_teams_show_page_survives_a_deleted_work_order_assignment(): void

@@ -252,6 +252,13 @@ class WorkOrderController extends Controller
     {
         $this->authorizeAdminOnly();
 
+        // Otherwise a still-"active" (unassigned_at null) assignment to a
+        // work order that no longer exists is a dead end: it blocks the
+        // Executive Team from ever being removed, with no page left to
+        // unassign it from since the work order itself is gone.
+        $workOrder->executiveTeams()->whereNull('unassigned_at')->update(['unassigned_at' => now()]);
+        $workOrder->subContractors()->whereNull('unassigned_at')->update(['unassigned_at' => now()]);
+
         $workOrder->delete();
 
         return redirect()->route('work-orders.index')->with('success', 'Work order removed.');

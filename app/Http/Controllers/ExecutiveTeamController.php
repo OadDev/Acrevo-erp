@@ -74,7 +74,15 @@ class ExecutiveTeamController extends Controller
 
     public function destroy(ExecutiveTeam $executiveTeam): RedirectResponse
     {
-        $activeAssignments = $executiveTeam->workOrderAssignments()->whereNull('unassigned_at')->count();
+        // Only count assignments to work orders that still exist - one
+        // pointing at a deleted work order is a dead end for the admin
+        // (there's no page left to unassign it from), and WorkOrderController
+        // now clears unassigned_at when a work order is deleted anyway; this
+        // is just defense against any assignment left over from before that.
+        $activeAssignments = $executiveTeam->workOrderAssignments()
+            ->whereNull('unassigned_at')
+            ->whereHas('workOrder')
+            ->count();
 
         abort_if($activeAssignments > 0, 422, "This team is still assigned to {$activeAssignments} work order(s). Unassign it from those work orders before removing the team.");
 
