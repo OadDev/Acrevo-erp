@@ -78,6 +78,12 @@ class RolePermissionSeeder extends Seeder
         'tasks' => [
             'tasks.view', 'tasks.create', 'tasks.manage',
         ],
+        'subcontractors' => [
+            'subcontractors.view', 'subcontractors.manage',
+        ],
+        'subcontractor_portal' => [
+            'subcontractor_sites.view', 'subcontractor_finance.view',
+        ],
     ];
 
     /**
@@ -160,6 +166,7 @@ class RolePermissionSeeder extends Seeder
         'Sub Contractor' => [
             'executive' => ['assigned_work.view', 'daily_progress.manage', 'media.upload'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'subcontractor_portal' => '*',
         ],
         'Client' => [
             'client_portal' => '*',

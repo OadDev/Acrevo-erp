@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Site;
 use App\Models\VendorPayment;
 use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
@@ -21,8 +22,11 @@ class MyWorkOrderController extends Controller
         $myPayments = $isSubContractor
             ? VendorPayment::where('user_id', $user->id)->with('workOrder')->latest('payment_date')->get()
             : collect();
+        $mySites = $isSubContractor
+            ? Site::with('client')->whereHas('subContractors', fn ($q) => $q->whereNull('unassigned_at')->where('user_id', $user->id))->get()
+            : collect();
 
-        return view('my-work-orders.index', compact('workOrders', 'isSubContractor', 'myPayments'));
+        return view('my-work-orders.index', compact('workOrders', 'isSubContractor', 'myPayments', 'mySites'));
     }
 
     public function show(WorkOrder $workOrder): RedirectResponse

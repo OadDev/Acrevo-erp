@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CandidateController;
+use App\Http\Controllers\SubcontractorController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyRecordController;
 use App\Http\Controllers\EmployeeController;
@@ -262,6 +263,25 @@ Route::middleware('permission:executive_teams.view')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Subcontractors (Admin)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:subcontractors.view')->group(function () {
+    Route::get('subcontractors', [SubcontractorController::class, 'index'])->name('subcontractors.index');
+    Route::get('subcontractors/{subcontractor}', [SubcontractorController::class, 'show'])->name('subcontractors.show');
+});
+Route::middleware('permission:subcontractors.manage')->group(function () {
+    Route::put('subcontractors/{subcontractor}', [SubcontractorController::class, 'update'])->name('subcontractors.update');
+    Route::post('subcontractors/{subcontractor}/verify', [SubcontractorController::class, 'verify'])->name('subcontractors.verify');
+    Route::post('subcontractors/{subcontractor}/unverify', [SubcontractorController::class, 'unverify'])->name('subcontractors.unverify');
+    Route::post('subcontractors/{subcontractor}/assign-site', [SubcontractorController::class, 'assignSite'])->name('subcontractors.assign-site');
+    Route::delete('subcontractors/{subcontractor}/unassign-site/{assignment}', [SubcontractorController::class, 'unassignSite'])->name('subcontractors.unassign-site');
+    Route::post('subcontractors/{subcontractor}/assign-work-order', [SubcontractorController::class, 'assignWorkOrder'])->name('subcontractors.assign-work-order');
+    Route::delete('subcontractors/{subcontractor}/unassign-work-order/{assignment}', [SubcontractorController::class, 'unassignWorkOrder'])->name('subcontractors.unassign-work-order');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Quality Control
 |--------------------------------------------------------------------------
 */
@@ -293,6 +313,9 @@ Route::middleware('permission:tickets.manage')->group(function () {
 Route::middleware('permission:finance.view')->group(function () {
     Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
     Route::get('finance/expenses/pdf', [FinanceController::class, 'expensesPdf'])->name('finance.expenses.pdf');
+});
+Route::middleware('permission:subcontractor_finance.view')->group(function () {
+    Route::get('finance/my-payments', [FinanceController::class, 'myPayments'])->name('finance.my-payments');
 });
 // Writing finance records requires finance.manage (Finance role + Admin), not
 // just finance.view - Management/Auditor can see this module but not edit it.

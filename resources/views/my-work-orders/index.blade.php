@@ -26,6 +26,25 @@
 
     @if ($isSubContractor)
         <x-card :padded="false" class="mt-8">
+            <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">My Sites</h3></div>
+            @if ($mySites->isEmpty())
+                <div class="p-6"><x-empty-state icon="map-pin" title="No sites assigned yet" description="Sites assigned to you by Admin will appear here." /></div>
+            @else
+                <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @foreach ($mySites as $site)
+                        <div class="flex items-center justify-between px-5 py-3 text-sm">
+                            <div>
+                                <p class="font-medium text-gray-800 dark:text-gray-200">{{ $site->site_no }}</p>
+                                <p class="text-xs text-gray-400">{{ $site->client?->name }} — {{ $site->address }}, {{ $site->city }}</p>
+                            </div>
+                            <x-badge :status="$site->status" />
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </x-card>
+
+        <x-card :padded="false" class="mt-8">
             <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">My Payments</h3></div>
             @if ($myPayments->isEmpty())
                 <div class="p-6"><x-empty-state icon="banknote" title="No payments recorded yet" description="Payments made to you by Finance/Admin will appear here." /></div>

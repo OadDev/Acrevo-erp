@@ -52,6 +52,15 @@
                     @if (auth()->user()->hasRole('Worker'))
                         <x-nav-link :href="route('my-payroll.index')" :active="request()->routeIs('my-payroll.*')" icon="wallet">My Payroll</x-nav-link>
                     @endif
+                    @can('subcontractor_finance.view')
+                        <x-nav-link :href="route('finance.my-payments')" :active="request()->routeIs('finance.my-payments')" icon="banknote">Finance</x-nav-link>
+                    @endcan
+                </x-nav-group>
+            @endcan
+
+            @can('subcontractors.view')
+                <x-nav-group label="Subcontractors">
+                    <x-nav-link :href="route('subcontractors.index')" :active="request()->routeIs('subcontractors.*')" icon="hard-hat">Subcontractors</x-nav-link>
                 </x-nav-group>
             @endcan
 

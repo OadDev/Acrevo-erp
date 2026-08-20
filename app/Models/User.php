@@ -84,4 +84,9 @@ class User extends Authenticatable
     {
         return $this->clientLogin?->client;
     }
+
+    public function subcontractorProfile(): HasOne
+    {
+        return $this->hasOne(SubcontractorProfile::class);
+    }
 }

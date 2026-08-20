@@ -49,6 +49,11 @@ class Site extends Model implements HasMedia
         return $this->hasMany(WorkOrder::class);
     }
 
+    public function subContractors(): HasMany
+    {
+        return $this->hasMany(SiteSubContractor::class);
+    }
+
     public function registerMediaCollections(): void
     {
         foreach (self::DOCUMENT_CATEGORIES as $category) {

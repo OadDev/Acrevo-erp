@@ -66,6 +66,20 @@ class FinanceController extends Controller
         ));
     }
 
+    public function myPayments(Request $request): View
+    {
+        $user = $request->user();
+
+        $payments = VendorPayment::where('user_id', $user->id)
+            ->with('workOrder')
+            ->latest('payment_date')
+            ->paginate(15);
+
+        $totalReceived = VendorPayment::where('user_id', $user->id)->sum('amount');
+
+        return view('finance.subcontractor', compact('payments', 'totalReceived'));
+    }
+
     public function storeInvoice(Request $request): RedirectResponse
     {
         $data = $request->validate([
