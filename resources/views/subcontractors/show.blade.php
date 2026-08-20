@@ -28,7 +28,7 @@
         <x-card class="lg:col-span-2">
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Subcontractor Details</h3>
             @can('subcontractors.manage')
-                <form method="POST" action="{{ route('subcontractors.update', $subcontractor) }}" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <form method="POST" action="{{ route('subcontractors.update', $subcontractor) }}" enctype="multipart/form-data" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     @csrf
                     @method('PUT')
                     @php($profile = $subcontractor->subcontractorProfile)
@@ -94,6 +94,33 @@
                         <x-textarea-input id="notes" name="notes" rows="3" class="mt-1 block w-full">{{ old('notes', $profile?->notes) }}</x-textarea-input>
                     </div>
 
+                    <div class="sm:col-span-2">
+                        <x-input-label value="{{ $profile ? 'Add More Documents' : 'Documents (KYC, ID proof, agreements, etc.)' }}" />
+                        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="mt-1 block w-full text-sm">
+                        @error('files')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    @if ($profile && $profile->media->isNotEmpty())
+                        <div class="sm:col-span-2">
+                            <x-input-label value="Uploaded Documents" />
+                            <div class="mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                                @foreach ($profile->media as $file)
+                                    <div class="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                                        <a href="{{ $file->getUrl() }}" target="_blank" class="flex flex-1 items-center gap-2 truncate">
+                                            <x-icon name="file-text" class="h-4 w-4 shrink-0 text-gray-400" />
+                                            <span class="truncate text-gray-700 dark:text-gray-300">{{ $file->file_name }}</span>
+                                        </a>
+                                        <form method="POST" action="{{ route('subcontractors.media.destroy', [$subcontractor, $file]) }}" onsubmit="return confirm('Remove this file?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="shrink-0 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="sm:col-span-2 flex justify-end">
                         <x-primary-button>Save Details</x-primary-button>
                     </div>
@@ -106,6 +133,20 @@
                     <div><dt class="text-gray-400">Phone</dt><dd class="text-gray-800 dark:text-gray-200">{{ $profile?->phone ?? $subcontractor->phone ?? '—' }}</dd></div>
                     <div><dt class="text-gray-400">Specialization</dt><dd class="text-gray-800 dark:text-gray-200">{{ $profile?->specialization ?? '—' }}</dd></div>
                 </dl>
+
+                @if ($profile && $profile->media->isNotEmpty())
+                    <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                        <p class="mb-2 text-sm font-medium text-gray-500">Documents</p>
+                        <div class="divide-y divide-gray-100 rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                            @foreach ($profile->media as $file)
+                                <a href="{{ $file->getUrl() }}" target="_blank" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                    <x-icon name="file-text" class="h-4 w-4 shrink-0 text-gray-400" />
+                                    <span class="truncate text-gray-700 dark:text-gray-300">{{ $file->file_name }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             @endcan
 
             @if ($profile?->is_verified)

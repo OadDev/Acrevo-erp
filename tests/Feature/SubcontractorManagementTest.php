@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\VendorPayment;
 use App\Models\WorkOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class SubcontractorManagementTest extends TestCase
@@ -103,6 +104,30 @@ class SubcontractorManagementTest extends TestCase
         $this->assertSame('Beta Builders', $profile->company_name);
         $this->assertSame('Electrical', $profile->specialization);
         $this->assertFalse($profile->is_verified);
+    }
+
+    public function test_admin_can_upload_view_and_remove_subcontractor_documents(): void
+    {
+        $admin = $this->admin();
+        $subcontractor = $this->subContractor();
+
+        $this->actingAs($admin)->put("/subcontractors/{$subcontractor->id}", [
+            'company_name' => 'Gamma Contractors',
+            'files' => [
+                UploadedFile::fake()->create('kyc.pdf', 100, 'application/pdf'),
+                UploadedFile::fake()->image('id-proof.jpg'),
+            ],
+        ])->assertRedirect();
+
+        $profile = $subcontractor->fresh()->subcontractorProfile;
+        $this->assertSame(2, $profile->media()->count());
+
+        $this->actingAs($admin)->get("/subcontractors/{$subcontractor->id}")
+            ->assertOk()->assertSee('kyc.pdf')->assertSee('id-proof.jpg');
+
+        $media = $profile->media()->where('file_name', 'like', 'kyc%')->firstOrFail();
+        $this->actingAs($admin)->delete("/subcontractors/{$subcontractor->id}/media/{$media->id}")->assertRedirect();
+        $this->assertSame(1, $profile->fresh()->media()->count());
     }
 
     public function test_admin_can_verify_and_unverify_a_subcontractor(): void

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Site;
 use App\Models\SiteSubContractor;
+use App\Models\SubcontractorProfile;
 use App\Models\User;
 use App\Models\VendorPayment;
 use App\Models\WorkOrder;
@@ -11,9 +12,13 @@ use App\Models\WorkOrderSubContractor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class SubcontractorController extends Controller
 {
+    private const FILE_RULES = ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'];
+
     public function index(Request $request): View
     {
         $subcontractors = User::role('Sub Contractor')
@@ -35,7 +40,7 @@ class SubcontractorController extends Controller
     {
         abort_unless($subcontractor->hasRole('Sub Contractor'), 404);
 
-        $subcontractor->load('subcontractorProfile.verifiedBy');
+        $subcontractor->load('subcontractorProfile.verifiedBy', 'subcontractorProfile.media');
 
         $assignedSites = SiteSubContractor::with('site.client')
             ->where('user_id', $subcontractor->id)
@@ -77,14 +82,45 @@ class SubcontractorController extends Controller
             'bank_ifsc' => ['nullable', 'string', 'max:20'],
             'specialization' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'files' => ['nullable', 'array'],
+            'files.*' => self::FILE_RULES,
         ]);
 
-        $subcontractor->subcontractorProfile()->updateOrCreate(
+        $profile = $subcontractor->subcontractorProfile()->updateOrCreate(
             ['user_id' => $subcontractor->id],
-            $data + ['created_by' => $subcontractor->subcontractorProfile?->created_by ?? $request->user()->id]
+            collect($data)->except('files')->all() + ['created_by' => $subcontractor->subcontractorProfile?->created_by ?? $request->user()->id]
         );
 
+        if ($error = $this->attachFiles($profile, $request)) {
+            return back()->withErrors(['files' => $error]);
+        }
+
         return redirect()->route('subcontractors.show', $subcontractor)->with('success', 'Subcontractor details saved.');
+    }
+
+    public function destroyMedia(User $subcontractor, Media $media): RedirectResponse
+    {
+        abort_unless($subcontractor->hasRole('Sub Contractor'), 404);
+
+        $profile = $subcontractor->subcontractorProfile;
+        abort_unless($profile && (string) $media->model_id === (string) $profile->id && $media->model_type === SubcontractorProfile::class, 404);
+
+        $media->delete();
+
+        return back()->with('success', 'File removed.');
+    }
+
+    private function attachFiles(SubcontractorProfile $profile, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $profile->addMedia($file)->toMediaCollection('documents');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 20MB).';
+        }
+
+        return null;
     }
 
     public function verify(Request $request, User $subcontractor): RedirectResponse

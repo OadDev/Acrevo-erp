@@ -4,9 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class SubcontractorProfile extends Model
+class SubcontractorProfile extends Model implements HasMedia
 {
+    use InteractsWithMedia;
+
     protected $fillable = [
         'user_id', 'company_name', 'contact_person', 'phone', 'email',
         'address', 'city', 'state', 'pincode', 'gst_number', 'pan_number',
@@ -35,5 +39,10 @@ class SubcontractorProfile extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('documents');
     }
 }

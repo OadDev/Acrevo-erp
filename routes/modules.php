@@ -278,6 +278,7 @@ Route::middleware('permission:subcontractors.view')->group(function () {
 });
 Route::middleware('permission:subcontractors.manage')->group(function () {
     Route::put('subcontractors/{subcontractor}', [SubcontractorController::class, 'update'])->name('subcontractors.update');
+    Route::delete('subcontractors/{subcontractor}/media/{media}', [SubcontractorController::class, 'destroyMedia'])->name('subcontractors.media.destroy');
     Route::post('subcontractors/{subcontractor}/verify', [SubcontractorController::class, 'verify'])->name('subcontractors.verify');
     Route::post('subcontractors/{subcontractor}/unverify', [SubcontractorController::class, 'unverify'])->name('subcontractors.unverify');
     Route::post('subcontractors/{subcontractor}/assign-site', [SubcontractorController::class, 'assignSite'])->name('subcontractors.assign-site');
