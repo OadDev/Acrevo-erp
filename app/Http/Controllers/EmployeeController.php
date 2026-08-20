@@ -72,4 +72,30 @@ class EmployeeController extends Controller
 
         return redirect()->route('employees.index')->with('success', 'Worker marked as relieved.');
     }
+
+    public function remove(Employee $employee): RedirectResponse
+    {
+        // Attendance/payroll/advances/benefits are financial history worth
+        // keeping - Mark Relieved covers that case. Only a worker with none
+        // of that history (e.g. added by mistake) can be fully removed, so
+        // this never leaves a payroll/attendance row pointing at a worker
+        // that no longer resolves.
+        $hasHistory = $employee->attendances()->exists()
+            || $employee->payrolls()->exists()
+            || $employee->salaryAdvances()->exists()
+            || $employee->benefits()->exists();
+
+        abort_if($hasHistory, 422, 'This worker has attendance, payroll, or benefit history and can\'t be permanently removed. Use Mark Relieved instead to keep those records.');
+
+        // Otherwise a still-active executive team membership would point at
+        // a now-trashed employee, and the team's page crashes reading its name.
+        foreach ($employee->executiveTeamMemberships as $membership) {
+            $membership->update(['left_at' => now()]);
+            $membership->delete();
+        }
+
+        $employee->delete();
+
+        return redirect()->route('employees.index')->with('success', 'Worker removed.');
+    }
 }

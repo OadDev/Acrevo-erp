@@ -8,6 +8,7 @@ use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 
 class PortalTicketController extends Controller
 {
@@ -18,7 +19,7 @@ class PortalTicketController extends Controller
         abort_unless($client, 403, 'No client account linked to this login.');
 
         $tickets = Ticket::whereHas('workOrder', fn ($q) => $q->where('client_id', $client->id))
-            ->with('workOrder')
+            ->with(['workOrder', 'media'])
             ->latest()
             ->paginate(10);
 
@@ -37,17 +38,27 @@ class PortalTicketController extends Controller
             'type' => ['required', 'in:delay,material,client_change,quality,safety,technical,finance,internal'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
         ]);
 
         $workOrder = WorkOrder::findOrFail($data['work_order_id']);
         abort_unless($workOrder->client_id === $client->id, 403);
 
-        $ticket = Ticket::create($data + [
+        $ticket = Ticket::create(collect($data)->except('files')->all() + [
             'priority' => 'medium',
             'raised_by_type' => 'client',
             'raised_by_client_id' => $client->id,
             'status' => 'open',
         ]);
+
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $ticket->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
+        }
 
         $workOrder->transitionTo('ticket_raised', 'Client raised a ticket: '.$ticket->title);
 

@@ -25,11 +25,19 @@
                                     <td class="px-5 py-3">
                                         <p class="font-medium text-gray-800 dark:text-gray-200">{{ $record->name }}</p>
                                         <p class="text-xs text-gray-400">{{ $record->number }}</p>
+                                        @if ($record->media->isNotEmpty())
+                                            <p class="mt-1 text-xs text-indigo-500">{{ $record->media->count() }} file(s) attached</p>
+                                        @endif
                                     </td>
                                     <td class="px-5 py-3 text-gray-500">Expires: {{ optional($record->expiry_date)->format('d M Y') ?? '—' }}</td>
                                     <td class="px-5 py-3 text-right">
                                         @can('company_records.manage')
                                             <a href="{{ route('company-records.edit', $record) }}" class="text-sm text-indigo-600 hover:underline">Edit</a>
+                                            <form method="POST" action="{{ route('company-records.destroy', $record) }}" class="inline" onsubmit="return confirm('Remove this company record and its files?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="ml-3 text-sm text-rose-600 hover:underline">Delete</button>
+                                            </form>
                                         @endcan
                                     </td>
                                 </tr>

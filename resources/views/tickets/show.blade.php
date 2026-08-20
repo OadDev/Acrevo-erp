@@ -47,6 +47,19 @@
                     <div><dt class="text-gray-400">Due Date</dt><dd>{{ optional($ticket->due_date)->format('d M Y') ?? '—' }}</dd></div>
                     <div class="col-span-2"><dt class="text-gray-400">Description</dt><dd>{{ $ticket->description ?: '—' }}</dd></div>
                 </dl>
+
+                @if ($ticket->media->isNotEmpty())
+                    <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Attachments</p>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach ($ticket->media as $file)
+                                <a href="{{ $file->getUrl() }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-indigo-600 hover:underline dark:border-gray-700">
+                                    <x-icon name="file-text" class="h-4 w-4" /> {{ $file->file_name }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </x-card>
 
             <x-card>

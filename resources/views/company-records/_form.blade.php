@@ -31,6 +31,32 @@
         <x-input-label for="notes" value="Notes" />
         <x-textarea-input id="notes" name="notes" rows="3" class="mt-1 block w-full">{{ old('notes', $record->notes ?? '') }}</x-textarea-input>
     </div>
+    <div>
+        <x-input-label value="{{ isset($record) ? 'Add More Files' : 'Files (one or more)' }}" />
+        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="mt-1 block w-full text-sm">
+        @error('files')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+    </div>
+
+    @if (isset($record) && $record->media->isNotEmpty())
+        <div>
+            <x-input-label value="Uploaded Files" />
+            <div class="mt-1 divide-y divide-gray-100 rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                @foreach ($record->media as $file)
+                    <div class="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                        <a href="{{ $file->getUrl() }}" target="_blank" class="flex flex-1 items-center gap-2 truncate">
+                            <x-icon name="file-text" class="h-4 w-4 shrink-0 text-gray-400" />
+                            <span class="truncate text-gray-700 dark:text-gray-300">{{ $file->file_name }}</span>
+                        </a>
+                        <form method="POST" action="{{ route('company-records.media.destroy', [$record, $file]) }}" onsubmit="return confirm('Remove this file?')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="shrink-0 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 </div>
 
 <div class="mt-6 flex justify-end gap-2">

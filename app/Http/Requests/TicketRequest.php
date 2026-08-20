@@ -22,6 +22,8 @@ class TicketRequest extends FormRequest
             'department_id' => ['nullable', 'exists:departments,id'],
             'assigned_to' => ['nullable', 'exists:users,id'],
             'due_date' => ['nullable', 'date'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
         ];
     }
 }

@@ -230,6 +230,7 @@ Route::middleware('permission:assigned_work.view')->group(function () {
 */
 Route::middleware('permission:employees.view')->group(function () {
     Route::resource('employees', EmployeeController::class);
+    Route::delete('employees/{employee}/remove', [EmployeeController::class, 'remove'])->name('employees.remove');
 });
 Route::middleware('permission:attendance.view')->group(function () {
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
@@ -267,6 +268,7 @@ Route::middleware('permission:tickets.view')->group(function () {
     Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
     Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
+    Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
 });
 
 /*
@@ -309,12 +311,20 @@ Route::middleware('permission:legal.manage')->group(function () {
     Route::delete('legal/{legalDocument}/media/{media}', [LegalController::class, 'destroyMedia'])->name('legal.media.destroy');
 });
 
+// The 'create' route must be registered before the wildcard 'audits/{audit}'
+// show route below, or GET /audits/create matches show with "create" as the
+// {audit} id and 404s on binding instead of running the create action.
+Route::middleware('permission:audit.manage')->group(function () {
+    Route::resource('audits', AuditController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+    Route::delete('audits/{audit}/media/{media}', [AuditController::class, 'destroyMedia'])->name('audits.media.destroy');
+});
 Route::middleware('permission:audit.view')->group(function () {
-    Route::resource('audits', AuditController::class)->only(['index', 'create', 'store', 'show']);
+    Route::resource('audits', AuditController::class)->only(['index', 'show']);
 });
 
 Route::middleware('permission:company_records.view')->group(function () {
     Route::resource('company-records', CompanyRecordController::class)->except('show');
+    Route::delete('company-records/{companyRecord}/media/{media}', [CompanyRecordController::class, 'destroyMedia'])->name('company-records.media.destroy');
 });
 
 /*

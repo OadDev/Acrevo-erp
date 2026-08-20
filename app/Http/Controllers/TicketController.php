@@ -10,9 +10,24 @@ use App\Models\WorkOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class TicketController extends Controller
 {
+    private function attachFiles(Ticket $ticket, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $ticket->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 20MB).';
+        }
+
+        return null;
+    }
+
     public function index(Request $request): View
     {
         $tickets = Ticket::query()
@@ -42,6 +57,10 @@ class TicketController extends Controller
             'status' => 'open',
         ]);
 
+        if ($error = $this->attachFiles($ticket, $request)) {
+            return back()->withErrors(['files' => $error]);
+        }
+
         $ticket->workOrder->transitionTo('ticket_raised', 'Ticket raised: '.$ticket->title);
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket raised successfully.');
@@ -51,7 +70,7 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load(['workOrder.client', 'raisedBy', 'assignedTo', 'department', 'comments.user']);
+        $ticket->load(['workOrder.client', 'raisedBy', 'assignedTo', 'department', 'comments.user', 'media']);
 
         return view('tickets.show', compact('ticket'));
     }
@@ -74,9 +93,24 @@ class TicketController extends Controller
     {
         $this->authorize('update', $ticket);
 
-        $ticket->update($request->validated());
+        $ticket->update(collect($request->validated())->except('files')->all());
+
+        if ($error = $this->attachFiles($ticket, $request)) {
+            return back()->withErrors(['files' => $error]);
+        }
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket updated.');
+    }
+
+    public function destroyMedia(Ticket $ticket, Media $media): RedirectResponse
+    {
+        $this->authorize('update', $ticket);
+
+        abort_unless((string) $media->model_id === (string) $ticket->id, 404);
+
+        $media->delete();
+
+        return back()->with('success', 'File removed.');
     }
 
     public function lock(Request $request, Ticket $ticket): RedirectResponse

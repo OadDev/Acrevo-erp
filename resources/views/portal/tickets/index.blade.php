@@ -15,6 +15,9 @@
                                 <td class="px-4 py-3">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $ticket->title }}</p>
                                     <p class="text-xs text-gray-400">{{ $ticket->workOrder->work_order_no }}</p>
+                                    @if ($ticket->media->isNotEmpty())
+                                        <p class="mt-1 text-xs text-indigo-500">{{ $ticket->media->count() }} file(s) attached</p>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3"><x-badge :status="$ticket->status" /></td>
                             </tr>
@@ -26,7 +29,7 @@
 
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Raise a Ticket</h3>
-            <form method="POST" action="{{ route('portal.tickets.store') }}" class="space-y-3">
+            <form method="POST" action="{{ route('portal.tickets.store') }}" enctype="multipart/form-data" class="space-y-3">
                 @csrf
                 <x-select-input name="work_order_id" class="w-full" required>
                     @foreach ($workOrders as $wo)
@@ -40,6 +43,11 @@
                 </x-select-input>
                 <x-text-input name="title" placeholder="Subject" class="w-full" required />
                 <x-textarea-input name="description" rows="3" class="w-full" placeholder="Describe the issue"></x-textarea-input>
+                <div>
+                    <x-input-label value="Attachments (optional)" class="text-xs" />
+                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="mt-1 block w-full text-xs">
+                    @error('files')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                </div>
                 <x-primary-button class="w-full justify-center">Submit Ticket</x-primary-button>
             </form>
         </x-card>
