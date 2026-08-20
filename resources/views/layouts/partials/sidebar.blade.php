@@ -59,6 +59,7 @@
                 <x-nav-group label="Human Resources">
                     @can('employees.view')
                         <x-nav-link :href="route('employees.index')" :active="request()->routeIs('employees.*')" icon="users">Workers</x-nav-link>
+                        <x-nav-link :href="route('candidates.index')" :active="request()->routeIs('candidates.*')" icon="search">Candidates / Interviews</x-nav-link>
                     @endcan
                     @can('attendance.view')
                         <x-nav-link :href="route('attendance.index')" :active="request()->routeIs('attendance.*')" icon="calendar-check">Attendance</x-nav-link>

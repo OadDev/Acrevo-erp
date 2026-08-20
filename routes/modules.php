@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyRecordController;
 use App\Http\Controllers\EmployeeController;
@@ -234,6 +235,12 @@ Route::middleware('permission:employees.view')->group(function () {
     Route::resource('employees', EmployeeController::class);
     Route::delete('employees/{employee}/remove', [EmployeeController::class, 'remove'])->name('employees.remove');
     Route::delete('employees/{employee}/media/{media}', [EmployeeController::class, 'destroyMedia'])->name('employees.media.destroy');
+
+    Route::resource('candidates', CandidateController::class);
+    Route::delete('candidates/{candidate}/media/{media}', [CandidateController::class, 'destroyMedia'])->name('candidates.media.destroy');
+    Route::post('candidates/{candidate}/decide', [CandidateController::class, 'decide'])->name('candidates.decide');
+    Route::get('candidates/{candidate}/hire', [CandidateController::class, 'hireForm'])->name('candidates.hire-form');
+    Route::post('candidates/{candidate}/hire', [CandidateController::class, 'hire'])->name('candidates.hire');
 });
 Route::middleware('permission:attendance.view')->group(function () {
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
