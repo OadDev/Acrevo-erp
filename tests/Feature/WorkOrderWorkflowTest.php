@@ -1265,6 +1265,49 @@ class WorkOrderWorkflowTest extends TestCase
         $response->assertOk()->assertSee('2 payment(s)');
     }
 
+    public function test_create_next_work_order_links_to_the_full_create_form_instead_of_auto_creating(): void
+    {
+        // Regression: "Create Next Work Order" used to submit a mini form
+        // (title only) straight to a dedicated endpoint that auto-created the
+        // work order, skipping the full Create Work Order page entirely
+        // (quotation/site details, execution method, itemized budget). It
+        // must now link to that full page so nothing is created until the
+        // admin actually reviews and submits it.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'quotation_id' => $quotation->id, 'site_id' => $site->id,
+            'title' => 'Phase 1', 'priority' => 'medium', 'execution_way' => 'way_1',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'completed', 'created_by' => $admin->id,
+        ]);
+
+        $expectedUrl = route('work-orders.create', ['quotation_id' => $quotation->id, 'parent_work_order_id' => $workOrder->id]);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=overview");
+        $response->assertOk()
+            ->assertSee(e($expectedUrl), false)
+            ->assertDontSee('Start a Next Work Order for this client');
+
+        $response = $this->actingAs($admin)->get($expectedUrl);
+        $response->assertOk()
+            ->assertSee('Next work order for')
+            ->assertSee($workOrder->work_order_no)
+            ->assertSee('name="parent_work_order_id" value="'.$workOrder->id.'"', false);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id, 'site_id' => $site->id, 'client_id' => $client->id,
+            'parent_work_order_id' => $workOrder->id,
+            'title' => 'Phase 2', 'execution_way' => 'way_2', 'priority' => 'medium',
+        ])->assertRedirect();
+
+        $next = WorkOrder::where('title', 'Phase 2')->firstOrFail();
+        $this->assertSame('next', $next->type);
+        $this->assertSame($workOrder->id, $next->parent_work_order_id);
+    }
+
     public function test_only_admin_can_edit_or_remove_a_work_order(): void
     {
         $admin = $this->admin();

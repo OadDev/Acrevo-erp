@@ -92,12 +92,9 @@
                 @endforelse
 
                 @can('work_orders.create')
-                    <form method="POST" action="{{ route('work-orders.next', $workOrder) }}" class="mt-4 space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
-                        @csrf
-                        <x-input-label value="Start a Next Work Order for this client" />
-                        <x-text-input name="title" placeholder="Title" class="w-full" required />
-                        <x-primary-button>Create Next Work Order</x-primary-button>
-                    </form>
+                    <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                        <x-link-button :href="route('work-orders.create', ['quotation_id' => $workOrder->quotation_id, 'parent_work_order_id' => $workOrder->id])">Create Next Work Order</x-link-button>
+                    </div>
                 @endcan
             </div>
         @endif

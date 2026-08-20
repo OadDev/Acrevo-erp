@@ -69,7 +69,9 @@ class WorkOrderController extends Controller
 
         $teamLeaders = User::role('Executive Team Leader')->orderBy('name')->get();
 
-        return view('work-orders.create', compact('quotation', 'site', 'teamLeaders'));
+        $parentWorkOrder = WorkOrder::find($request->get('parent_work_order_id'));
+
+        return view('work-orders.create', compact('quotation', 'site', 'teamLeaders', 'parentWorkOrder'));
     }
 
     public function store(WorkOrderRequest $request): RedirectResponse
@@ -146,7 +148,8 @@ class WorkOrderController extends Controller
             'estimated_misc_budget' => $miscBudget ?: null,
             'budget_amount' => $totalBudget ?: null,
             'enquiry_id' => $quotation?->enquiry_id,
-            'type' => 'new',
+            'parent_work_order_id' => $data['parent_work_order_id'] ?? null,
+            'type' => empty($data['parent_work_order_id']) ? 'new' : 'next',
             'status' => 'pending_hr_assignment',
             'created_by' => $request->user()->id,
         ]);
@@ -551,29 +554,6 @@ class WorkOrderController extends Controller
         $workOrder->transitionTo('rework_in_progress', 'Re-work order created: '.$rework->work_order_no);
 
         return redirect()->route('work-orders.show', $rework)->with('success', 'Re-work order created.');
-    }
-
-    public function createNext(Request $request, WorkOrder $workOrder): RedirectResponse
-    {
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'scope' => ['nullable', 'string'],
-            'deadline' => ['nullable', 'date'],
-        ]);
-
-        $next = WorkOrder::create($data + [
-            'client_id' => $workOrder->client_id,
-            'quotation_id' => $workOrder->quotation_id,
-            'site_id' => $workOrder->site_id,
-            'execution_way' => $workOrder->execution_way,
-            'parent_work_order_id' => $workOrder->id,
-            'type' => 'next',
-            'priority' => 'medium',
-            'status' => 'pending_hr_assignment',
-            'created_by' => $request->user()->id,
-        ]);
-
-        return redirect()->route('work-orders.show', $next)->with('success', 'Next work order created.');
     }
 
     public function complete(WorkOrder $workOrder): RedirectResponse

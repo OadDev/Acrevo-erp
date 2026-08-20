@@ -34,6 +34,7 @@ class WorkOrderRequest extends FormRequest
             'quotation_id' => ['required', 'exists:quotations,id'],
             'site_id' => ['required', 'exists:sites,id'],
             'client_id' => ['required', 'exists:clients,id'],
+            'parent_work_order_id' => ['nullable', 'exists:work_orders,id'],
             'title' => ['required', 'string', 'max:255'],
             'scope' => ['nullable', 'string'],
             'execution_way' => ['required', 'in:'.implode(',', array_keys(\App\Models\WorkOrder::EXECUTION_WAYS))],

@@ -98,7 +98,6 @@ Route::middleware('permission:work_orders.view')->group(function () {
     Route::resource('work-orders', WorkOrderController::class)->except(['destroy', 'show'])->parameters(['work-orders' => 'workOrder']);
     Route::post('work-orders/{workOrder}/cancel', [WorkOrderController::class, 'cancel'])->name('work-orders.cancel');
     Route::post('work-orders/{workOrder}/rework', [WorkOrderController::class, 'createRework'])->name('work-orders.rework');
-    Route::post('work-orders/{workOrder}/next', [WorkOrderController::class, 'createNext'])->name('work-orders.next');
     Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete'])->name('work-orders.complete');
     Route::delete('work-orders/{workOrder}', [WorkOrderController::class, 'destroy'])->name('work-orders.destroy');
 });

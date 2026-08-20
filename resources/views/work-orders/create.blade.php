@@ -38,6 +38,12 @@
             <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
             <input type="hidden" name="client_id" value="{{ $quotation->client_id }}">
             <input type="hidden" name="site_id" value="{{ $site->id }}">
+            @if ($parentWorkOrder)
+                <input type="hidden" name="parent_work_order_id" value="{{ $parentWorkOrder->id }}">
+                <div class="mb-6 rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                    Next work order for <strong>{{ $parentWorkOrder->client?->name }}</strong>, continuing from <strong>{{ $parentWorkOrder->work_order_no }}</strong>.
+                </div>
+            @endif
             <div class="mb-6 rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
                 Generating from approved quotation for <strong>{{ $quotation->client->name }}</strong> — Total ₹{{ number_format($quotation->total_amount, 2) }}
             </div>
