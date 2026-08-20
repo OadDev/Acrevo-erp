@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSequenceNumber;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,12 @@ class Employee extends Model implements HasMedia
     protected $sequencePrefix = 'EMP';
 
     protected $sequenceColumn = 'employee_code';
+
+    /**
+     * Roles whose attendance/payroll is tracked as "Employee Payroll" (HR >
+     * Attendance) rather than "WO Workers Payroll" (a work order's M.Book).
+     */
+    public const STAFF_ROLES = ['Sales', 'HR', 'Finance', 'Executive Team Leader', 'QC Officer'];
 
     protected $fillable = [
         'employee_code', 'user_id', 'name', 'phone', 'date_of_birth', 'email', 'designation',
@@ -76,5 +83,25 @@ class Employee extends Model implements HasMedia
     public function executiveTeamMemberships(): HasMany
     {
         return $this->hasMany(ExecutiveTeamMember::class);
+    }
+
+    /**
+     * Employees whose attendance belongs on the WO Workers Payroll: an
+     * unregistered worker (no login) or one linked to a User with the
+     * Worker role. Mirrors the Executive Team member eligibility rule.
+     */
+    public function scopeWorkOrderWorkers(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->whereNull('user_id')->orWhereHas('user', fn ($q2) => $q2->role('Worker')));
+    }
+
+    /**
+     * Employees whose attendance belongs on the Employee Payroll: linked to
+     * a User with one of the STAFF_ROLES (Sales, HR, Finance, Executive
+     * Team Leader, QC Officer).
+     */
+    public function scopeStaff(Builder $query): Builder
+    {
+        return $query->whereHas('user', fn ($q) => $q->role(self::STAFF_ROLES));
     }
 }

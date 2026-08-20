@@ -65,18 +65,40 @@ class WorkerUserLinkTest extends TestCase
         $this->actingAs($admin)->get('/employees')->assertOk()->assertSee('Ravi Kumar');
     }
 
-    public function test_creating_a_user_with_a_non_worker_role_does_not_create_an_employee(): void
+    public function test_creating_a_user_with_a_role_outside_hr_tracking_does_not_create_an_employee(): void
     {
         $admin = $this->admin();
 
         $this->actingAs($admin)->post('/admin/users', [
-            'name' => 'Sales Person',
-            'email' => 'sales+'.uniqid().'@example.com',
-            'role' => 'Sales',
+            'name' => 'Marketing Person',
+            'email' => 'marketing+'.uniqid().'@example.com',
+            'role' => 'Marketing',
         ])->assertRedirect();
 
-        $user = User::where('name', 'Sales Person')->firstOrFail();
+        $user = User::where('name', 'Marketing Person')->firstOrFail();
         $this->assertNull($user->employee);
+    }
+
+    /**
+     * HR > Attendance is for Sales/HR/Finance/Executive Team Leader/QC
+     * Officer staff (Worker attendance goes through a work order's M.Book
+     * instead), so those five roles get a linked Employee record too, the
+     * same as Worker.
+     */
+    public function test_creating_a_user_with_a_staff_role_also_creates_a_linked_employee(): void
+    {
+        $admin = $this->admin();
+
+        foreach (['Sales', 'HR', 'Finance', 'Executive Team Leader', 'QC Officer'] as $role) {
+            $this->actingAs($admin)->post('/admin/users', [
+                'name' => "{$role} Person",
+                'email' => strtolower(str_replace(' ', '', $role)).'+'.uniqid().'@example.com',
+                'role' => $role,
+            ])->assertRedirect();
+
+            $user = User::where('name', "{$role} Person")->firstOrFail();
+            $this->assertNotNull($user->employee, "Creating a {$role} User should auto-create a linked Employee record.");
+        }
     }
 
     public function test_editing_a_worker_user_keeps_the_linked_employee_in_sync(): void
