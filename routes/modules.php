@@ -231,6 +231,7 @@ Route::middleware('permission:assigned_work.view')->group(function () {
 Route::middleware('permission:employees.view')->group(function () {
     Route::resource('employees', EmployeeController::class);
     Route::delete('employees/{employee}/remove', [EmployeeController::class, 'remove'])->name('employees.remove');
+    Route::delete('employees/{employee}/media/{media}', [EmployeeController::class, 'destroyMedia'])->name('employees.media.destroy');
 });
 Route::middleware('permission:attendance.view')->group(function () {
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');

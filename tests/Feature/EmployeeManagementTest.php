@@ -11,6 +11,7 @@ use App\Models\Payroll;
 use App\Models\User;
 use App\Models\WorkOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class EmployeeManagementTest extends TestCase
@@ -29,6 +30,53 @@ class EmployeeManagementTest extends TestCase
         $admin->syncRoles(['Admin']);
 
         return $admin;
+    }
+
+    public function test_a_worker_can_be_created_with_cv_details_and_multiple_documents(): void
+    {
+        $admin = $this->admin();
+
+        $response = $this->actingAs($admin)->post('/employees', [
+            'name' => 'New Hire', 'designation' => 'Site Supervisor',
+            'date_of_birth' => '1995-05-10', 'qualification' => 'Diploma in Civil Engineering',
+            'experience_summary' => '5 years supervising residential projects.',
+            'skill_set' => 'Masonry, AutoCAD, Team Management',
+            'employment_type' => 'permanent', 'salary_type' => 'monthly',
+            'files' => [
+                UploadedFile::fake()->create('resume.pdf', 100, 'application/pdf'),
+                UploadedFile::fake()->image('certificate.jpg'),
+            ],
+        ]);
+        $response->assertRedirect();
+
+        $employee = Employee::where('name', 'New Hire')->firstOrFail();
+        $this->assertSame('Diploma in Civil Engineering', $employee->qualification);
+        $this->assertSame(['Masonry', 'AutoCAD', 'Team Management'], $employee->skill_set);
+        $this->assertSame(2, $employee->media()->count());
+
+        $this->actingAs($admin)->get("/employees/{$employee->id}")
+            ->assertOk()->assertSee('resume.pdf')->assertSee('certificate.jpg')->assertSee('Masonry');
+    }
+
+    public function test_editing_a_worker_can_add_more_documents_and_remove_one(): void
+    {
+        $admin = $this->admin();
+        $employee = Employee::create([
+            'employee_code' => 'EMP-'.uniqid(), 'name' => 'Existing Worker', 'status' => 'active',
+            'department_id' => Department::first()->id, 'designation' => 'Mason',
+            'employment_type' => 'permanent', 'created_by' => $admin->id,
+        ]);
+        $media = $employee->addMedia(UploadedFile::fake()->create('old-cert.pdf', 50))->toMediaCollection('documents');
+
+        $this->actingAs($admin)->put("/employees/{$employee->id}", [
+            'name' => 'Existing Worker', 'employment_type' => 'permanent', 'salary_type' => 'monthly',
+            'files' => [UploadedFile::fake()->create('new-cert.pdf', 50)],
+        ])->assertRedirect();
+
+        $this->assertSame(2, $employee->fresh()->media()->count());
+
+        $this->actingAs($admin)->delete("/employees/{$employee->id}/media/{$media->id}")->assertRedirect();
+        $this->assertSame(1, $employee->fresh()->media()->count());
     }
 
     public function test_a_worker_with_no_history_can_be_permanently_removed(): void

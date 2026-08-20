@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-card class="max-w-3xl">
-        <form method="POST" action="{{ route('employees.store') }}">
+        <form method="POST" action="{{ route('employees.store') }}" enctype="multipart/form-data">
             @include('employees._form')
         </form>
     </x-card>

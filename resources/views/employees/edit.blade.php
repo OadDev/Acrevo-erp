@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-card class="max-w-3xl">
-        <form method="POST" action="{{ route('employees.update', $employee) }}">
+        <form method="POST" action="{{ route('employees.update', $employee) }}" enctype="multipart/form-data">
             @method('PUT')
             @include('employees._form')
         </form>

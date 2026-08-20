@@ -8,9 +8,37 @@ use App\Models\Employee;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class EmployeeController extends Controller
 {
+    private function skillSetFrom(array $data): ?array
+    {
+        if (! filled($data['skill_set'] ?? null)) {
+            return null;
+        }
+
+        return collect(explode(',', $data['skill_set']))
+            ->map(fn ($skill) => trim($skill))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function attachFiles(Employee $employee, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $employee->addMedia($file)->toMediaCollection('documents');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 20MB).';
+        }
+
+        return null;
+    }
+
     public function index(Request $request): View
     {
         $employees = Employee::query()
@@ -35,17 +63,24 @@ class EmployeeController extends Controller
 
     public function store(EmployeeRequest $request): RedirectResponse
     {
-        $employee = Employee::create($request->validated() + [
+        $data = $request->validated();
+
+        $employee = Employee::create(collect($data)->except('files', 'skill_set')->all() + [
+            'skill_set' => $this->skillSetFrom($data),
             'status' => 'active',
             'created_by' => $request->user()->id,
         ]);
+
+        if ($error = $this->attachFiles($employee, $request)) {
+            return back()->withErrors(['files' => $error]);
+        }
 
         return redirect()->route('employees.show', $employee)->with('success', 'Worker added successfully.');
     }
 
     public function show(Employee $employee): View
     {
-        $employee->load(['department', 'attendances' => fn ($q) => $q->latest()->limit(30), 'payrolls' => fn ($q) => $q->latest(), 'benefits', 'executiveTeamMemberships.executiveTeam']);
+        $employee->load(['department', 'media', 'attendances' => fn ($q) => $q->latest()->limit(30), 'payrolls' => fn ($q) => $q->latest(), 'benefits', 'executiveTeamMemberships.executiveTeam']);
 
         return view('employees.show', compact('employee'));
     }
@@ -53,15 +88,33 @@ class EmployeeController extends Controller
     public function edit(Employee $employee): View
     {
         $departments = Department::orderBy('name')->get();
+        $employee->load('media');
 
         return view('employees.edit', compact('employee', 'departments'));
     }
 
     public function update(EmployeeRequest $request, Employee $employee): RedirectResponse
     {
-        $employee->update($request->validated());
+        $data = $request->validated();
+
+        $employee->update(collect($data)->except('files', 'skill_set')->all() + [
+            'skill_set' => $this->skillSetFrom($data),
+        ]);
+
+        if ($error = $this->attachFiles($employee, $request)) {
+            return back()->withErrors(['files' => $error]);
+        }
 
         return redirect()->route('employees.show', $employee)->with('success', 'Worker details updated.');
+    }
+
+    public function destroyMedia(Employee $employee, Media $media): RedirectResponse
+    {
+        abort_unless((string) $media->model_id === (string) $employee->id, 404);
+
+        $media->delete();
+
+        return back()->with('success', 'File removed.');
     }
 
     public function destroy(Request $request, Employee $employee): RedirectResponse

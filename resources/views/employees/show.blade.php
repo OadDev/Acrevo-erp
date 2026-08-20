@@ -29,11 +29,40 @@
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Details</h3>
             <dl class="space-y-3 text-sm">
                 <div><dt class="text-gray-400">Phone</dt><dd class="text-gray-800 dark:text-gray-200">{{ $employee->phone ?: '—' }}</dd></div>
+                <div><dt class="text-gray-400">Email</dt><dd class="text-gray-800 dark:text-gray-200">{{ $employee->email ?: '—' }}</dd></div>
+                <div><dt class="text-gray-400">Date of Birth</dt><dd class="text-gray-800 dark:text-gray-200">{{ optional($employee->date_of_birth)->format('d M Y') ?? '—' }}</dd></div>
+                <div><dt class="text-gray-400">Address</dt><dd class="text-gray-800 dark:text-gray-200">{{ $employee->address ?: '—' }}</dd></div>
                 <div><dt class="text-gray-400">Department</dt><dd class="text-gray-800 dark:text-gray-200">{{ $employee->department?->name ?? '—' }}</dd></div>
                 <div><dt class="text-gray-400">Employment Type</dt><dd class="text-gray-800 dark:text-gray-200">{{ Str::title(str_replace('_',' ',$employee->employment_type)) }}</dd></div>
                 <div><dt class="text-gray-400">Salary</dt><dd class="text-gray-800 dark:text-gray-200">₹{{ number_format($employee->salary_amount ?? 0, 2) }} / {{ $employee->salary_type }}</dd></div>
                 <div><dt class="text-gray-400">Joining Date</dt><dd class="text-gray-800 dark:text-gray-200">{{ optional($employee->joining_date)->format('d M Y') ?? '—' }}</dd></div>
+                <div><dt class="text-gray-400">Qualification</dt><dd class="text-gray-800 dark:text-gray-200">{{ $employee->qualification ?: '—' }}</dd></div>
+                <div><dt class="text-gray-400">Experience</dt><dd class="whitespace-pre-line text-gray-800 dark:text-gray-200">{{ $employee->experience_summary ?: '—' }}</dd></div>
+                <div><dt class="text-gray-400">Skills</dt><dd class="text-gray-800 dark:text-gray-200">
+                    @forelse ($employee->skill_set ?? [] as $skill)
+                        <x-badge color="indigo">{{ $skill }}</x-badge>
+                    @empty
+                        —
+                    @endforelse
+                </dd></div>
+                <div><dt class="text-gray-400">Emergency Contact</dt><dd class="text-gray-800 dark:text-gray-200">{{ $employee->emergency_contact_name ?: '—' }} {{ $employee->emergency_contact_phone ? '('.$employee->emergency_contact_phone.')' : '' }}</dd></div>
             </dl>
+        </x-card>
+
+        <x-card :padded="false">
+            <h3 class="p-4 pb-2 text-sm font-semibold text-gray-500">Documents &amp; Certificates</h3>
+            <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                @forelse ($employee->media as $file)
+                    <div class="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                        <a href="{{ $file->getUrl() }}" target="_blank" class="flex flex-1 items-center gap-2 truncate">
+                            <x-icon name="file-text" class="h-4 w-4 shrink-0 text-gray-400" />
+                            <span class="truncate text-gray-700 dark:text-gray-300">{{ $file->file_name }}</span>
+                        </a>
+                    </div>
+                @empty
+                    <p class="px-4 py-6 text-center text-sm text-gray-400">No documents uploaded yet.</p>
+                @endforelse
+            </div>
         </x-card>
 
         <x-card class="lg:col-span-2">

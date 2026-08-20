@@ -20,8 +20,8 @@ class Employee extends Model implements HasMedia
     protected $sequenceColumn = 'employee_code';
 
     protected $fillable = [
-        'employee_code', 'user_id', 'name', 'phone', 'email', 'designation',
-        'department_id', 'skill_set', 'employment_type', 'joining_date',
+        'employee_code', 'user_id', 'name', 'phone', 'date_of_birth', 'email', 'designation',
+        'qualification', 'experience_summary', 'department_id', 'skill_set', 'employment_type', 'joining_date',
         'relieving_date', 'status', 'salary_type', 'salary_amount', 'address',
         'emergency_contact_name', 'emergency_contact_phone', 'exit_notes', 'created_by',
     ];
@@ -30,6 +30,7 @@ class Employee extends Model implements HasMedia
     {
         return [
             'skill_set' => 'array',
+            'date_of_birth' => 'date',
             'joining_date' => 'date',
             'relieving_date' => 'date',
             'salary_amount' => 'decimal:2',
