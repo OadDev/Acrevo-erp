@@ -92,6 +92,8 @@ class WorkOrderRequest extends FormRequest
             'site_city' => ['nullable', 'string', 'max:255'],
             'site_state' => ['nullable', 'string', 'max:255'],
             'site_pincode' => ['nullable', 'string', 'max:20'],
+            'construction_site_location' => ['nullable', 'string', 'max:255'],
+            'client_living_location' => ['nullable', 'string', 'max:255'],
             'site_contact_name' => ['nullable', 'string', 'max:255'],
             'site_contact_phone' => ['nullable', 'string', 'max:30'],
         ];

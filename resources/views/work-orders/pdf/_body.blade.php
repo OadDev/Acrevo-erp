@@ -8,6 +8,12 @@
         <table class="meta-table">
             <tr><td class="muted">Site ID</td><td>{{ $workOrder->site->site_no }}</td><td class="muted">Client</td><td>{{ $workOrder->client?->name ?? '—' }}</td></tr>
             <tr><td class="muted">Address</td><td colspan="3">{{ collect([$workOrder->site->address, $workOrder->site->city, $workOrder->site->state, $workOrder->site->pincode])->filter()->join(', ') ?: '—' }}</td></tr>
+            @if ($workOrder->site->construction_site_location)
+                <tr><td class="muted">Construction Site Location</td><td colspan="3">{{ $workOrder->site->construction_site_location }}</td></tr>
+            @endif
+            @if ($workOrder->site->client_living_location)
+                <tr><td class="muted">Client Living Location</td><td colspan="3">{{ $workOrder->site->client_living_location }}</td></tr>
+            @endif
             <tr><td class="muted">Site Contact</td><td colspan="3">{{ $workOrder->site->site_contact_name ?? '—' }} {{ $workOrder->site->site_contact_phone ? '· '.$workOrder->site->site_contact_phone : '' }}</td></tr>
         </table>
     @else

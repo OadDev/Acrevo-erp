@@ -60,6 +60,8 @@ class SiteController extends Controller
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'pincode' => ['nullable', 'string', 'max:20'],
+            'construction_site_location' => ['nullable', 'string', 'max:255'],
+            'client_living_location' => ['nullable', 'string', 'max:255'],
             'site_contact_name' => ['nullable', 'string', 'max:150'],
             'site_contact_phone' => ['nullable', 'string', 'max:20'],
         ]);
@@ -89,6 +91,8 @@ class SiteController extends Controller
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'pincode' => ['nullable', 'string', 'max:20'],
+            'construction_site_location' => ['nullable', 'string', 'max:255'],
+            'client_living_location' => ['nullable', 'string', 'max:255'],
             'site_contact_name' => ['nullable', 'string', 'max:150'],
             'site_contact_phone' => ['nullable', 'string', 'max:20'],
         ]);

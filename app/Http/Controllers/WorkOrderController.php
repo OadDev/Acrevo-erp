@@ -94,6 +94,8 @@ class WorkOrderController extends Controller
             'city' => $data['site_city'] ?? null,
             'state' => $data['site_state'] ?? null,
             'pincode' => $data['site_pincode'] ?? null,
+            'construction_site_location' => $data['construction_site_location'] ?? null,
+            'client_living_location' => $data['client_living_location'] ?? null,
             'site_contact_name' => $data['site_contact_name'] ?? null,
             'site_contact_phone' => $data['site_contact_phone'] ?? null,
         ]);

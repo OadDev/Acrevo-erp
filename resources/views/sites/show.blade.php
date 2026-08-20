@@ -57,6 +57,14 @@
                         <x-text-input id="pincode" name="pincode" class="mt-1 block w-full" value="{{ old('pincode', $site->pincode) }}" />
                     </div>
                     <div>
+                        <x-input-label for="construction_site_location" value="Construction Site Location" />
+                        <x-text-input id="construction_site_location" name="construction_site_location" class="mt-1 block w-full" placeholder="e.g. Maps link or landmark" value="{{ old('construction_site_location', $site->construction_site_location) }}" />
+                    </div>
+                    <div>
+                        <x-input-label for="client_living_location" value="Client Living Location" />
+                        <x-text-input id="client_living_location" name="client_living_location" class="mt-1 block w-full" placeholder="Where the client currently lives" value="{{ old('client_living_location', $site->client_living_location) }}" />
+                    </div>
+                    <div>
                         <x-input-label for="site_contact_name" value="Site Contact Name" />
                         <x-text-input id="site_contact_name" name="site_contact_name" class="mt-1 block w-full" value="{{ old('site_contact_name', $site->site_contact_name) }}" />
                     </div>
@@ -71,6 +79,8 @@
             @else
                 <dl class="space-y-2 text-sm">
                     <div><dt class="text-gray-400">Address</dt><dd class="text-gray-800 dark:text-gray-200">{{ collect([$site->address, $site->city, $site->state, $site->pincode])->filter()->join(', ') ?: '—' }}</dd></div>
+                    <div><dt class="text-gray-400">Construction Site Location</dt><dd class="text-gray-800 dark:text-gray-200">{{ $site->construction_site_location ?? '—' }}</dd></div>
+                    <div><dt class="text-gray-400">Client Living Location</dt><dd class="text-gray-800 dark:text-gray-200">{{ $site->client_living_location ?? '—' }}</dd></div>
                     <div><dt class="text-gray-400">Site Contact</dt><dd class="text-gray-800 dark:text-gray-200">{{ $site->site_contact_name ?? '—' }} @if ($site->site_contact_phone) · {{ $site->site_contact_phone }} @endif</dd></div>
                 </dl>
             @endcan

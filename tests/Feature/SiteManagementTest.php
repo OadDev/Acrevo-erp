@@ -62,6 +62,38 @@ class SiteManagementTest extends TestCase
         $this->assertNull(Site::find($site->id));
     }
 
+    public function test_site_details_support_construction_site_and_client_living_location(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/sites', [
+            'client_id' => $client->id,
+            'address' => 'Addr',
+            'construction_site_location' => 'https://maps.example/site',
+            'client_living_location' => '12 Client Street, Chennai',
+        ])->assertRedirect();
+
+        $site = Site::where('client_id', $client->id)->firstOrFail();
+        $this->assertSame('https://maps.example/site', $site->construction_site_location);
+        $this->assertSame('12 Client Street, Chennai', $site->client_living_location);
+
+        $this->actingAs($admin)->get("/sites/{$site->id}")
+            ->assertOk()
+            ->assertSee('https://maps.example/site')
+            ->assertSee('12 Client Street, Chennai');
+
+        $this->actingAs($admin)->patch("/sites/{$site->id}", [
+            'address' => 'Addr',
+            'construction_site_location' => 'Updated site location',
+            'client_living_location' => 'Updated client location',
+        ])->assertRedirect();
+
+        $fresh = $site->fresh();
+        $this->assertSame('Updated site location', $fresh->construction_site_location);
+        $this->assertSame('Updated client location', $fresh->client_living_location);
+    }
+
     public function test_only_admin_can_remove_a_site(): void
     {
         $admin = $this->admin();

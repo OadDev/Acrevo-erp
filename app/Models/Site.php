@@ -25,6 +25,7 @@ class Site extends Model implements HasMedia
 
     protected $fillable = [
         'site_no', 'quotation_id', 'client_id', 'address', 'city', 'state', 'pincode',
+        'construction_site_location', 'client_living_location',
         'site_contact_name', 'site_contact_phone', 'status', 'completed_at', 'created_by',
     ];
 
