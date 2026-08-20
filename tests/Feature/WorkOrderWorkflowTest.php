@@ -628,6 +628,46 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('19500.50', $workOrder->budget_amount);
     }
 
+    public function test_work_order_creation_supports_itemized_equipment_transport_and_misc_budget_entry(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}")
+            ->assertOk()->assertSee('Equipment / Machinery')->assertSee('Transport')->assertSee('Miscellaneous / Contingency');
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with full budget breakdown',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'materials' => [['material_name' => 'Cement', 'unit' => 'Bag', 'quantity' => 10, 'rate' => 400]],
+            'labour' => [['labour_type' => 'Mason', 'count' => 2, 'wage_rate' => 800]],
+            'equipment' => [['item_name' => 'Concrete Mixer', 'unit' => 'Days', 'quantity' => 5, 'rate' => 1000]],
+            'transport' => [['item_name' => 'Material delivery', 'unit' => 'Trip', 'quantity' => 3, 'rate' => 1500]],
+            'misc' => [['item_name' => 'Contingency', 'unit' => 'Lump', 'quantity' => 1, 'rate' => 2000]],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with full budget breakdown')->firstOrFail();
+        $this->assertSame('4000.00', $workOrder->estimated_material_budget);
+        $this->assertSame('1600.00', $workOrder->estimated_labour_budget);
+        $this->assertSame('5000.00', $workOrder->estimated_equipment_budget);
+        $this->assertSame('4500.00', $workOrder->estimated_transport_budget);
+        $this->assertSame('2000.00', $workOrder->estimated_misc_budget);
+        $this->assertSame('17100.00', $workOrder->budget_amount);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
+        $response->assertOk()
+            ->assertSee('Equipment / Machinery')
+            ->assertSee('Transport')
+            ->assertSee('Miscellaneous / Contingency');
+    }
+
     public function test_a_ledger_entry_can_be_recorded_with_a_bill_attachment(): void
     {
         $admin = $this->admin();
@@ -1238,6 +1278,36 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('50000.00', $fresh->estimated_material_budget);
         $this->assertSame('25000.50', $fresh->estimated_labour_budget);
         $this->assertSame('75000.50', $fresh->budget_amount);
+    }
+
+    public function test_editing_a_work_order_updates_equipment_transport_and_misc_budget_too(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/edit")
+            ->assertOk()
+            ->assertSee('Allocated Equipment / Machinery Budget')
+            ->assertSee('Allocated Transport Budget')
+            ->assertSee('Allocated Miscellaneous / Contingency Budget');
+
+        $response = $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
+            'title' => 'WO', 'priority' => 'medium',
+            'estimated_equipment_budget' => '3,000', 'estimated_transport_budget' => '1,500', 'estimated_misc_budget' => '500',
+        ]);
+        $response->assertRedirect();
+        $response->assertSessionDoesntHaveErrors();
+
+        $fresh = $workOrder->fresh();
+        $this->assertSame('3000.00', $fresh->estimated_equipment_budget);
+        $this->assertSame('1500.00', $fresh->estimated_transport_budget);
+        $this->assertSame('500.00', $fresh->estimated_misc_budget);
+        $this->assertSame('5000.00', $fresh->budget_amount);
     }
 
     public function test_only_admin_can_edit_or_remove_tab_entries_on_a_work_order(): void

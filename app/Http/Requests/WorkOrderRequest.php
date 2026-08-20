@@ -11,6 +11,11 @@ class WorkOrderRequest extends FormRequest
         return true;
     }
 
+    private const BUDGET_TOTAL_FIELDS = [
+        'estimated_material_budget', 'estimated_labour_budget',
+        'estimated_equipment_budget', 'estimated_transport_budget', 'estimated_misc_budget',
+    ];
+
     /**
      * Budget fields are often typed or pasted with thousands separators
      * (e.g. "50,000") - strip them so a comma doesn't fail the 'numeric'
@@ -18,14 +23,9 @@ class WorkOrderRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'estimated_material_budget' => is_string($this->estimated_material_budget)
-                ? str_replace(',', '', $this->estimated_material_budget)
-                : $this->estimated_material_budget,
-            'estimated_labour_budget' => is_string($this->estimated_labour_budget)
-                ? str_replace(',', '', $this->estimated_labour_budget)
-                : $this->estimated_labour_budget,
-        ]);
+        $this->merge(collect(self::BUDGET_TOTAL_FIELDS)->mapWithKeys(fn ($field) => [
+            $field => is_string($this->$field) ? str_replace(',', '', $this->$field) : $this->$field,
+        ])->all());
     }
 
     public function rules(): array
@@ -43,6 +43,9 @@ class WorkOrderRequest extends FormRequest
             'deadline' => ['nullable', 'date', 'after_or_equal:start_date'],
             'estimated_material_budget' => ['nullable', 'numeric', 'min:0'],
             'estimated_labour_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_equipment_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_transport_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_misc_budget' => ['nullable', 'numeric', 'min:0'],
             'materials' => ['nullable', 'array'],
             'materials.*.material_name' => ['nullable', 'string', 'max:255'],
             'materials.*.brand' => ['nullable', 'string', 'max:150'],
@@ -56,6 +59,24 @@ class WorkOrderRequest extends FormRequest
             'labour.*.count' => ['nullable', 'integer', 'min:1'],
             'labour.*.hours' => ['nullable', 'numeric', 'min:0'],
             'labour.*.wage_rate' => ['nullable', 'numeric', 'min:0'],
+            'equipment' => ['nullable', 'array'],
+            'equipment.*.item_name' => ['nullable', 'string', 'max:255'],
+            'equipment.*.unit' => ['nullable', 'string', 'max:30'],
+            'equipment.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'equipment.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'equipment.*.vendor' => ['nullable', 'string', 'max:255'],
+            'transport' => ['nullable', 'array'],
+            'transport.*.item_name' => ['nullable', 'string', 'max:255'],
+            'transport.*.unit' => ['nullable', 'string', 'max:30'],
+            'transport.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'transport.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'transport.*.vendor' => ['nullable', 'string', 'max:255'],
+            'misc' => ['nullable', 'array'],
+            'misc.*.item_name' => ['nullable', 'string', 'max:255'],
+            'misc.*.unit' => ['nullable', 'string', 'max:30'],
+            'misc.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'misc.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'misc.*.vendor' => ['nullable', 'string', 'max:255'],
             'time_schedules' => ['nullable', 'array'],
             'time_schedules.*.time_to_finish' => ['nullable', 'string', 'max:100'],
             'time_schedules.*.unit' => ['nullable', 'string', 'max:50'],

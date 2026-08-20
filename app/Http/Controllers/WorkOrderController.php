@@ -102,6 +102,12 @@ class WorkOrderController extends Controller
             ->filter(fn ($row) => filled($row['material_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
         $labourRows = collect($data['labour'] ?? [])
             ->filter(fn ($row) => filled($row['labour_type'] ?? null) && filled($row['count'] ?? null) && isset($row['wage_rate']));
+        $equipmentRows = collect($data['equipment'] ?? [])
+            ->filter(fn ($row) => filled($row['item_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
+        $transportRows = collect($data['transport'] ?? [])
+            ->filter(fn ($row) => filled($row['item_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
+        $miscRows = collect($data['misc'] ?? [])
+            ->filter(fn ($row) => filled($row['item_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
 
         $materialBudget = $materialRows->isNotEmpty()
             ? $materialRows->sum(fn ($row) => $row['quantity'] * $row['rate'])
@@ -109,6 +115,17 @@ class WorkOrderController extends Controller
         $labourBudget = $labourRows->isNotEmpty()
             ? $labourRows->sum(fn ($row) => $row['count'] * $row['wage_rate'])
             : ($data['estimated_labour_budget'] ?? 0);
+        $equipmentBudget = $equipmentRows->isNotEmpty()
+            ? $equipmentRows->sum(fn ($row) => $row['quantity'] * $row['rate'])
+            : ($data['estimated_equipment_budget'] ?? 0);
+        $transportBudget = $transportRows->isNotEmpty()
+            ? $transportRows->sum(fn ($row) => $row['quantity'] * $row['rate'])
+            : ($data['estimated_transport_budget'] ?? 0);
+        $miscBudget = $miscRows->isNotEmpty()
+            ? $miscRows->sum(fn ($row) => $row['quantity'] * $row['rate'])
+            : ($data['estimated_misc_budget'] ?? 0);
+
+        $totalBudget = $materialBudget + $labourBudget + $equipmentBudget + $transportBudget + $miscBudget;
 
         $workOrder = WorkOrder::create([
             'quotation_id' => $data['quotation_id'],
@@ -122,7 +139,10 @@ class WorkOrderController extends Controller
             'deadline' => $data['deadline'] ?? null,
             'estimated_material_budget' => $materialBudget ?: null,
             'estimated_labour_budget' => $labourBudget ?: null,
-            'budget_amount' => $materialBudget + $labourBudget ?: null,
+            'estimated_equipment_budget' => $equipmentBudget ?: null,
+            'estimated_transport_budget' => $transportBudget ?: null,
+            'estimated_misc_budget' => $miscBudget ?: null,
+            'budget_amount' => $totalBudget ?: null,
             'enquiry_id' => $quotation?->enquiry_id,
             'type' => 'new',
             'status' => 'pending_hr_assignment',
@@ -196,14 +216,13 @@ class WorkOrderController extends Controller
         // Budget fields are often typed or pasted with thousands separators
         // (e.g. "50,000") - strip them so a comma doesn't fail the 'numeric'
         // rule and silently drop the whole submission.
-        $request->merge([
-            'estimated_material_budget' => is_string($request->estimated_material_budget)
-                ? str_replace(',', '', $request->estimated_material_budget)
-                : $request->estimated_material_budget,
-            'estimated_labour_budget' => is_string($request->estimated_labour_budget)
-                ? str_replace(',', '', $request->estimated_labour_budget)
-                : $request->estimated_labour_budget,
-        ]);
+        $budgetFields = [
+            'estimated_material_budget', 'estimated_labour_budget',
+            'estimated_equipment_budget', 'estimated_transport_budget', 'estimated_misc_budget',
+        ];
+        $request->merge(collect($budgetFields)->mapWithKeys(fn ($field) => [
+            $field => is_string($request->$field) ? str_replace(',', '', $request->$field) : $request->$field,
+        ])->all());
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -213,13 +232,15 @@ class WorkOrderController extends Controller
             'deadline' => ['nullable', 'date', 'after_or_equal:start_date'],
             'estimated_material_budget' => ['nullable', 'numeric', 'min:0'],
             'estimated_labour_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_equipment_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_transport_budget' => ['nullable', 'numeric', 'min:0'],
+            'estimated_misc_budget' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $materialBudget = $data['estimated_material_budget'] ?? 0;
-        $labourBudget = $data['estimated_labour_budget'] ?? 0;
+        $totalBudget = collect($budgetFields)->sum(fn ($field) => $data[$field] ?? 0);
 
         $workOrder->update($data + [
-            'budget_amount' => $materialBudget + $labourBudget ?: null,
+            'budget_amount' => $totalBudget ?: null,
         ]);
 
         return redirect()->route('work-orders.show', $workOrder)->with('success', 'Work order updated.');

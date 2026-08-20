@@ -50,6 +50,21 @@
                         <x-input-label for="estimated_labour_budget" value="Allocated Man Power Budget" />
                         <x-text-input id="estimated_labour_budget" type="text" inputmode="decimal" name="estimated_labour_budget" class="mt-1 block w-full" value="{{ old('estimated_labour_budget', $workOrder->estimated_labour_budget) }}" />
                     </div>
+
+                    <div>
+                        <x-input-label for="estimated_equipment_budget" value="Allocated Equipment / Machinery Budget" />
+                        <x-text-input id="estimated_equipment_budget" type="text" inputmode="decimal" name="estimated_equipment_budget" class="mt-1 block w-full" value="{{ old('estimated_equipment_budget', $workOrder->estimated_equipment_budget) }}" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="estimated_transport_budget" value="Allocated Transport Budget" />
+                        <x-text-input id="estimated_transport_budget" type="text" inputmode="decimal" name="estimated_transport_budget" class="mt-1 block w-full" value="{{ old('estimated_transport_budget', $workOrder->estimated_transport_budget) }}" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="estimated_misc_budget" value="Allocated Miscellaneous / Contingency Budget" />
+                        <x-text-input id="estimated_misc_budget" type="text" inputmode="decimal" name="estimated_misc_budget" class="mt-1 block w-full" value="{{ old('estimated_misc_budget', $workOrder->estimated_misc_budget) }}" />
+                    </div>
                 </div>
 
                 <p class="text-xs text-gray-400">Execution method, site, client, and itemized entries (materials, man power, ledger, etc.) are edited from their own tabs.</p>

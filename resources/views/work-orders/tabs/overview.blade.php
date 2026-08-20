@@ -11,6 +11,23 @@
             <div class="col-span-2"><dt class="text-gray-400">Execution Method</dt><dd class="text-gray-800 dark:text-gray-200">{{ \App\Models\WorkOrder::EXECUTION_WAYS[$workOrder->execution_way] ?? '—' }}</dd></div>
         </dl>
 
+        @php
+            $budgetBreakdown = collect([
+                'Material' => $workOrder->estimated_material_budget,
+                'Man Power' => $workOrder->estimated_labour_budget,
+                'Equipment / Machinery' => $workOrder->estimated_equipment_budget,
+                'Transport' => $workOrder->estimated_transport_budget,
+                'Miscellaneous / Contingency' => $workOrder->estimated_misc_budget,
+            ])->filter(fn ($amount) => (float) ($amount ?? 0) > 0);
+        @endphp
+        @if ($budgetBreakdown->isNotEmpty())
+            <dl class="mt-2 flex flex-wrap gap-6 border-t border-gray-100 pt-4 text-sm dark:border-gray-800">
+                @foreach ($budgetBreakdown as $label => $amount)
+                    <div><dt class="text-gray-400">{{ $label }}</dt><dd class="font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($amount, 2) }}</dd></div>
+                @endforeach
+            </dl>
+        @endif
+
         @if ($workOrder->parent)
             <p class="mt-4 text-sm text-gray-500">Follows: <a href="{{ route('work-orders.show', $workOrder->parent) }}" class="text-indigo-600 hover:underline">{{ $workOrder->parent->work_order_no }}</a></p>
         @endif
