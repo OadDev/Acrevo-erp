@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TaskScheduleController;
+use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClientController;
@@ -385,6 +386,9 @@ Route::middleware('permission:users.view')->group(function () {
 });
 Route::middleware('permission:roles.view')->group(function () {
     Route::resource('admin/roles', RoleController::class)->except('show')->names('admin.roles');
+});
+Route::middleware('permission:masters.manage')->group(function () {
+    Route::resource('admin/departments', DepartmentController::class)->except(['create', 'edit', 'show'])->names('admin.departments');
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');

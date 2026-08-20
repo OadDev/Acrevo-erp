@@ -115,13 +115,16 @@
                 </x-nav-group>
             @endcan
 
-            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage'])
+            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage', 'masters.manage'])
                 <x-nav-group label="Administration">
                     @can('users.view')
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')" icon="user-cog">Users</x-nav-link>
                     @endcan
                     @can('roles.view')
                         <x-nav-link :href="route('admin.roles.index')" :active="request()->routeIs('admin.roles.*')" icon="key">Roles &amp; Permissions</x-nav-link>
+                    @endcan
+                    @can('masters.manage')
+                        <x-nav-link :href="route('admin.departments.index')" :active="request()->routeIs('admin.departments.*')" icon="building">Departments</x-nav-link>
                     @endcan
                     @can('tasks.manage')
                         <x-nav-link :href="route('admin.task-schedules.index')" :active="request()->routeIs('admin.task-schedules.*')" icon="calendar-check">Calendar Task Management</x-nav-link>
