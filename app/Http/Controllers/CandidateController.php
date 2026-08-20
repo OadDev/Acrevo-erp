@@ -83,8 +83,6 @@ class CandidateController extends Controller
 
     public function destroy(Candidate $candidate): RedirectResponse
     {
-        abort_if($candidate->status === 'hired', 422, 'This candidate was already hired and can\'t be removed - see the linked worker record instead.');
-
         $candidate->delete();
 
         return redirect()->route('candidates.index')->with('success', 'Candidate removed.');

@@ -135,8 +135,11 @@ class CandidateManagementTest extends TestCase
         $this->assertNull($candidate->fresh()->employee_id);
     }
 
-    public function test_a_hired_candidate_cannot_be_removed(): void
+    public function test_a_hired_candidate_can_be_removed_without_affecting_the_linked_employee(): void
     {
+        // The candidate record is just the interview-pipeline history - the
+        // Employee it produced on hire is a separate, independent record,
+        // so removing the candidate must not touch the employee.
         $admin = $this->admin();
         $employee = Employee::create([
             'employee_code' => 'EMP-'.uniqid(), 'name' => 'Hired Person', 'status' => 'active',
@@ -144,14 +147,26 @@ class CandidateManagementTest extends TestCase
         ]);
         $candidate = Candidate::create(['name' => 'Hired Person', 'status' => 'hired', 'employee_id' => $employee->id, 'created_by' => $admin->id]);
 
-        $this->actingAs($admin)->delete("/candidates/{$candidate->id}")->assertStatus(422);
-        $this->assertNotNull($candidate->fresh());
+        $this->actingAs($admin)->delete("/candidates/{$candidate->id}")->assertRedirect();
+        $this->assertNull(Candidate::find($candidate->id));
+        $this->assertNotNull($employee->fresh());
     }
 
     public function test_a_non_hired_candidate_can_be_removed(): void
     {
         $admin = $this->admin();
         $candidate = Candidate::create(['name' => 'Removable', 'status' => 'not_selected', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->delete("/candidates/{$candidate->id}")->assertRedirect();
+        $this->assertNull(Candidate::find($candidate->id));
+    }
+
+    public function test_a_candidate_can_be_removed_directly_from_the_index_list(): void
+    {
+        $admin = $this->admin();
+        $candidate = Candidate::create(['name' => 'Listed Removable', 'status' => 'pending', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->get('/candidates')->assertOk()->assertSee('Remove');
 
         $this->actingAs($admin)->delete("/candidates/{$candidate->id}")->assertRedirect();
         $this->assertNull(Candidate::find($candidate->id));

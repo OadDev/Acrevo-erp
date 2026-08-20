@@ -27,14 +27,23 @@
             <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @foreach ($candidates as $candidate)
-                        <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('candidates.show', $candidate) }}'">
-                            <td class="px-4 py-3">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                            <td class="cursor-pointer px-4 py-3" onclick="window.location='{{ route('candidates.show', $candidate) }}'">
                                 <p class="font-medium text-gray-800 dark:text-gray-200">{{ $candidate->name }}</p>
                                 <p class="text-xs text-gray-400">{{ $candidate->position_applied }} · {{ $candidate->department?->name }}</p>
                             </td>
-                            <td class="px-4 py-3 text-gray-500">{{ $candidate->phone }}</td>
-                            <td class="px-4 py-3 text-gray-500">{{ optional($candidate->interview_date)->format('d M Y') ?? '—' }}</td>
-                            <td class="px-4 py-3"><x-badge :status="$candidate->status" /></td>
+                            <td class="cursor-pointer px-4 py-3 text-gray-500" onclick="window.location='{{ route('candidates.show', $candidate) }}'">{{ $candidate->phone }}</td>
+                            <td class="cursor-pointer px-4 py-3 text-gray-500" onclick="window.location='{{ route('candidates.show', $candidate) }}'">{{ optional($candidate->interview_date)->format('d M Y') ?? '—' }}</td>
+                            <td class="cursor-pointer px-4 py-3" onclick="window.location='{{ route('candidates.show', $candidate) }}'"><x-badge :status="$candidate->status" /></td>
+                            @can('employees.delete')
+                                <td class="px-4 py-3 text-right">
+                                    <form method="POST" action="{{ route('candidates.destroy', $candidate) }}" onsubmit="return confirm('Remove this candidate record?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="text-sm font-medium text-rose-600 hover:underline">Remove</button>
+                                    </form>
+                                </td>
+                            @endcan
                         </tr>
                     @endforeach
                 </tbody>
