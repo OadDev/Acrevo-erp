@@ -104,4 +104,41 @@ class TicketPermissionTest extends TestCase
         $this->actingAs($creator)->post("/tickets/{$ticket->id}/lock")->assertRedirect();
         $this->assertNotNull($ticket->fresh()->locked_at);
     }
+
+    public function test_tickets_manage_permission_can_remove_a_ticket(): void
+    {
+        $this->seedRoles();
+        $admin = $this->user('Admin');
+        $workOrder = $this->workOrder($admin);
+        $sales = $this->user('Sales');
+
+        $ticket = Ticket::create([
+            'work_order_id' => $workOrder->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'Removable',
+            'raised_by_type' => 'internal', 'raised_by' => $sales->id, 'status' => 'open',
+        ]);
+
+        $this->actingAs($sales)->get("/tickets/{$ticket->id}")->assertOk()->assertSee('Remove');
+
+        $this->actingAs($sales)->delete("/tickets/{$ticket->id}")->assertRedirect('/tickets');
+        $this->assertNotNull($ticket->fresh()->deleted_at);
+
+        $this->actingAs($sales)->get('/tickets')->assertOk()->assertDontSee('Removable');
+    }
+
+    public function test_a_role_without_tickets_manage_cannot_remove_a_ticket(): void
+    {
+        $this->seedRoles();
+        $admin = $this->user('Admin');
+        $workOrder = $this->workOrder($admin);
+        $execTl = $this->user('Executive Team Leader');
+
+        $ticket = Ticket::create([
+            'work_order_id' => $workOrder->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'Protected',
+            'raised_by_type' => 'internal', 'raised_by' => $execTl->id, 'status' => 'open',
+        ]);
+
+        $this->actingAs($execTl)->get("/tickets/{$ticket->id}")->assertOk()->assertDontSee('Remove');
+        $this->actingAs($execTl)->delete("/tickets/{$ticket->id}")->assertForbidden();
+        $this->assertNull($ticket->fresh()->deleted_at);
+    }
 }

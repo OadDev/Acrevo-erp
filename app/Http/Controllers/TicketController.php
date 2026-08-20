@@ -102,6 +102,13 @@ class TicketController extends Controller
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket updated.');
     }
 
+    public function destroy(Ticket $ticket): RedirectResponse
+    {
+        $ticket->delete();
+
+        return redirect()->route('tickets.index')->with('success', 'Ticket removed.');
+    }
+
     public function destroyMedia(Ticket $ticket, Media $media): RedirectResponse
     {
         $this->authorize('update', $ticket);

@@ -9,6 +9,13 @@
                 @can('update', $ticket)
                     <x-link-button :href="route('tickets.edit', $ticket)" variant="secondary">Edit</x-link-button>
                 @endcan
+                @can('tickets.manage')
+                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
+                    </form>
+                @endcan
                 @can('lock', $ticket)
                     <form method="POST" action="{{ route('tickets.lock', $ticket) }}" onsubmit="return confirm('Mark this ticket uneditable? This cannot be undone.')">
                         @csrf

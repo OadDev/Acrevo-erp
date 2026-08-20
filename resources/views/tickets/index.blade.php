@@ -26,20 +26,32 @@
                             <th class="px-5 py-3">Priority</th>
                             <th class="px-5 py-3">Assigned To</th>
                             <th class="px-5 py-3">Status</th>
+                            @can('tickets.manage')
+                                <th class="px-5 py-3"></th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($tickets as $ticket)
-                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('tickets.show', $ticket) }}'">
-                                <td class="px-5 py-3">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'">
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $ticket->ticket_no }}</span>
                                     <p class="text-xs text-gray-400">{{ $ticket->title }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $ticket->workOrder->work_order_no ?? 'Deleted work order' }}</td>
-                                <td class="px-5 py-3"><x-badge color="indigo" :status="$ticket->type" /></td>
-                                <td class="px-5 py-3"><x-badge :status="$ticket->priority" /></td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $ticket->assignedTo?->name ?? '—' }}</td>
-                                <td class="px-5 py-3"><x-badge :status="$ticket->status" /></td>
+                                <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('tickets.show', $ticket) }}'">{{ $ticket->workOrder->work_order_no ?? 'Deleted work order' }}</td>
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'"><x-badge color="indigo" :status="$ticket->type" /></td>
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'"><x-badge :status="$ticket->priority" /></td>
+                                <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('tickets.show', $ticket) }}'">{{ $ticket->assignedTo?->name ?? '—' }}</td>
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'"><x-badge :status="$ticket->status" /></td>
+                                @can('tickets.manage')
+                                    <td class="px-5 py-3 text-right">
+                                        <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="text-sm font-medium text-rose-600 hover:underline">Remove</button>
+                                        </form>
+                                    </td>
+                                @endcan
                             </tr>
                         @endforeach
                     </tbody>

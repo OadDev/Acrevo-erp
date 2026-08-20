@@ -264,11 +264,14 @@ Route::middleware('permission:qc.view')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('permission:tickets.view')->group(function () {
-    Route::resource('tickets', TicketController::class);
+    Route::resource('tickets', TicketController::class)->except('destroy');
     Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
     Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
     Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
+});
+Route::middleware('permission:tickets.manage')->group(function () {
+    Route::delete('tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
 });
 
 /*
