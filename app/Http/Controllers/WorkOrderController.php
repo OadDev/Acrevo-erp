@@ -151,42 +151,30 @@ class WorkOrderController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        $timeScheduleRows = collect($data['time_schedules'] ?? [])
-            ->filter(fn ($row) => filled($row['time_to_finish'] ?? null));
+        $this->saveBudgetItems($workOrder, 'material', $materialRows, fn ($row) => [
+            'name' => $row['material_name'], 'brand' => $row['brand'] ?? null, 'size' => $row['size'] ?? null,
+            'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'], 'vendor' => $row['vendor'] ?? null,
+            'amount' => $row['quantity'] * $row['rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'labour', $labourRows, fn ($row) => [
+            'name' => $row['labour_type'], 'quantity' => $row['count'], 'hours' => $row['hours'] ?? null, 'rate' => $row['wage_rate'],
+            'amount' => $row['count'] * $row['wage_rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'equipment', $equipmentRows, fn ($row) => [
+            'name' => $row['item_name'], 'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'],
+            'vendor' => $row['vendor'] ?? null, 'amount' => $row['quantity'] * $row['rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'transport', $transportRows, fn ($row) => [
+            'name' => $row['item_name'], 'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'],
+            'vendor' => $row['vendor'] ?? null, 'amount' => $row['quantity'] * $row['rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'misc', $miscRows, fn ($row) => [
+            'name' => $row['item_name'], 'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'],
+            'vendor' => $row['vendor'] ?? null, 'amount' => $row['quantity'] * $row['rate'],
+        ]);
 
-        foreach ($timeScheduleRows as $row) {
-            $workOrder->timeSchedules()->create([
-                'time_to_finish' => $row['time_to_finish'],
-                'unit' => $row['unit'] ?? null,
-                'remark' => $row['remark'] ?? null,
-            ]);
-        }
-
-        $procedureRows = collect($data['procedures'] ?? [])
-            ->filter(fn ($row) => filled($row['item_description'] ?? null));
-
-        if ($procedureRows->isNotEmpty()) {
-            $scheduleBook = $workOrder->measurementBooks()->create([
-                'type' => 'schedule',
-                'description' => 'Work Schedule (M.Book)',
-                'date' => $data['start_date'] ?? now()->toDateString(),
-                'recorded_by' => $request->user()->id,
-                'status' => 'draft',
-            ]);
-
-            foreach ($procedureRows as $row) {
-                $scheduleBook->items()->create([
-                    'item_description' => $row['item_description'],
-                    'unit' => $row['unit'] ?: 'Sqft',
-                    'length' => $row['length'] ?? null,
-                    'breadth' => $row['breadth'] ?? null,
-                    'height' => $row['height'] ?? null,
-                    'quantity' => $row['quantity'] ?? 0,
-                    'rate' => 0,
-                    'amount' => 0,
-                ]);
-            }
-        }
+        $this->saveTimeSchedules($workOrder, $data['time_schedules'] ?? []);
+        $this->saveProcedures($workOrder, $data['procedures'] ?? [], $data['start_date'] ?? null, $request->user()->id);
 
         if ($team) {
             WorkOrderExecutiveTeam::create([
@@ -208,23 +196,45 @@ class WorkOrderController extends Controller
     {
         $this->authorizeAdminOnly();
 
-        return view('work-orders.edit', compact('workOrder'));
+        $byCategory = fn ($category) => $workOrder->budgetItems()->where('category', $category)->get();
+
+        $materials = $byCategory('material')->map(fn ($i) => [
+            'material_name' => $i->name, 'brand' => $i->brand, 'size' => $i->size,
+            'unit' => $i->unit ?? 'Nos', 'quantity' => $i->quantity, 'rate' => $i->rate, 'vendor' => $i->vendor,
+        ])->all() ?: [['material_name' => '', 'brand' => '', 'size' => '', 'unit' => 'Nos', 'quantity' => '', 'rate' => '', 'vendor' => '']];
+
+        $labour = $byCategory('labour')->map(fn ($i) => [
+            'labour_type' => $i->name, 'count' => $i->quantity, 'hours' => $i->hours, 'wage_rate' => $i->rate,
+        ])->all() ?: [['labour_type' => '', 'count' => 1, 'hours' => '', 'wage_rate' => '']];
+
+        $equipment = $byCategory('equipment')->map(fn ($i) => [
+            'item_name' => $i->name, 'unit' => $i->unit ?? 'Nos', 'quantity' => $i->quantity, 'rate' => $i->rate, 'vendor' => $i->vendor,
+        ])->all() ?: [['item_name' => '', 'unit' => 'Nos', 'quantity' => '', 'rate' => '', 'vendor' => '']];
+
+        $transport = $byCategory('transport')->map(fn ($i) => [
+            'item_name' => $i->name, 'unit' => $i->unit ?? 'Trip', 'quantity' => $i->quantity, 'rate' => $i->rate, 'vendor' => $i->vendor,
+        ])->all() ?: [['item_name' => '', 'unit' => 'Trip', 'quantity' => '', 'rate' => '', 'vendor' => '']];
+
+        $misc = $byCategory('misc')->map(fn ($i) => [
+            'item_name' => $i->name, 'unit' => $i->unit ?? 'Nos', 'quantity' => $i->quantity, 'rate' => $i->rate, 'vendor' => $i->vendor,
+        ])->all() ?: [['item_name' => '', 'unit' => 'Nos', 'quantity' => '', 'rate' => '', 'vendor' => '']];
+
+        $scheduleItems = $workOrder->measurementBooks()->where('type', 'schedule')->first()?->items ?? collect();
+        $procedures = $scheduleItems->map(fn ($i) => [
+            'item_description' => $i->item_description, 'length' => $i->length, 'breadth' => $i->breadth,
+            'height' => $i->height, 'quantity' => $i->quantity, 'unit' => $i->unit ?? 'Sqft',
+        ])->all() ?: [['item_description' => '', 'length' => '', 'breadth' => '', 'height' => '', 'quantity' => '', 'unit' => 'Sqft']];
+
+        $timeSchedules = $workOrder->timeSchedules->map(fn ($t) => [
+            'time_to_finish' => $t->time_to_finish, 'unit' => $t->unit, 'remark' => $t->remark,
+        ])->all() ?: [['time_to_finish' => '', 'unit' => '', 'remark' => '']];
+
+        return view('work-orders.edit', compact('workOrder', 'materials', 'labour', 'equipment', 'transport', 'misc', 'procedures', 'timeSchedules'));
     }
 
     public function update(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $this->authorizeAdminOnly();
-
-        // Budget fields are often typed or pasted with thousands separators
-        // (e.g. "50,000") - strip them so a comma doesn't fail the 'numeric'
-        // rule and silently drop the whole submission.
-        $budgetFields = [
-            'estimated_material_budget', 'estimated_labour_budget',
-            'estimated_equipment_budget', 'estimated_transport_budget', 'estimated_misc_budget',
-        ];
-        $request->merge(collect($budgetFields)->mapWithKeys(fn ($field) => [
-            $field => is_string($request->$field) ? str_replace(',', '', $request->$field) : $request->$field,
-        ])->all());
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -232,20 +242,171 @@ class WorkOrderController extends Controller
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'start_date' => ['nullable', 'date'],
             'deadline' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'estimated_material_budget' => ['nullable', 'numeric', 'min:0'],
-            'estimated_labour_budget' => ['nullable', 'numeric', 'min:0'],
-            'estimated_equipment_budget' => ['nullable', 'numeric', 'min:0'],
-            'estimated_transport_budget' => ['nullable', 'numeric', 'min:0'],
-            'estimated_misc_budget' => ['nullable', 'numeric', 'min:0'],
+            'materials' => ['nullable', 'array'],
+            'materials.*.material_name' => ['nullable', 'string', 'max:255'],
+            'materials.*.brand' => ['nullable', 'string', 'max:150'],
+            'materials.*.size' => ['nullable', 'string', 'max:100'],
+            'materials.*.unit' => ['nullable', 'string', 'max:30'],
+            'materials.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'materials.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'materials.*.vendor' => ['nullable', 'string', 'max:255'],
+            'labour' => ['nullable', 'array'],
+            'labour.*.labour_type' => ['nullable', 'string', 'max:150'],
+            'labour.*.count' => ['nullable', 'integer', 'min:1'],
+            'labour.*.hours' => ['nullable', 'numeric', 'min:0'],
+            'labour.*.wage_rate' => ['nullable', 'numeric', 'min:0'],
+            'equipment' => ['nullable', 'array'],
+            'equipment.*.item_name' => ['nullable', 'string', 'max:255'],
+            'equipment.*.unit' => ['nullable', 'string', 'max:30'],
+            'equipment.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'equipment.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'equipment.*.vendor' => ['nullable', 'string', 'max:255'],
+            'transport' => ['nullable', 'array'],
+            'transport.*.item_name' => ['nullable', 'string', 'max:255'],
+            'transport.*.unit' => ['nullable', 'string', 'max:30'],
+            'transport.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'transport.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'transport.*.vendor' => ['nullable', 'string', 'max:255'],
+            'misc' => ['nullable', 'array'],
+            'misc.*.item_name' => ['nullable', 'string', 'max:255'],
+            'misc.*.unit' => ['nullable', 'string', 'max:30'],
+            'misc.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'misc.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'misc.*.vendor' => ['nullable', 'string', 'max:255'],
+            'time_schedules' => ['nullable', 'array'],
+            'time_schedules.*.time_to_finish' => ['nullable', 'string', 'max:100'],
+            'time_schedules.*.unit' => ['nullable', 'string', 'max:50'],
+            'time_schedules.*.remark' => ['nullable', 'string', 'max:255'],
+            'procedures' => ['nullable', 'array'],
+            'procedures.*.item_description' => ['nullable', 'string', 'max:255'],
+            'procedures.*.length' => ['nullable', 'numeric', 'min:0'],
+            'procedures.*.breadth' => ['nullable', 'numeric', 'min:0'],
+            'procedures.*.height' => ['nullable', 'numeric', 'min:0'],
+            'procedures.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'procedures.*.unit' => ['nullable', 'string', 'max:30'],
         ]);
 
-        $totalBudget = collect($budgetFields)->sum(fn ($field) => $data[$field] ?? 0);
+        $materialRows = collect($data['materials'] ?? [])
+            ->filter(fn ($row) => filled($row['material_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
+        $labourRows = collect($data['labour'] ?? [])
+            ->filter(fn ($row) => filled($row['labour_type'] ?? null) && filled($row['count'] ?? null) && isset($row['wage_rate']));
+        $equipmentRows = collect($data['equipment'] ?? [])
+            ->filter(fn ($row) => filled($row['item_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
+        $transportRows = collect($data['transport'] ?? [])
+            ->filter(fn ($row) => filled($row['item_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
+        $miscRows = collect($data['misc'] ?? [])
+            ->filter(fn ($row) => filled($row['item_name'] ?? null) && filled($row['quantity'] ?? null) && isset($row['rate']));
 
-        $workOrder->update($data + [
+        $materialBudget = $materialRows->sum(fn ($row) => $row['quantity'] * $row['rate']);
+        $labourBudget = $labourRows->sum(fn ($row) => $row['count'] * $row['wage_rate']);
+        $equipmentBudget = $equipmentRows->sum(fn ($row) => $row['quantity'] * $row['rate']);
+        $transportBudget = $transportRows->sum(fn ($row) => $row['quantity'] * $row['rate']);
+        $miscBudget = $miscRows->sum(fn ($row) => $row['quantity'] * $row['rate']);
+        $totalBudget = $materialBudget + $labourBudget + $equipmentBudget + $transportBudget + $miscBudget;
+
+        $workOrder->update([
+            'title' => $data['title'],
+            'scope' => $data['scope'] ?? null,
+            'priority' => $data['priority'],
+            'start_date' => $data['start_date'] ?? null,
+            'deadline' => $data['deadline'] ?? null,
+            'estimated_material_budget' => $materialBudget ?: null,
+            'estimated_labour_budget' => $labourBudget ?: null,
+            'estimated_equipment_budget' => $equipmentBudget ?: null,
+            'estimated_transport_budget' => $transportBudget ?: null,
+            'estimated_misc_budget' => $miscBudget ?: null,
             'budget_amount' => $totalBudget ?: null,
         ]);
 
+        $this->saveBudgetItems($workOrder, 'material', $materialRows, fn ($row) => [
+            'name' => $row['material_name'], 'brand' => $row['brand'] ?? null, 'size' => $row['size'] ?? null,
+            'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'], 'vendor' => $row['vendor'] ?? null,
+            'amount' => $row['quantity'] * $row['rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'labour', $labourRows, fn ($row) => [
+            'name' => $row['labour_type'], 'quantity' => $row['count'], 'hours' => $row['hours'] ?? null, 'rate' => $row['wage_rate'],
+            'amount' => $row['count'] * $row['wage_rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'equipment', $equipmentRows, fn ($row) => [
+            'name' => $row['item_name'], 'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'],
+            'vendor' => $row['vendor'] ?? null, 'amount' => $row['quantity'] * $row['rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'transport', $transportRows, fn ($row) => [
+            'name' => $row['item_name'], 'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'],
+            'vendor' => $row['vendor'] ?? null, 'amount' => $row['quantity'] * $row['rate'],
+        ]);
+        $this->saveBudgetItems($workOrder, 'misc', $miscRows, fn ($row) => [
+            'name' => $row['item_name'], 'unit' => $row['unit'] ?? null, 'quantity' => $row['quantity'], 'rate' => $row['rate'],
+            'vendor' => $row['vendor'] ?? null, 'amount' => $row['quantity'] * $row['rate'],
+        ]);
+
+        $this->saveTimeSchedules($workOrder, $data['time_schedules'] ?? []);
+        $this->saveProcedures($workOrder, $data['procedures'] ?? [], $data['start_date'] ?? null, $request->user()->id);
+
         return redirect()->route('work-orders.show', $workOrder)->with('success', 'Work order updated.');
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     */
+    private function saveBudgetItems(WorkOrder $workOrder, string $category, \Illuminate\Support\Collection $rows, \Closure $map): void
+    {
+        $workOrder->budgetItems()->where('category', $category)->delete();
+
+        foreach ($rows as $row) {
+            $workOrder->budgetItems()->create(['category' => $category] + $map($row));
+        }
+    }
+
+    private function saveTimeSchedules(WorkOrder $workOrder, array $rows): void
+    {
+        $rows = collect($rows)->filter(fn ($row) => filled($row['time_to_finish'] ?? null));
+
+        $workOrder->timeSchedules()->delete();
+
+        foreach ($rows as $row) {
+            $workOrder->timeSchedules()->create([
+                'time_to_finish' => $row['time_to_finish'],
+                'unit' => $row['unit'] ?? null,
+                'remark' => $row['remark'] ?? null,
+            ]);
+        }
+    }
+
+    private function saveProcedures(WorkOrder $workOrder, array $rows, ?string $startDate, string $userId): void
+    {
+        $rows = collect($rows)->filter(fn ($row) => filled($row['item_description'] ?? null));
+
+        $scheduleBook = $workOrder->measurementBooks()->where('type', 'schedule')->first();
+
+        if ($rows->isEmpty()) {
+            $scheduleBook?->items()->delete();
+
+            return;
+        }
+
+        $scheduleBook ??= $workOrder->measurementBooks()->create([
+            'type' => 'schedule',
+            'description' => 'Work Schedule (M.Book)',
+            'date' => $startDate ?? now()->toDateString(),
+            'recorded_by' => $userId,
+            'status' => 'draft',
+        ]);
+
+        $scheduleBook->items()->delete();
+
+        foreach ($rows as $row) {
+            $scheduleBook->items()->create([
+                'item_description' => $row['item_description'],
+                'unit' => $row['unit'] ?: 'Sqft',
+                'length' => $row['length'] ?? null,
+                'breadth' => $row['breadth'] ?? null,
+                'height' => $row['height'] ?? null,
+                'quantity' => $row['quantity'] ?? 0,
+                'rate' => 0,
+                'amount' => 0,
+            ]);
+        }
     }
 
     public function destroy(WorkOrder $workOrder): RedirectResponse

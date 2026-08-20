@@ -193,6 +193,11 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(WorkOrderTimeSchedule::class);
     }
 
+    public function budgetItems(): HasMany
+    {
+        return $this->hasMany(WorkOrderBudgetItem::class);
+    }
+
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class)->latest('date');

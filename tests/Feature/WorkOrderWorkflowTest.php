@@ -1254,11 +1254,11 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertNotNull($workOrder->fresh()->deleted_at);
     }
 
-    public function test_editing_a_work_order_updates_the_budget_even_with_comma_formatted_amounts(): void
+    public function test_editing_a_work_order_via_itemized_material_and_labour_rows_updates_the_budget(): void
     {
-        // Regression test: money is commonly typed/pasted with thousands
-        // separators (e.g. "50,000") - the numeric validation rule used to
-        // reject that outright, so the whole edit silently failed to save.
+        // The Edit page used to only accept flat total-budget numbers; it now
+        // uses the same itemized entry tables as Create, so quantity x rate
+        // rows compute and persist the allocated budget totals instead.
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
         $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
@@ -1269,7 +1269,8 @@ class WorkOrderWorkflowTest extends TestCase
 
         $response = $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
             'title' => 'WO', 'priority' => 'medium',
-            'estimated_material_budget' => '50,000', 'estimated_labour_budget' => '25,000.50',
+            'materials' => [['material_name' => 'Cement', 'quantity' => 500, 'rate' => 100]],
+            'labour' => [['labour_type' => 'Mason', 'count' => 10, 'wage_rate' => 2500.05]],
         ]);
         $response->assertRedirect();
         $response->assertSessionDoesntHaveErrors();
@@ -1278,6 +1279,8 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('50000.00', $fresh->estimated_material_budget);
         $this->assertSame('25000.50', $fresh->estimated_labour_budget);
         $this->assertSame('75000.50', $fresh->budget_amount);
+        $this->assertSame(1, $fresh->budgetItems()->where('category', 'material')->count());
+        $this->assertSame(1, $fresh->budgetItems()->where('category', 'labour')->count());
     }
 
     public function test_editing_a_work_order_updates_equipment_transport_and_misc_budget_too(): void
@@ -1292,13 +1295,15 @@ class WorkOrderWorkflowTest extends TestCase
 
         $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/edit")
             ->assertOk()
-            ->assertSee('Allocated Equipment / Machinery Budget')
-            ->assertSee('Allocated Transport Budget')
-            ->assertSee('Allocated Miscellaneous / Contingency Budget');
+            ->assertSee('Equipment / Machinery')
+            ->assertSee('Transport')
+            ->assertSee('Miscellaneous / Contingency');
 
         $response = $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
             'title' => 'WO', 'priority' => 'medium',
-            'estimated_equipment_budget' => '3,000', 'estimated_transport_budget' => '1,500', 'estimated_misc_budget' => '500',
+            'equipment' => [['item_name' => 'Mixer', 'quantity' => 1, 'rate' => 3000]],
+            'transport' => [['item_name' => 'Delivery', 'quantity' => 1, 'rate' => 1500]],
+            'misc' => [['item_name' => 'Contingency', 'quantity' => 1, 'rate' => 500]],
         ]);
         $response->assertRedirect();
         $response->assertSessionDoesntHaveErrors();
@@ -1308,6 +1313,41 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('1500.00', $fresh->estimated_transport_budget);
         $this->assertSame('500.00', $fresh->estimated_misc_budget);
         $this->assertSame('5000.00', $fresh->budget_amount);
+    }
+
+    public function test_editing_a_work_order_preserves_and_updates_the_work_procedure_and_time_schedule_rows(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
+            'title' => 'WO', 'priority' => 'medium',
+            'procedures' => [['item_description' => 'Foundation', 'length' => 10, 'breadth' => 5, 'quantity' => 50, 'unit' => 'Sqft']],
+            'time_schedules' => [['time_to_finish' => '10', 'unit' => 'Days']],
+        ])->assertRedirect();
+
+        $scheduleBook = $workOrder->fresh()->measurementBooks()->where('type', 'schedule')->first();
+        $this->assertNotNull($scheduleBook);
+        $this->assertSame(1, $scheduleBook->items()->count());
+        $this->assertSame('Foundation', $scheduleBook->items()->first()->item_description);
+        $this->assertSame(1, $workOrder->fresh()->timeSchedules()->count());
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/edit")
+            ->assertOk()->assertSee('Foundation');
+
+        // Submitting again with the procedure row removed clears it, rather
+        // than leaving the old row stuck with no page left to remove it from.
+        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
+            'title' => 'WO', 'priority' => 'medium',
+        ])->assertRedirect();
+
+        $this->assertSame(0, $scheduleBook->fresh()->items()->count());
+        $this->assertSame(0, $workOrder->fresh()->timeSchedules()->count());
     }
 
     public function test_only_admin_can_edit_or_remove_tab_entries_on_a_work_order(): void
