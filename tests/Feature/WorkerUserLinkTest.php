@@ -171,12 +171,13 @@ class WorkerUserLinkTest extends TestCase
         $this->assertTrue($team->fresh()->members()->where('employee_id', $workerUser->employee->id)->exists());
     }
 
-    public function test_only_registered_workers_see_payroll_on_their_dashboard(): void
+    public function test_any_employee_linked_login_sees_payroll_on_their_dashboard(): void
     {
         $admin = $this->admin();
 
-        // An HR user manually linked to an Employee record (not via the
-        // Worker-role auto-link) should never see the payroll widget.
+        // Any login linked to an Employee record - not just Workers - sees
+        // their own attendance/payroll widget, since Sales/HR/Finance/QC
+        // Officer now get Employee Payroll from HR Attendance too.
         $hrUser = User::create([
             'name' => 'HR Person', 'email' => 'hr+'.uniqid().'@example.com',
             'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
@@ -188,7 +189,7 @@ class WorkerUserLinkTest extends TestCase
         ]);
 
         $response = $this->actingAs($hrUser)->get('/dashboard');
-        $response->assertOk()->assertDontSee('My Attendance')->assertDontSee("This Month's Payroll");
+        $response->assertOk()->assertSee('My Attendance')->assertSee("This Month's Payroll", false);
     }
 
     public function test_a_workers_attendance_entered_via_the_wo_measurement_book_shows_on_their_own_dashboard(): void

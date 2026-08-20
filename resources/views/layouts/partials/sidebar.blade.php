@@ -46,17 +46,21 @@
                 </x-nav-group>
             @endcanany
 
-            @can('assigned_work.view')
+            @if (auth()->user()->can('assigned_work.view') || (auth()->user()->can('tasks.view') && auth()->user()->employee) || auth()->user()->can('subcontractor_finance.view'))
                 <x-nav-group label="Executive Team">
-                    <x-nav-link :href="route('my-work-orders.index')" :active="request()->routeIs('my-work-orders.*')" icon="hard-hat">My Work Orders</x-nav-link>
-                    @if (auth()->user()->hasRole('Worker'))
-                        <x-nav-link :href="route('my-payroll.index')" :active="request()->routeIs('my-payroll.*')" icon="wallet">My Payroll</x-nav-link>
-                    @endif
+                    @can('assigned_work.view')
+                        <x-nav-link :href="route('my-work-orders.index')" :active="request()->routeIs('my-work-orders.*')" icon="hard-hat">My Work Orders</x-nav-link>
+                    @endcan
+                    @can('tasks.view')
+                        @if (auth()->user()->employee)
+                            <x-nav-link :href="route('my-payroll.index')" :active="request()->routeIs('my-payroll.*')" icon="wallet">My Payroll</x-nav-link>
+                        @endif
+                    @endcan
                     @can('subcontractor_finance.view')
                         <x-nav-link :href="route('finance.my-payments')" :active="request()->routeIs('finance.my-payments')" icon="banknote">Finance</x-nav-link>
                     @endcan
                 </x-nav-group>
-            @endcan
+            @endif
 
             @can('subcontractors.view')
                 <x-nav-group label="Subcontractors">

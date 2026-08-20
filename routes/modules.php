@@ -223,6 +223,12 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
 Route::middleware('permission:assigned_work.view')->group(function () {
     Route::get('my-work-orders', [MyWorkOrderController::class, 'index'])->name('my-work-orders.index');
     Route::get('my-work-orders/{workOrder}', [MyWorkOrderController::class, 'show'])->name('my-work-orders.show');
+});
+// tasks.view is held by every internal staff role (Sales, HR, Finance, QC
+// Officer, Executive Team Leader, Worker, ...) - not just the roles with
+// assigned_work.view - so any employee-linked staff member can reach their
+// own payroll self-service page, not only Workers/Executive Team.
+Route::middleware('permission:tasks.view')->group(function () {
     Route::get('my-payroll', [MyPayrollController::class, 'index'])->name('my-payroll.index');
     Route::get('my-payroll/{payroll}/pdf', [MyPayrollController::class, 'pdf'])->name('my-payroll.pdf');
 });

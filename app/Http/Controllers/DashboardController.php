@@ -134,12 +134,12 @@ class DashboardController extends Controller
 
         $myAttendance = null;
         $myPayroll = null;
-        // Only registered workers (a Worker-role login linked to an HR
-        // Employee record) see their own attendance/payroll here - an
-        // unregistered worker has no login at all, and an Employee record
-        // linked to a non-Worker account (HR, Sales, etc.) shouldn't surface
-        // payroll data through this widget.
-        if ($user->hasRole('Worker') && ($employee = $user->employee)) {
+        // Any login linked to an HR Employee record sees their own
+        // attendance/payroll here - Workers (via WO attendance) and the
+        // employee-linked staff roles (Sales, HR, Finance, Executive Team
+        // Leader, QC Officer) alike. An unregistered worker has no login at
+        // all, so this naturally stays empty for them.
+        if ($employee = $user->employee) {
             $myAttendance = Attendance::where('employee_id', $employee->id)
                 ->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)

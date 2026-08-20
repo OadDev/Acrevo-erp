@@ -84,4 +84,26 @@ class EmployeePayrollTest extends TestCase
         $response = $this->actingAs($admin)->get('/payroll/employees?month='.now()->month.'&year='.now()->year);
         $response->assertOk()->assertSee('Reviewed applications')->assertSee('HR Person');
     }
+
+    public function test_a_staff_employee_can_see_their_own_payroll_via_self_service_and_the_dashboard(): void
+    {
+        // Regression: /my-payroll and its sidebar link were gated behind
+        // assigned_work.view, which only Worker/Executive Team Leader hold -
+        // Sales/HR/Finance/QC Officer got a 403 even though their Employee
+        // Payroll data was being generated correctly.
+        $admin = $this->admin();
+        $hr = $this->staffUser($admin, 'HR');
+
+        $payroll = Payroll::create([
+            'employee_id' => $hr->employee->id, 'month' => now()->month, 'year' => now()->year,
+            'basic_salary' => 20000, 'net_salary' => 20000, 'paid_amount' => 20000, 'status' => 'paid',
+            'processed_by' => $admin->id,
+        ]);
+
+        $this->actingAs($hr)->get('/my-payroll')
+            ->assertOk()->assertSee(number_format($payroll->net_salary, 2));
+
+        $this->actingAs($hr)->get('/dashboard')
+            ->assertOk()->assertSee('My Attendance')->assertSee(number_format($payroll->net_salary, 2));
+    }
 }
