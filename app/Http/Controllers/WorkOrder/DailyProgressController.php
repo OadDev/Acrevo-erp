@@ -18,7 +18,7 @@ class DailyProgressController extends Controller
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
-            'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'executive_team_id' => [$workOrder->execution_way === 'way_2' ? 'nullable' : 'required', 'exists:executive_teams,id'],
             'date' => ['required', 'date'],
             'completed_work' => ['required', 'string'],
             'pending_work' => ['nullable', 'string'],
@@ -40,7 +40,7 @@ class DailyProgressController extends Controller
         abort_unless($report->work_order_id === $workOrder->id, 404);
 
         $data = $request->validate([
-            'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'executive_team_id' => [$workOrder->execution_way === 'way_2' ? 'nullable' : 'required', 'exists:executive_teams,id'],
             'date' => ['required', 'date'],
             'completed_work' => ['required', 'string'],
             'pending_work' => ['nullable', 'string'],

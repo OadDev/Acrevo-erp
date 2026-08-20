@@ -2060,6 +2060,60 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($subContractor)->get("/work-orders/{$workOrder->id}")->assertForbidden();
     }
 
+    public function test_daily_work_with_checklist_can_be_added_on_a_way_2_work_order_with_no_team_assigned(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $subContractor = $this->subContractor();
+        \App\Models\WorkOrderSubContractor::create([
+            'work_order_id' => $workOrder->id, 'user_id' => $subContractor->id, 'assigned_by' => $admin->id, 'assigned_at' => now(),
+        ]);
+
+        $this->assertTrue($workOrder->executiveTeams->isEmpty());
+
+        $response = $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/checklists", [
+            'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => "Lay bricks\nMix cement",
+        ]);
+        $response->assertRedirect();
+
+        $checklist = \App\Models\DailyChecklist::firstOrFail();
+        $this->assertNull($checklist->executive_team_id);
+        $this->assertSame(2, $checklist->checklistItems()->count());
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")->assertOk()->assertSee('Day 1');
+    }
+
+    public function test_a_sub_contractor_can_submit_daily_progress_on_a_way_2_work_order_with_no_team_assigned(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $subContractor = $this->subContractor();
+        \App\Models\WorkOrderSubContractor::create([
+            'work_order_id' => $workOrder->id, 'user_id' => $subContractor->id, 'assigned_by' => $admin->id, 'assigned_at' => now(),
+        ]);
+
+        $response = $this->actingAs($subContractor)->post("/work-orders/{$workOrder->id}/progress", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering done',
+        ]);
+        $response->assertRedirect();
+
+        $report = \App\Models\DailyProgressReport::firstOrFail();
+        $this->assertNull($report->executive_team_id);
+        $this->assertSame('Plastering done', $report->completed_work);
+    }
+
     public function test_qc_officer_cannot_see_the_site_ledger_tab_but_other_roles_still_can(): void
     {
         $admin = $this->admin();

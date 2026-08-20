@@ -26,14 +26,17 @@
                     </div>
                 </div>
                 @if (auth()->user()->hasRole('Admin'))
+                    @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
                     <form method="POST" action="{{ route('work-orders.checklists.update', [$workOrder, $checklist]) }}" x-show="open === '{{ $checklist->id }}'" x-cloak class="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
                         @method('PUT')
-                        <x-select-input name="executive_team_id" class="text-xs">
-                            @foreach ($workOrder->executiveTeams->whereNull('unassigned_at') as $assignment)
-                                <option value="{{ $assignment->executive_team_id }}" @selected($assignment->executive_team_id === $checklist->executive_team_id)>{{ $assignment->executiveTeam?->name ?? '—' }}</option>
-                            @endforeach
-                        </x-select-input>
+                        @if ($activeTeams->isNotEmpty())
+                            <x-select-input name="executive_team_id" class="text-xs">
+                                @foreach ($activeTeams as $assignment)
+                                    <option value="{{ $assignment->executive_team_id }}" @selected($assignment->executive_team_id === $checklist->executive_team_id)>{{ $assignment->executiveTeam?->name ?? '—' }}</option>
+                                @endforeach
+                            </x-select-input>
+                        @endif
                         <x-text-input type="date" name="date" value="{{ $checklist->date->format('Y-m-d') }}" class="text-xs" required />
                         <x-text-input name="title" value="{{ $checklist->title }}" class="col-span-2 text-xs" required />
                         <button class="col-span-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Save</button>
@@ -103,15 +106,20 @@
     </div>
 
     @can('daily_checklist.manage')
+        @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Add Daily Work</h3>
             <form method="POST" action="{{ route('work-orders.checklists.store', $workOrder) }}" class="space-y-3">
                 @csrf
-                <x-select-input name="executive_team_id" class="w-full" required>
-                    @foreach ($workOrder->executiveTeams->whereNull('unassigned_at') as $assignment)
-                        <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
-                    @endforeach
-                </x-select-input>
+                @if ($activeTeams->isNotEmpty())
+                    <x-select-input name="executive_team_id" class="w-full" required>
+                        @foreach ($activeTeams as $assignment)
+                            <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
+                        @endforeach
+                    </x-select-input>
+                @elseif ($workOrder->execution_way === 'way_2')
+                    <p class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-gray-800/50">Executed via Sub-Contractor — no in-house team required.</p>
+                @endif
                 <x-text-input type="date" name="date" value="{{ now()->toDateString() }}" class="w-full" required />
                 <x-text-input name="title" class="w-full" placeholder="Daily work (e.g. Plastering - Ground floor)" required />
                 <x-textarea-input name="items" rows="5" class="w-full" placeholder="One checklist item per line..." required></x-textarea-input>

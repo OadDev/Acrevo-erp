@@ -18,7 +18,7 @@ class DailyChecklistController extends Controller
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
-            'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'executive_team_id' => [$workOrder->execution_way === 'way_2' ? 'nullable' : 'required', 'exists:executive_teams,id'],
             'date' => ['required', 'date'],
             'title' => ['required', 'string', 'max:255'],
             'items' => ['required', 'string'],
@@ -30,7 +30,7 @@ class DailyChecklistController extends Controller
             ->values();
 
         $checklist = $workOrder->dailyChecklists()->create([
-            'executive_team_id' => $data['executive_team_id'],
+            'executive_team_id' => $data['executive_team_id'] ?? null,
             'date' => $data['date'],
             'title' => $data['title'],
             'created_by' => $request->user()->id,
@@ -54,7 +54,7 @@ class DailyChecklistController extends Controller
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'executive_team_id' => ['required', 'exists:executive_teams,id'],
+            'executive_team_id' => [$workOrder->execution_way === 'way_2' ? 'nullable' : 'required', 'exists:executive_teams,id'],
             'date' => ['required', 'date'],
         ]);
 

@@ -96,14 +96,17 @@
                     @if ($report->materials_required)<p class="text-gray-600 dark:text-gray-300"><span class="text-gray-400">Materials Needed:</span> {{ $report->materials_required }}</p>@endif
 
                     @if (auth()->user()->hasRole('Admin'))
+                        @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
                         <form method="POST" action="{{ route('work-orders.progress.update', [$workOrder, $report]) }}" x-show="openReport === {{ $report->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                             @csrf
                             @method('PUT')
-                            <x-select-input name="executive_team_id" class="w-full text-xs">
-                                @foreach ($workOrder->executiveTeams->whereNull('unassigned_at') as $assignment)
-                                    <option value="{{ $assignment->executive_team_id }}" @selected($assignment->executive_team_id === $report->executive_team_id)>{{ $assignment->executiveTeam?->name ?? '—' }}</option>
-                                @endforeach
-                            </x-select-input>
+                            @if ($activeTeams->isNotEmpty())
+                                <x-select-input name="executive_team_id" class="w-full text-xs">
+                                    @foreach ($activeTeams as $assignment)
+                                        <option value="{{ $assignment->executive_team_id }}" @selected($assignment->executive_team_id === $report->executive_team_id)>{{ $assignment->executiveTeam?->name ?? '—' }}</option>
+                                    @endforeach
+                                </x-select-input>
+                            @endif
                             <x-text-input type="date" name="date" value="{{ $report->date->format('Y-m-d') }}" class="w-full text-xs" required />
                             <x-textarea-input name="completed_work" rows="2" class="w-full text-xs" required>{{ $report->completed_work }}</x-textarea-input>
                             <x-textarea-input name="pending_work" rows="2" class="w-full text-xs">{{ $report->pending_work }}</x-textarea-input>
@@ -121,15 +124,20 @@
 
     <div class="space-y-6">
         @can('daily_progress.manage')
+            @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
             <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Submit Progress</h3>
                 <form method="POST" action="{{ route('work-orders.progress.store', $workOrder) }}" class="space-y-3">
                     @csrf
-                    <x-select-input name="executive_team_id" class="w-full" required>
-                        @foreach ($workOrder->executiveTeams->whereNull('unassigned_at') as $assignment)
-                            <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
-                        @endforeach
-                    </x-select-input>
+                    @if ($activeTeams->isNotEmpty())
+                        <x-select-input name="executive_team_id" class="w-full" required>
+                            @foreach ($activeTeams as $assignment)
+                                <option value="{{ $assignment->executive_team_id }}">{{ $assignment->executiveTeam?->name ?? '—' }}</option>
+                            @endforeach
+                        </x-select-input>
+                    @elseif ($workOrder->execution_way === 'way_2')
+                        <p class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-gray-800/50">Executed via Sub-Contractor — no in-house team required.</p>
+                    @endif
                     <x-text-input type="date" name="date" value="{{ now()->toDateString() }}" class="w-full" required />
                     <x-textarea-input name="completed_work" rows="2" class="w-full" placeholder="Completed work" required></x-textarea-input>
                     <x-textarea-input name="pending_work" rows="2" class="w-full" placeholder="Pending work"></x-textarea-input>
