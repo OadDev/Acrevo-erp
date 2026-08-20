@@ -300,7 +300,13 @@ Route::middleware('permission:finance.manage')->group(function () {
 
 Route::middleware('permission:legal.view')->group(function () {
     Route::get('legal', [LegalController::class, 'index'])->name('legal.index');
+});
+Route::middleware('permission:legal.manage')->group(function () {
     Route::post('legal', [LegalController::class, 'store'])->name('legal.store');
+    Route::get('legal/{legalDocument}/edit', [LegalController::class, 'edit'])->name('legal.edit');
+    Route::put('legal/{legalDocument}', [LegalController::class, 'update'])->name('legal.update');
+    Route::delete('legal/{legalDocument}', [LegalController::class, 'destroy'])->name('legal.destroy');
+    Route::delete('legal/{legalDocument}/media/{media}', [LegalController::class, 'destroyMedia'])->name('legal.media.destroy');
 });
 
 Route::middleware('permission:audit.view')->group(function () {
