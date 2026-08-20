@@ -239,6 +239,7 @@ Route::middleware('permission:attendance.view')->group(function () {
 });
 Route::middleware('permission:payroll.view')->group(function () {
     Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
+    Route::get('payroll/employees', [PayrollController::class, 'employeeIndex'])->name('payroll.employee-index');
     Route::post('payroll', [PayrollController::class, 'store'])->name('payroll.store');
     Route::post('payroll/generate-from-attendance', [PayrollController::class, 'generateFromAttendance'])->name('payroll.generate-from-attendance');
     Route::post('payroll/{payroll}/record-payment', [PayrollController::class, 'recordPayment'])->name('payroll.record-payment');

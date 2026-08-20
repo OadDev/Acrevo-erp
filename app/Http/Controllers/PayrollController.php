@@ -15,23 +15,49 @@ class PayrollController extends Controller
 {
     public function index(Request $request): View
     {
+        return $this->indexForScope($request, 'worker');
+    }
+
+    public function employeeIndex(Request $request): View
+    {
+        return $this->indexForScope($request, 'employee');
+    }
+
+    /**
+     * WO Workers Payroll (attendance from a work order's Measurement Book)
+     * and Employee Payroll (attendance from HR > Attendance, for
+     * Sales/HR/Finance/Executive Team Leader/QC Officer) are the same page
+     * and the same generate/pay/PDF mechanics underneath - only which
+     * employees they cover differs, via Employee::workOrderWorkers()/staff().
+     */
+    private function indexForScope(Request $request, string $scope): View
+    {
         $month = (int) $request->get('month', now()->month);
         $year = (int) $request->get('year', now()->year);
 
-        $payrolls = Payroll::with(['employee', 'payments'])
-            ->where('month', $month)->where('year', $year)
+        $employees = Employee::where('status', 'active')
+            ->when($scope === 'worker', fn ($q) => $q->workOrderWorkers(), fn ($q) => $q->staff())
+            ->orderBy('name')
             ->get();
 
-        $employees = Employee::where('status', 'active')->orderBy('name')->get();
+        // Scoped by the employee's role, not by $employees above - a removed
+        // (soft-deleted) employee's already-generated payroll must keep
+        // showing here, the same as it does everywhere else historical
+        // Payroll/Attendance records reference a withTrashed() employee.
+        $payrolls = Payroll::with(['employee', 'payments'])
+            ->where('month', $month)->where('year', $year)
+            ->whereHas('employee', fn ($q) => $scope === 'worker' ? $q->workOrderWorkers() : $q->staff())
+            ->get();
 
         $attendanceByEmployee = Attendance::whereMonth('date', $month)
             ->whereYear('date', $year)
+            ->whereIn('employee_id', $employees->pluck('id'))
             ->with('workOrder')
             ->orderBy('date')
             ->get()
             ->groupBy('employee_id');
 
-        return view('payroll.index', compact('payrolls', 'employees', 'month', 'year', 'attendanceByEmployee'));
+        return view('payroll.index', compact('payrolls', 'employees', 'month', 'year', 'attendanceByEmployee', 'scope'));
     }
 
     public function store(Request $request): RedirectResponse

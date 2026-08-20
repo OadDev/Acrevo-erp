@@ -64,7 +64,8 @@
                         <x-nav-link :href="route('attendance.index')" :active="request()->routeIs('attendance.*')" icon="calendar-check">Attendance</x-nav-link>
                     @endcan
                     @can('payroll.view')
-                        <x-nav-link :href="route('payroll.index')" :active="request()->routeIs('payroll.*')" icon="wallet">Payroll</x-nav-link>
+                        <x-nav-link :href="route('payroll.index')" :active="request()->routeIs('payroll.index')" icon="wallet">WO Workers Payroll</x-nav-link>
+                        <x-nav-link :href="route('payroll.employee-index')" :active="request()->routeIs('payroll.employee-index')" icon="wallet">Employee Payroll</x-nav-link>
                     @endcan
                     @can('executive_teams.view')
                         <x-nav-link :href="route('executive-teams.index')" :active="request()->routeIs('executive-teams.*')" icon="users-round">Executive Teams</x-nav-link>

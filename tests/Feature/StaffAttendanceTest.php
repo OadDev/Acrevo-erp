@@ -66,12 +66,15 @@ class StaffAttendanceTest extends TestCase
             'date' => now()->toDateString(),
             'attendance' => [$hr->employee->id => 'present'],
             'work_details' => [$hr->employee->id => 'Processed payroll for the month.'],
+            'salary' => [$hr->employee->id => 800],
+            'advance' => [$hr->employee->id => 100],
         ]);
         $response->assertRedirect();
 
         $this->assertDatabaseHas('attendances', [
             'employee_id' => $hr->employee->id, 'status' => 'present',
             'work_details' => 'Processed payroll for the month.',
+            'salary' => 800, 'advance' => 100,
         ]);
     }
 

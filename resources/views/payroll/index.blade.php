@@ -1,8 +1,18 @@
 <x-app-layout>
+    @php
+        $isWorkerScope = $scope === 'worker';
+        $scopeLabel = $isWorkerScope ? 'WO Workers Payroll' : 'Employee Payroll';
+        $peopleLabel = $isWorkerScope ? 'Worker' : 'Employee';
+        $indexRoute = $isWorkerScope ? 'payroll.index' : 'payroll.employee-index';
+    @endphp
     <x-slot name="header">
-        <x-page-header title="Payroll" :subtitle="\Carbon\Carbon::create($year, $month, 1)->format('F Y')">
+        <x-page-header :title="$scopeLabel" :subtitle="\Carbon\Carbon::create($year, $month, 1)->format('F Y')">
             <x-slot name="actions">
-                <form method="GET" class="flex gap-2">
+                <div class="flex overflow-hidden rounded-lg border border-gray-200 text-sm dark:border-gray-700">
+                    <a href="{{ route('payroll.index') }}" class="px-3 py-1.5 {{ $isWorkerScope ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800' }}">WO Workers</a>
+                    <a href="{{ route('payroll.employee-index') }}" class="px-3 py-1.5 {{ ! $isWorkerScope ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800' }}">Employees</a>
+                </div>
+                <form method="GET" action="{{ route($indexRoute) }}" class="flex gap-2">
                     <x-select-input name="month" class="text-sm" onchange="this.form.submit()">
                         @foreach (range(1,12) as $m)
                             <option value="{{ $m }}" @selected($m == $month)>{{ \Carbon\Carbon::create()->month($m)->format('M') }}</option>
@@ -21,13 +31,19 @@
     <x-card :padded="false" class="mb-6">
         <div class="p-4">
             <h3 class="text-sm font-semibold text-gray-500">Attendance Summary — {{ \Carbon\Carbon::create($year, $month, 1)->format('F Y') }}</h3>
-            <p class="mt-1 text-xs text-gray-400">Totals come from Worker Attendance recorded against each work order this month.</p>
+            <p class="mt-1 text-xs text-gray-400">
+                @if ($isWorkerScope)
+                    Totals come from Worker Attendance recorded against each work order this month.
+                @else
+                    Totals come from HR &gt; Attendance recorded for this month.
+                @endif
+            </p>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        <th class="px-4 py-3">Worker</th>
+                        <th class="px-4 py-3">{{ $peopleLabel }}</th>
                         <th class="px-4 py-3">Days Present</th>
                         <th class="px-4 py-3 text-right">Total Salary</th>
                         <th class="px-4 py-3 text-right">Total Advance</th>
@@ -55,8 +71,12 @@
                                             <thead>
                                                 <tr class="text-left text-gray-400">
                                                     <th class="pr-3 py-1">Date</th>
-                                                    <th class="pr-3 py-1">Work Order</th>
-                                                    <th class="pr-3 py-1">Hours</th>
+                                                    @if ($isWorkerScope)
+                                                        <th class="pr-3 py-1">Work Order</th>
+                                                        <th class="pr-3 py-1">Hours</th>
+                                                    @else
+                                                        <th class="pr-3 py-1">Work Details</th>
+                                                    @endif
                                                     <th class="pr-3 py-1 text-right">Salary</th>
                                                 </tr>
                                             </thead>
@@ -64,8 +84,12 @@
                                                 @foreach ($records as $record)
                                                     <tr>
                                                         <td class="pr-3 py-1">{{ $record->date->format('d M') }}</td>
-                                                        <td class="pr-3 py-1">{{ $record->workOrder?->work_order_no ?? '—' }}</td>
-                                                        <td class="pr-3 py-1">{{ $record->hours_worked ?? '—' }}</td>
+                                                        @if ($isWorkerScope)
+                                                            <td class="pr-3 py-1">{{ $record->workOrder?->work_order_no ?? '—' }}</td>
+                                                            <td class="pr-3 py-1">{{ $record->hours_worked ?? '—' }}</td>
+                                                        @else
+                                                            <td class="pr-3 py-1">{{ $record->work_details ?? '—' }}</td>
+                                                        @endif
                                                         <td class="pr-3 py-1 text-right">{{ $record->salary ? '₹'.number_format($record->salary, 2) : '—' }}</td>
                                                     </tr>
                                                 @endforeach
@@ -97,7 +121,7 @@
                 <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            <th class="px-4 py-3">Worker</th>
+                            <th class="px-4 py-3">{{ $peopleLabel }}</th>
                             <th class="px-4 py-3 text-right">Net Salary</th>
                             <th class="px-4 py-3 text-right">Paid</th>
                             <th class="px-4 py-3 text-right">Held / Remaining</th>

@@ -33,6 +33,10 @@ class AttendanceController extends Controller
             'attendance.*' => ['required', 'in:present,absent,half_day,leave'],
             'work_details' => ['nullable', 'array'],
             'work_details.*' => ['nullable', 'string'],
+            'salary' => ['nullable', 'array'],
+            'salary.*' => ['nullable', 'numeric', 'min:0'],
+            'advance' => ['nullable', 'array'],
+            'advance.*' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         // Only ever mark attendance for staff employees here, even if an
@@ -50,6 +54,8 @@ class AttendanceController extends Controller
                 [
                     'status' => $status,
                     'work_details' => $data['work_details'][$employeeId] ?? null,
+                    'salary' => $data['salary'][$employeeId] ?? null,
+                    'advance' => $data['advance'][$employeeId] ?? null,
                     'marked_by' => $request->user()->id,
                 ]
             );

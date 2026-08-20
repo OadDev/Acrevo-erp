@@ -23,6 +23,8 @@
                             <th class="px-5 py-3">Staff</th>
                             <th class="px-5 py-3">Status</th>
                             <th class="px-5 py-3">Daily Work Details</th>
+                            <th class="px-5 py-3 w-28">Salary</th>
+                            <th class="px-5 py-3 w-28">Advance</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -40,9 +42,15 @@
                                 <td class="px-5 py-3">
                                     <input type="text" name="work_details[{{ $employee->id }}]" value="{{ $current->work_details ?? '' }}" placeholder="What did they work on today?" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
                                 </td>
+                                <td class="px-5 py-3">
+                                    <input type="number" step="0.01" min="0" name="salary[{{ $employee->id }}]" value="{{ $current->salary ?? '' }}" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                                </td>
+                                <td class="px-5 py-3">
+                                    <input type="number" step="0.01" min="0" name="advance[{{ $employee->id }}]" value="{{ $current->advance ?? '' }}" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="px-5 py-6 text-center text-gray-400">No active staff to mark attendance for.</td></tr>
+                            <tr><td colspan="5" class="px-5 py-6 text-center text-gray-400">No active staff to mark attendance for.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
