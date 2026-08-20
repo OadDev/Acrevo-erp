@@ -85,6 +85,11 @@ class Employee extends Model implements HasMedia
         return $this->hasMany(ExecutiveTeamMember::class);
     }
 
+    public function leaveRequests(): HasMany
+    {
+        return $this->hasMany(LeaveRequest::class);
+    }
+
     /**
      * Employees whose attendance belongs on the WO Workers Payroll: an
      * unregistered worker (no login) or one linked to a User with the

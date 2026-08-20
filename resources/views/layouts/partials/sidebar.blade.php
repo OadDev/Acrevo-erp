@@ -89,6 +89,7 @@
                 <x-nav-group label="Task">
                     <x-nav-link :href="route('tasks.index', ['type' => 'common'])" :active="request()->routeIs('tasks.*') && request('type') !== 'calendar'" icon="clipboard">Common Task</x-nav-link>
                     <x-nav-link :href="route('tasks.index', ['type' => 'calendar'])" :active="request()->routeIs('tasks.*') && request('type') === 'calendar'" icon="calendar-check">Calendar Task</x-nav-link>
+                    <x-nav-link :href="route('leave-requests.index')" :active="request()->routeIs('leave-requests.*')" icon="calendar-check">Leave Requests</x-nav-link>
                 </x-nav-group>
             @endcan
 

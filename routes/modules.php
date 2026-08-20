@@ -13,6 +13,7 @@ use App\Http\Controllers\EnquiryController;
 use App\Http\Controllers\EnquiryFollowUpController;
 use App\Http\Controllers\ExecutiveTeamController;
 use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\MyPayrollController;
@@ -355,6 +356,11 @@ Route::middleware('permission:tasks.view')->group(function () {
     Route::post('tasks/{task}/delay', [TaskController::class, 'reportDelay'])->name('tasks.delay');
     Route::post('tasks/{task}/verify', [TaskController::class, 'verify'])->name('tasks.verify');
     Route::post('tasks/{task}/retask', [TaskController::class, 'retask'])->name('tasks.retask');
+
+    Route::get('leave-requests', [LeaveRequestController::class, 'index'])->name('leave-requests.index');
+    Route::post('leave-requests', [LeaveRequestController::class, 'store'])->name('leave-requests.store');
+    Route::post('leave-requests/{leaveRequest}/review', [LeaveRequestController::class, 'review'])->name('leave-requests.review');
+    Route::delete('leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
 });
 Route::middleware('permission:tasks.manage')->group(function () {
     Route::resource('admin/task-schedules', TaskScheduleController::class)
