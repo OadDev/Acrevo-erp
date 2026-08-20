@@ -73,6 +73,19 @@ jobs:
              \$PHP_BIN artisan route:cache && \
              \$PHP_BIN artisan view:cache"
 
+      - name: Print recent error log (diagnostic)
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             if [ -f storage/logs/laravel.log ]; then \
+               tail -n 200 storage/logs/laravel.log; \
+             else \
+               echo 'No laravel.log found.'; \
+             fi"
+
       - name: Print install link (only if not yet installed)
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
