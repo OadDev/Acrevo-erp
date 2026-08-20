@@ -46,8 +46,12 @@ class ExecutiveTeamController extends Controller
     public function show(ExecutiveTeam $executiveTeam): View
     {
         $executiveTeam->load(['teamLeader', 'members.employee', 'workOrderAssignments.workOrder']);
+        // The HR > Worker list holds both unregistered workers (no login,
+        // Employee-only) and registered workers (Employee linked to a User
+        // with the Worker role). Both are eligible team members - an
+        // Employee linked to a non-Worker User (HR, Sales, etc.) is not.
         $availableEmployees = Employee::where('status', 'active')
-            ->whereHas('user', fn ($q) => $q->role('Worker'))
+            ->where(fn ($q) => $q->whereNull('user_id')->orWhereHas('user', fn ($q2) => $q2->role('Worker')))
             ->whereNotIn('id', $executiveTeam->members->pluck('employee_id'))
             ->get();
 
@@ -88,7 +92,7 @@ class ExecutiveTeamController extends Controller
         ]);
 
         $employee = Employee::findOrFail($data['employee_id']);
-        abort_unless($employee->user?->hasRole('Worker'), 422, 'Only users with the Worker role can be added to an executive team.');
+        abort_if($employee->user && ! $employee->user->hasRole('Worker'), 422, 'Only workers from the HR > Worker list can be added to an executive team.');
 
         $executiveTeam->members()->create($data + ['joined_at' => now()]);
 

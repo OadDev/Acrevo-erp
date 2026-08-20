@@ -134,7 +134,12 @@ class DashboardController extends Controller
 
         $myAttendance = null;
         $myPayroll = null;
-        if ($employee = $user->employee) {
+        // Only registered workers (a Worker-role login linked to an HR
+        // Employee record) see their own attendance/payroll here - an
+        // unregistered worker has no login at all, and an Employee record
+        // linked to a non-Worker account (HR, Sales, etc.) shouldn't surface
+        // payroll data through this widget.
+        if ($user->hasRole('Worker') && ($employee = $user->employee)) {
             $myAttendance = Attendance::where('employee_id', $employee->id)
                 ->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)

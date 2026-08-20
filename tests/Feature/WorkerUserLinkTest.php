@@ -97,19 +97,19 @@ class WorkerUserLinkTest extends TestCase
         $this->assertSame(1, Employee::count(), 'Editing should update the same Employee row, not create a second one.');
     }
 
-    public function test_executive_team_member_picker_only_offers_worker_role_employees(): void
+    public function test_executive_team_member_picker_offers_both_registered_and_unregistered_workers_but_no_other_roles(): void
     {
         $admin = $this->admin();
 
-        // A Worker-role user - eligible.
+        // A registered worker (Worker-role User, auto-linked Employee) - eligible.
         $this->actingAs($admin)->post('/admin/users', [
             'name' => 'Worker One', 'email' => 'w1+'.uniqid().'@example.com', 'role' => 'Worker',
         ])->assertRedirect();
         $workerUser = User::where('name', 'Worker One')->firstOrFail();
 
-        // An Employee with no linked User at all (legacy HR-only record) - not eligible.
-        $unlinkedEmployee = Employee::create([
-            'name' => 'Legacy Employee', 'department_id' => Department::first()->id,
+        // An unregistered worker - added via "Add Worker" only, no login at all - still eligible.
+        $unregisteredWorker = Employee::create([
+            'name' => 'Unregistered Worker', 'department_id' => Department::first()->id,
             'employment_type' => 'permanent', 'status' => 'active', 'salary_type' => 'monthly', 'created_by' => $admin->id,
         ]);
 
@@ -130,17 +130,43 @@ class WorkerUserLinkTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)->get("/executive-teams/{$team->id}");
-        $response->assertOk()->assertSee('Worker One')->assertDontSee('Legacy Employee')->assertDontSee('HR Person');
+        $response->assertOk()->assertSee('Worker One')->assertSee('Unregistered Worker')->assertDontSee('HR Person');
 
-        // Server-side guard: even a direct POST with the unlinked employee's id is rejected.
+        // Server-side guard: the HR-linked employee is rejected even via direct POST.
+        $hrEmployee = Employee::where('name', 'HR Person')->firstOrFail();
         $this->actingAs($admin)->post("/executive-teams/{$team->id}/members", [
-            'employee_id' => $unlinkedEmployee->id,
+            'employee_id' => $hrEmployee->id,
         ])->assertStatus(422);
+
+        $this->actingAs($admin)->post("/executive-teams/{$team->id}/members", [
+            'employee_id' => $unregisteredWorker->id,
+        ])->assertRedirect();
+        $this->assertTrue($team->fresh()->members()->where('employee_id', $unregisteredWorker->id)->exists());
 
         $this->actingAs($admin)->post("/executive-teams/{$team->id}/members", [
             'employee_id' => $workerUser->employee->id,
         ])->assertRedirect();
         $this->assertTrue($team->fresh()->members()->where('employee_id', $workerUser->employee->id)->exists());
+    }
+
+    public function test_only_registered_workers_see_payroll_on_their_dashboard(): void
+    {
+        $admin = $this->admin();
+
+        // An HR user manually linked to an Employee record (not via the
+        // Worker-role auto-link) should never see the payroll widget.
+        $hrUser = User::create([
+            'name' => 'HR Person', 'email' => 'hr+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $hrUser->syncRoles(['HR']);
+        Employee::create([
+            'user_id' => $hrUser->id, 'name' => 'HR Person', 'department_id' => Department::first()->id,
+            'employment_type' => 'permanent', 'status' => 'active', 'salary_type' => 'monthly', 'created_by' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($hrUser)->get('/dashboard');
+        $response->assertOk()->assertDontSee('My Attendance')->assertDontSee("This Month's Payroll");
     }
 
     public function test_a_workers_attendance_entered_via_the_wo_measurement_book_shows_on_their_own_dashboard(): void
