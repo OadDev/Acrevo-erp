@@ -24,8 +24,12 @@
                         @foreach ($siteVisits as $visit)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                                 <td class="px-5 py-3">
-                                    <a href="{{ route('enquiries.show', $visit->enquiry) }}" class="font-medium text-gray-900 hover:text-indigo-600 dark:text-white">{{ $visit->enquiry->enquiry_no }}</a>
-                                    <p class="text-xs text-gray-400">{{ $visit->enquiry->contact_name }}</p>
+                                    @if ($visit->enquiry)
+                                        <a href="{{ route('enquiries.show', $visit->enquiry) }}" class="font-medium text-gray-900 hover:text-indigo-600 dark:text-white">{{ $visit->enquiry->enquiry_no }}</a>
+                                        <p class="text-xs text-gray-400">{{ $visit->enquiry->contact_name }}</p>
+                                    @else
+                                        <span class="font-medium text-gray-400">Deleted enquiry</span>
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $visit->scheduled_at->format('d M Y, h:i A') }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $visit->assignedTo?->name }}</td>
@@ -37,7 +41,9 @@
                                             <button class="text-sm text-emerald-600 hover:underline">Mark Complete</button>
                                         </form>
                                     @endif
-                                    <a href="{{ route('site-visits.edit', $visit) }}" class="ml-2 text-sm text-indigo-600 hover:underline">Edit</a>
+                                    @if ($visit->enquiry)
+                                        <a href="{{ route('site-visits.edit', $visit) }}" class="ml-2 text-sm text-indigo-600 hover:underline">Edit</a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

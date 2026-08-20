@@ -43,6 +43,9 @@ class SiteVisitController extends Controller
     public function edit(SiteVisit $siteVisit): View
     {
         $enquiry = $siteVisit->enquiry;
+
+        abort_if($enquiry === null, 404, 'This site visit\'s enquiry has been deleted and can no longer be edited.');
+
         $salesUsers = User::permission('site_visits.view')->get();
 
         return view('site-visits.edit', compact('siteVisit', 'enquiry', 'salesUsers'));

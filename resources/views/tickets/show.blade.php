@@ -33,7 +33,13 @@
         <div class="space-y-6 lg:col-span-2">
             <x-card>
                 <dl class="grid grid-cols-2 gap-4 text-sm">
-                    <div><dt class="text-gray-400">Work Order</dt><dd><a href="{{ route('work-orders.show', $ticket->workOrder) }}" class="text-indigo-600 hover:underline">{{ $ticket->workOrder->work_order_no }}</a></dd></div>
+                    <div><dt class="text-gray-400">Work Order</dt><dd>
+                        @if ($ticket->workOrder)
+                            <a href="{{ route('work-orders.show', $ticket->workOrder) }}" class="text-indigo-600 hover:underline">{{ $ticket->workOrder->work_order_no }}</a>
+                        @else
+                            <span class="text-gray-400">Deleted work order</span>
+                        @endif
+                    </dd></div>
                     <div><dt class="text-gray-400">Type</dt><dd><x-badge color="indigo" :status="$ticket->type" /></dd></div>
                     <div><dt class="text-gray-400">Priority</dt><dd><x-badge :status="$ticket->priority" /></dd></div>
                     <div><dt class="text-gray-400">Department</dt><dd>{{ $ticket->department?->name ?? '—' }}</dd></div>

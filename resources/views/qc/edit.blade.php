@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Edit QC Inspection" :subtitle="$qcInspection->workOrder->work_order_no.' — '.$qcInspection->workOrder->title" />
+        <x-page-header title="Edit QC Inspection" :subtitle="$qcInspection->workOrder ? $qcInspection->workOrder->work_order_no.' — '.$qcInspection->workOrder->title : 'Deleted work order'" />
     </x-slot>
 
     <x-card class="max-w-xl">

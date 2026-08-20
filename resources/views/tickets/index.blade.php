@@ -35,7 +35,7 @@
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $ticket->ticket_no }}</span>
                                     <p class="text-xs text-gray-400">{{ $ticket->title }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $ticket->workOrder->work_order_no }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $ticket->workOrder->work_order_no ?? 'Deleted work order' }}</td>
                                 <td class="px-5 py-3"><x-badge color="indigo" :status="$ticket->type" /></td>
                                 <td class="px-5 py-3"><x-badge :status="$ticket->priority" /></td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $ticket->assignedTo?->name ?? '—' }}</td>

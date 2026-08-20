@@ -97,6 +97,8 @@ class QcInspectionController extends Controller
 
         $qcInspection->delete();
 
-        return redirect()->route('work-orders.show', $workOrder)->with('success', 'QC inspection removed.');
+        return $workOrder
+            ? redirect()->route('work-orders.show', $workOrder)->with('success', 'QC inspection removed.')
+            : redirect()->route('qc.index')->with('success', 'QC inspection removed.');
     }
 }

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="QC Inspection" :subtitle="$qcInspection->workOrder->work_order_no">
+        <x-page-header title="QC Inspection" :subtitle="$qcInspection->workOrder->work_order_no ?? 'Deleted work order'">
             @if (auth()->user()->hasRole('Admin'))
                 <x-slot name="actions">
                     <a href="{{ route('qc.edit', $qcInspection) }}" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Edit</a>
@@ -22,8 +22,10 @@
             <div><dt class="text-gray-400">Date</dt><dd>{{ $qcInspection->inspection_date->format('d M Y') }}</dd></div>
             <div><dt class="text-gray-400">Remarks</dt><dd>{{ $qcInspection->remarks ?: '—' }}</dd></div>
         </dl>
-        <div class="mt-4">
-            <x-link-button :href="route('work-orders.show', $qcInspection->workOrder)" variant="secondary">View Work Order</x-link-button>
-        </div>
+        @if ($qcInspection->workOrder)
+            <div class="mt-4">
+                <x-link-button :href="route('work-orders.show', $qcInspection->workOrder)" variant="secondary">View Work Order</x-link-button>
+            </div>
+        @endif
     </x-card>
 </x-app-layout>

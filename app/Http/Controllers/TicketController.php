@@ -61,6 +61,9 @@ class TicketController extends Controller
         $this->authorize('update', $ticket);
 
         $workOrder = $ticket->workOrder()->with('client')->first();
+
+        abort_if($workOrder === null, 404, 'This ticket\'s work order has been deleted and can no longer be edited.');
+
         $departments = Department::orderBy('name')->get();
         $assignees = User::orderBy('name')->get();
 
