@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\Employee;
 use App\Models\ExecutiveTeam;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -73,6 +74,7 @@ class UserController extends Controller
                 'created_by' => $request->user()->id,
             ]);
             $trashed->syncRoles([$data['role']]);
+            $this->syncWorkerEmployeeRecord($trashed, $data);
 
             return redirect()->route('admin.users.index')->with('success', "Restored the previously deleted account for this email. Temporary password: {$password}");
         }
@@ -85,8 +87,33 @@ class UserController extends Controller
         ]);
 
         $user->assignRole($data['role']);
+        $this->syncWorkerEmployeeRecord($user, $data);
 
         return redirect()->route('admin.users.index')->with('success', "User created. Temporary password: {$password}");
+    }
+
+    /**
+     * The Workers list (HR > Worker) reads from the Employee model, and
+     * Executive Team membership / a Worker's own attendance dashboard both
+     * key off Employee::user_id - so a User created here with the Worker
+     * role needs a linked Employee record to show up anywhere in HR at all.
+     * Keeps the linked Employee's basic details in sync on every save.
+     */
+    private function syncWorkerEmployeeRecord(User $user, array $data): void
+    {
+        if ($data['role'] !== 'Worker') {
+            return;
+        }
+
+        $employee = $user->employee ?: new Employee(['user_id' => $user->id, 'status' => 'active', 'created_by' => $user->created_by]);
+
+        $employee->fill([
+            'name' => $data['name'],
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'],
+            'designation' => $data['designation'] ?? null,
+            'department_id' => $data['department_id'] ?? null,
+        ])->save();
     }
 
     public function edit(User $user): View
@@ -113,6 +140,7 @@ class UserController extends Controller
 
         $user->update($data + ['is_active' => $request->boolean('is_active')]);
         $user->syncRoles([$data['role']]);
+        $this->syncWorkerEmployeeRecord($user, $data);
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
     }

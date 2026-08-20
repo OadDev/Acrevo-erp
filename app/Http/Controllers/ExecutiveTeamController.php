@@ -47,6 +47,7 @@ class ExecutiveTeamController extends Controller
     {
         $executiveTeam->load(['teamLeader', 'members.employee', 'workOrderAssignments.workOrder']);
         $availableEmployees = Employee::where('status', 'active')
+            ->whereHas('user', fn ($q) => $q->role('Worker'))
             ->whereNotIn('id', $executiveTeam->members->pluck('employee_id'))
             ->get();
 
@@ -85,6 +86,9 @@ class ExecutiveTeamController extends Controller
             'employee_id' => ['required', 'exists:employees,id'],
             'role_in_team' => ['nullable', 'string', 'max:100'],
         ]);
+
+        $employee = Employee::findOrFail($data['employee_id']);
+        abort_unless($employee->user?->hasRole('Worker'), 422, 'Only users with the Worker role can be added to an executive team.');
 
         $executiveTeam->members()->create($data + ['joined_at' => now()]);
 
