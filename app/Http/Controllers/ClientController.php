@@ -116,4 +116,22 @@ class ClientController extends Controller
 
         return redirect()->route('clients.index')->with('success', 'Client removed.');
     }
+
+    public function updatePortalPermissions(Request $request, Client $client): RedirectResponse
+    {
+        $data = $request->validate([
+            'visible_sections' => ['nullable', 'array'],
+            'visible_sections.*' => ['in:'.implode(',', array_keys(\App\Support\ClientPortalSections::SECTIONS))],
+            'unrestricted' => ['nullable', 'boolean'],
+        ]);
+
+        // "Unrestricted" stores null (every section visible) rather than the
+        // full key list, so a section added to the canonical list later is
+        // visible here too without having to revisit every client.
+        $client->update([
+            'visible_sections' => $request->boolean('unrestricted') ? null : ($data['visible_sections'] ?? []),
+        ]);
+
+        return redirect()->route('clients.show', $client)->with('success', 'Portal section permissions updated.');
+    }
 }

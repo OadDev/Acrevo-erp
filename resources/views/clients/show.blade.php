@@ -37,6 +37,31 @@
                     @endcan
                 @endif
             </div>
+
+            @if ($client->clientLogin)
+                <div class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
+                    <h3 class="mb-1 text-sm font-semibold text-gray-500">Portal Section Permissions</h3>
+                    <p class="mb-3 text-xs text-gray-400">Choose which sections this client can see on their work orders in the portal.</p>
+                    <form method="POST" action="{{ route('clients.portal-permissions', $client) }}" x-data="{ unrestricted: {{ $client->visible_sections === null ? 'true' : 'false' }} }">
+                        @csrf
+                        @method('PUT')
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="unrestricted" value="1" x-model="unrestricted" class="rounded border-gray-300 text-indigo-600">
+                            All sections visible (no restriction)
+                        </label>
+                        <div class="mt-3 space-y-2" x-show="!unrestricted" x-cloak>
+                            @foreach (\App\Support\ClientPortalSections::SECTIONS as $key => $label)
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" name="visible_sections[]" value="{{ $key }}" class="rounded border-gray-300 text-indigo-600"
+                                        @checked($client->visible_sections !== null && in_array($key, $client->visible_sections, true))>
+                                    {{ $label }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <x-primary-button class="mt-4">Save Permissions</x-primary-button>
+                    </form>
+                </div>
+            @endif
         </x-card>
 
         <div class="space-y-6 lg:col-span-2">

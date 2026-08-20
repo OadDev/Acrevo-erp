@@ -76,6 +76,7 @@ Route::middleware('permission:quotations.view')->group(function () {
 Route::middleware('permission:enquiries.view')->group(function () {
     Route::resource('clients', ClientController::class);
     Route::post('clients/{client}/portal-access', [ClientController::class, 'generatePortalAccess'])->name('clients.portal-access');
+    Route::put('clients/{client}/portal-permissions', [ClientController::class, 'updatePortalPermissions'])->name('clients.portal-permissions');
 });
 
 // The literal /sites/create path must be registered before the /sites/{site}

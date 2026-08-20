@@ -38,6 +38,9 @@ class PortalWorkOrderController extends Controller
             'dailyChecklists.checklistItems.media',
             'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',
             'summaries' => fn ($q) => $q->orderBy('entry_date'),
+            'ledgers' => fn ($q) => $q->orderBy('entry_date'),
+            'measurementBooks' => fn ($q) => $q->where('type', 'actual')->orderBy('date'),
+            'measurementBooks.items',
         ]);
 
         return view('portal.work-orders.show', compact('workOrder'));

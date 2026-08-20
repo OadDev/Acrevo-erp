@@ -24,12 +24,22 @@ class Client extends Model
     protected $fillable = [
         'client_code', 'name', 'type', 'email', 'phone', 'alternate_phone',
         'address', 'city', 'state', 'pincode', 'gstin', 'source',
-        'assigned_sales_user_id', 'notes', 'is_active', 'created_by',
+        'assigned_sales_user_id', 'notes', 'is_active', 'visible_sections', 'created_by',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'visible_sections' => 'array'];
+    }
+
+    /**
+     * Null visible_sections means unrestricted (every section visible) -
+     * the default so existing clients keep seeing what they already see
+     * until an Admin deliberately restricts them.
+     */
+    public function canViewSection(string $key): bool
+    {
+        return $this->visible_sections === null || in_array($key, $this->visible_sections, true);
     }
 
     public function getActivitylogOptions(): LogOptions

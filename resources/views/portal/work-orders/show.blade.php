@@ -10,90 +10,173 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
-            <x-card>
-                <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Photos &amp; Videos</h3>
-                <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    @forelse ($workOrder->media as $item)
-                        <a href="{{ $item->getUrl() }}" target="_blank" class="block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                            @if (str_starts_with($item->mime_type, 'image'))
-                                <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
-                            @else
-                                <div class="flex h-full w-full items-center justify-center"><x-icon name="video" class="h-6 w-6 text-gray-400" /></div>
-                            @endif
-                        </a>
+            @if ($workOrder->client->canViewSection('media'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Photos &amp; Videos</h3>
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        @forelse ($workOrder->media as $item)
+                            <a href="{{ $item->getUrl() }}" target="_blank" class="block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                @if (str_starts_with($item->mime_type, 'image'))
+                                    <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
+                                @else
+                                    <div class="flex h-full w-full items-center justify-center"><x-icon name="video" class="h-6 w-6 text-gray-400" /></div>
+                                @endif
+                            </a>
+                        @empty
+                            <p class="col-span-full text-sm text-gray-400">No media shared yet.</p>
+                        @endforelse
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('checklist'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">Daily Work &amp; Checklist</h3>
+                    @forelse ($workOrder->dailyChecklists as $checklist)
+                        <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                            <p class="font-medium text-gray-800 dark:text-gray-200">{{ $checklist->title ?? 'Daily Work' }} <span class="font-normal text-gray-400">— {{ $checklist->date->format('d M Y') }}</span></p>
+                            <ul class="mt-2 space-y-2">
+                                @foreach ($checklist->checklistItems as $item)
+                                    <li class="flex items-center gap-2">
+                                        <x-icon :name="$item->is_done ? 'check-circle' : 'clock'" class="h-4 w-4 shrink-0 {{ $item->is_done ? 'text-emerald-500' : 'text-amber-500' }}" />
+                                        <span class="flex-1 text-gray-600 dark:text-gray-300 {{ $item->is_done ? 'line-through decoration-gray-300' : '' }}">{{ $item->description }}</span>
+                                        @if ($item->is_done && $item->getFirstMedia('proof'))
+                                            <a href="{{ $item->getFirstMediaUrl('proof') }}" target="_blank" class="text-xs font-medium text-indigo-600 hover:underline">View Proof</a>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
                     @empty
-                        <p class="col-span-full text-sm text-gray-400">No media shared yet.</p>
+                        <p class="text-sm text-gray-400">No daily work entries yet.</p>
                     @endforelse
-                </div>
-            </x-card>
+                </x-card>
+            @endif
 
-            <x-card>
-                <h3 class="mb-4 text-sm font-semibold text-gray-500">Daily Work &amp; Checklist</h3>
-                @forelse ($workOrder->dailyChecklists as $checklist)
-                    <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
-                        <p class="font-medium text-gray-800 dark:text-gray-200">{{ $checklist->title ?? 'Daily Work' }} <span class="font-normal text-gray-400">— {{ $checklist->date->format('d M Y') }}</span></p>
-                        <ul class="mt-2 space-y-2">
-                            @foreach ($checklist->checklistItems as $item)
-                                <li class="flex items-center gap-2">
-                                    <x-icon :name="$item->is_done ? 'check-circle' : 'clock'" class="h-4 w-4 shrink-0 {{ $item->is_done ? 'text-emerald-500' : 'text-amber-500' }}" />
-                                    <span class="flex-1 text-gray-600 dark:text-gray-300 {{ $item->is_done ? 'line-through decoration-gray-300' : '' }}">{{ $item->description }}</span>
-                                    @if ($item->is_done && $item->getFirstMedia('proof'))
-                                        <a href="{{ $item->getFirstMediaUrl('proof') }}" target="_blank" class="text-xs font-medium text-indigo-600 hover:underline">View Proof</a>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @empty
-                    <p class="text-sm text-gray-400">No daily work entries yet.</p>
-                @endforelse
-            </x-card>
+            @if ($workOrder->client->canViewSection('progress'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Updates</h3>
+                    @forelse ($workOrder->dailyProgressReports as $report)
+                        <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                            <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }}</p>
+                            <p class="text-gray-600 dark:text-gray-300">{{ $report->completed_work }}</p>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400">No updates yet.</p>
+                    @endforelse
+                </x-card>
+            @endif
 
-            <x-card>
-                <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Updates</h3>
-                @forelse ($workOrder->dailyProgressReports as $report)
-                    <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
-                        <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }}</p>
-                        <p class="text-gray-600 dark:text-gray-300">{{ $report->completed_work }}</p>
-                    </div>
-                @empty
-                    <p class="text-sm text-gray-400">No updates yet.</p>
-                @endforelse
-            </x-card>
-
-            <x-card :padded="false">
-                <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Monthly Summary</h3>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
-                                <th class="px-4 py-2">Date</th>
-                                <th class="px-4 py-2">Work Done/Not</th>
-                                <th class="px-4 py-2">Responsibility</th>
-                                <th class="px-4 py-2">Work Detail/Reason</th>
-                                <th class="px-4 py-2 text-right">Days in Client Bear</th>
-                                <th class="px-4 py-2 text-right">Remaining Construction Days</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                            @forelse ($workOrder->summaries as $entry)
-                                <tr>
-                                    <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date->format('d M Y') }}</td>
-                                    <td class="px-4 py-2">
-                                        <span class="{{ $entry->status === 'done' ? 'text-emerald-600' : 'text-gray-500' }}">{{ $entry->status === 'done' ? 'Done' : 'No' }}</span>
-                                    </td>
-                                    <td class="px-4 py-2 text-gray-500">{{ ucfirst($entry->responsibility) }}</td>
-                                    <td class="px-4 py-2">{{ $entry->work_detail ?? '—' }}</td>
-                                    <td class="px-4 py-2 text-right text-gray-500">{{ $entry->client_bear_days ?? '—' }}</td>
-                                    <td class="px-4 py-2 text-right text-gray-500">{{ $entry->remaining_construction_days ?? '—' }}</td>
+            @if ($workOrder->client->canViewSection('summary'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Monthly Summary</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Work Done/Not</th>
+                                    <th class="px-4 py-2">Responsibility</th>
+                                    <th class="px-4 py-2">Work Detail/Reason</th>
+                                    <th class="px-4 py-2 text-right">Days in Client Bear</th>
+                                    <th class="px-4 py-2 text-right">Remaining Construction Days</th>
                                 </tr>
-                            @empty
-                                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No summary entries yet.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </x-card>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->summaries as $entry)
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date->format('d M Y') }}</td>
+                                        <td class="px-4 py-2">
+                                            <span class="{{ $entry->status === 'done' ? 'text-emerald-600' : 'text-gray-500' }}">{{ $entry->status === 'done' ? 'Done' : 'No' }}</span>
+                                        </td>
+                                        <td class="px-4 py-2 text-gray-500">{{ ucfirst($entry->responsibility) }}</td>
+                                        <td class="px-4 py-2">{{ $entry->work_detail ?? '—' }}</td>
+                                        <td class="px-4 py-2 text-right text-gray-500">{{ $entry->client_bear_days ?? '—' }}</td>
+                                        <td class="px-4 py-2 text-right text-gray-500">{{ $entry->remaining_construction_days ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No summary entries yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('ledger'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Site Ledger</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Category</th>
+                                    <th class="px-4 py-2">Description</th>
+                                    <th class="px-4 py-2">Type</th>
+                                    <th class="px-4 py-2 text-right">Amount</th>
+                                    <th class="px-4 py-2 text-right">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->ledgers as $entry)
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date->format('d M Y') }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->category ?? '—' }}</td>
+                                        <td class="px-4 py-2">{{ $entry->description ?? '—' }}</td>
+                                        <td class="px-4 py-2"><x-badge :status="$entry->type" /></td>
+                                        <td class="px-4 py-2 text-right">₹{{ number_format($entry->amount, 2) }}</td>
+                                        <td class="px-4 py-2 text-right font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($entry->balance, 2) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No ledger entries yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('mb'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">Measurement Book</h3>
+                    @forelse ($workOrder->measurementBooks as $mb)
+                        <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                            <p class="font-medium text-gray-800 dark:text-gray-200">{{ $mb->mb_no }} — {{ $mb->date->format('d M Y') }}</p>
+                            @if ($mb->items->isNotEmpty())
+                                <div class="mt-2 overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-100 text-xs dark:divide-gray-800">
+                                        <thead>
+                                            <tr class="text-left text-gray-400">
+                                                <th class="py-1 pr-2">Work Description</th>
+                                                <th class="py-1 pr-2">L</th>
+                                                <th class="py-1 pr-2">B</th>
+                                                <th class="py-1 pr-2">D</th>
+                                                <th class="py-1 pr-2">Total</th>
+                                                <th class="py-1 pr-2">Unit</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                            @foreach ($mb->items as $item)
+                                                <tr>
+                                                    <td class="py-1 pr-2">{{ $item->item_description }}</td>
+                                                    <td class="py-1 pr-2">{{ $item->length ?? '—' }}</td>
+                                                    <td class="py-1 pr-2">{{ $item->breadth ?? '—' }}</td>
+                                                    <td class="py-1 pr-2">{{ $item->height ?? '—' }}</td>
+                                                    <td class="py-1 pr-2">{{ $item->quantity }}</td>
+                                                    <td class="py-1 pr-2">{{ $item->unit }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400">No measurement book entries yet.</p>
+                    @endforelse
+                </x-card>
+            @endif
         </div>
 
         <div class="space-y-6">
@@ -128,6 +211,7 @@
                 </x-card>
             @endif
 
+            @if ($workOrder->client->canViewSection('approvals'))
             <x-card>
                 <div class="mb-3 flex items-center justify-between gap-2">
                     <h3 class="text-sm font-semibold text-gray-500">Approval Requests</h3>
@@ -192,7 +276,9 @@
                     <x-primary-button class="w-full justify-center">Send Request</x-primary-button>
                 </form>
             </x-card>
+            @endif
 
+            @if ($workOrder->client->canViewSection('tickets'))
             <x-card>
                 <h3 class="mb-3 text-sm font-semibold text-gray-500">Tickets</h3>
                 @forelse ($workOrder->tickets as $ticket)
@@ -204,6 +290,7 @@
                     <p class="text-sm text-gray-400">No tickets raised.</p>
                 @endforelse
             </x-card>
+            @endif
         </div>
     </div>
 </x-app-layout>
