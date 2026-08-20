@@ -72,6 +72,7 @@
                         @else
                             <p class="mt-2 text-sm text-gray-400">Not processed yet.</p>
                         @endif
+                        <a href="{{ route('my-payroll.index') }}" class="mt-3 inline-block text-xs font-medium text-indigo-600 hover:underline">View full payroll history &amp; payslips</a>
                     </x-card>
                 </div>
             </div>

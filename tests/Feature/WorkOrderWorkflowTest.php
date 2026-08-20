@@ -999,6 +999,44 @@ class WorkOrderWorkflowTest extends TestCase
         $response->assertOk()->assertSee($workOrder->work_order_no)->assertSee('My Attendance');
     }
 
+    public function test_a_registered_worker_can_see_their_own_payroll_history_and_download_a_payslip(): void
+    {
+        // Regression: the Worker role's sidebar had no menu at all for
+        // payroll - only an easy-to-miss current-month widget on the
+        // Dashboard, with no way to see past months or download a payslip.
+        $admin = $this->admin();
+        $workerUser = User::create([
+            'name' => 'Worker Login', 'email' => 'worker+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $workerUser->syncRoles(['Worker']);
+        $employee = \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Worker Five', 'status' => 'active', 'user_id' => $workerUser->id]);
+
+        $payroll = \App\Models\Payroll::create([
+            'employee_id' => $employee->id, 'month' => now()->month, 'year' => now()->year,
+            'basic_salary' => 20000, 'net_salary' => 20000, 'paid_amount' => 5000, 'status' => 'partial',
+            'processed_by' => $admin->id,
+        ]);
+
+        $this->actingAs($workerUser)->get('/my-payroll')
+            ->assertOk()
+            ->assertSee(now()->format('F Y'))
+            ->assertSee('₹20,000.00')
+            ->assertSee('Payslip PDF');
+
+        $this->actingAs($workerUser)->get("/my-payroll/{$payroll->id}/pdf")->assertOk();
+
+        // Another worker cannot download someone else's payslip via this route.
+        $otherWorker = User::create([
+            'name' => 'Other Worker', 'email' => 'worker2+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $otherWorker->syncRoles(['Worker']);
+        \App\Models\Employee::create(['employee_code' => 'EMP-'.uniqid(), 'name' => 'Other Employee', 'status' => 'active', 'user_id' => $otherWorker->id]);
+
+        $this->actingAs($otherWorker)->get("/my-payroll/{$payroll->id}/pdf")->assertForbidden();
+    }
+
     public function test_material_inward_and_man_power_budget_tabs_show_allocated_actual_and_remaining(): void
     {
         $admin = $this->admin();

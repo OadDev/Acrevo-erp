@@ -49,6 +49,9 @@
             @can('assigned_work.view')
                 <x-nav-group label="Executive Team">
                     <x-nav-link :href="route('my-work-orders.index')" :active="request()->routeIs('my-work-orders.*')" icon="hard-hat">My Work Orders</x-nav-link>
+                    @if (auth()->user()->hasRole('Worker'))
+                        <x-nav-link :href="route('my-payroll.index')" :active="request()->routeIs('my-payroll.*')" icon="wallet">My Payroll</x-nav-link>
+                    @endif
                 </x-nav-group>
             @endcan
 

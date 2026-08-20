@@ -14,6 +14,7 @@ use App\Http\Controllers\ExecutiveTeamController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\MyPayrollController;
 use App\Http\Controllers\MyWorkOrderController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\Portal\PortalApprovalRequestController;
@@ -218,6 +219,8 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
 Route::middleware('permission:assigned_work.view')->group(function () {
     Route::get('my-work-orders', [MyWorkOrderController::class, 'index'])->name('my-work-orders.index');
     Route::get('my-work-orders/{workOrder}', [MyWorkOrderController::class, 'show'])->name('my-work-orders.show');
+    Route::get('my-payroll', [MyPayrollController::class, 'index'])->name('my-payroll.index');
+    Route::get('my-payroll/{payroll}/pdf', [MyPayrollController::class, 'pdf'])->name('my-payroll.pdf');
 });
 
 /*
