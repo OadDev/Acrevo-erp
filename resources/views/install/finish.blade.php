@@ -3,7 +3,7 @@
         <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <x-icon name="check-circle" class="h-7 w-7" />
         </div>
-        <h1 class="mb-2 text-lg font-semibold text-gray-900">Acrevo ERP is ready</h1>
+        <h1 class="mb-2 text-lg font-semibold text-gray-900">{{ config('app.name') ?: 'Geethan Works ERP' }} is ready</h1>
         <p class="mb-6 text-sm text-gray-600">
             Setup is complete. This installer is now locked and will refuse
             to run again unless <code class="rounded bg-gray-100 px-1">storage/installed</code>

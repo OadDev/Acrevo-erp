@@ -39,7 +39,7 @@ class InstallController extends Controller
         return view('install.database', [
             'token' => $request->query('token'),
             'values' => [
-                'app_name' => config('app.name') ?: 'Acrevo ERP',
+                'app_name' => config('app.name') ?: 'Geethan Works ERP',
                 'app_url' => config('app.url') ?: $request->getSchemeAndHttpHost(),
                 'db_connection' => env('DB_CONNECTION', 'mysql'),
                 'db_host' => env('DB_HOST', '127.0.0.1'),

@@ -69,9 +69,14 @@ class ExecutiveTeamController extends Controller
 
     public function destroy(ExecutiveTeam $executiveTeam): RedirectResponse
     {
-        $executiveTeam->update(['is_active' => false]);
+        $activeAssignments = $executiveTeam->workOrderAssignments()->whereNull('unassigned_at')->count();
 
-        return redirect()->route('executive-teams.index')->with('success', 'Team deactivated.');
+        abort_if($activeAssignments > 0, 422, "This team is still assigned to {$activeAssignments} work order(s). Unassign it from those work orders before removing the team.");
+
+        $executiveTeam->update(['is_active' => false]);
+        $executiveTeam->delete();
+
+        return redirect()->route('executive-teams.index')->with('success', 'Team removed.');
     }
 
     public function addMember(Request $request, ExecutiveTeam $executiveTeam): RedirectResponse

@@ -9,7 +9,7 @@
             <div class="space-y-4">
                 <div>
                     <x-input-label for="client_id" value="Client" />
-                    <x-select-input id="client_id" name="client_id" class="mt-1 block w-full" required @disabled($client)>
+                    <x-select-input id="client_id" name="client_id" class="mt-1 block w-full" required :disabled="(bool) $client">
                         <option value="">Select a client</option>
                         @foreach ($clients as $c)
                             <option value="{{ $c->id }}" @selected(old('client_id', $client?->id) == $c->id)>{{ $c->name }}</option>

@@ -43,12 +43,12 @@
 
                     <div>
                         <x-input-label for="estimated_material_budget" value="Allocated Material Budget" />
-                        <x-text-input id="estimated_material_budget" type="number" step="0.01" name="estimated_material_budget" class="mt-1 block w-full" value="{{ old('estimated_material_budget', $workOrder->estimated_material_budget) }}" />
+                        <x-text-input id="estimated_material_budget" type="text" inputmode="decimal" name="estimated_material_budget" class="mt-1 block w-full" value="{{ old('estimated_material_budget', $workOrder->estimated_material_budget) }}" />
                     </div>
 
                     <div>
                         <x-input-label for="estimated_labour_budget" value="Allocated Man Power Budget" />
-                        <x-text-input id="estimated_labour_budget" type="number" step="0.01" name="estimated_labour_budget" class="mt-1 block w-full" value="{{ old('estimated_labour_budget', $workOrder->estimated_labour_budget) }}" />
+                        <x-text-input id="estimated_labour_budget" type="text" inputmode="decimal" name="estimated_labour_budget" class="mt-1 block w-full" value="{{ old('estimated_labour_budget', $workOrder->estimated_labour_budget) }}" />
                     </div>
                 </div>
 

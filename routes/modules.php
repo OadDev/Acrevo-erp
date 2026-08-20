@@ -80,7 +80,7 @@ Route::middleware('permission:enquiries.view')->group(function () {
 // The literal /sites/create path must be registered before the /sites/{site}
 // wildcard below, or Laravel's route matching binds "create" to {site} first.
 Route::middleware('permission:work_orders.edit')->group(function () {
-    Route::resource('sites', SiteController::class)->only(['create', 'store', 'update']);
+    Route::resource('sites', SiteController::class)->only(['create', 'store', 'update', 'destroy']);
     Route::post('sites/{site}/complete', [SiteController::class, 'complete'])->name('sites.complete');
     Route::post('sites/{site}/documents', [SiteDocumentController::class, 'store'])->name('sites.documents.store');
     Route::delete('sites/{site}/documents/{media}', [SiteDocumentController::class, 'destroy'])->name('sites.documents.destroy');

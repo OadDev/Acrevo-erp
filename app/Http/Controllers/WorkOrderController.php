@@ -193,6 +193,18 @@ class WorkOrderController extends Controller
     {
         $this->authorizeAdminOnly();
 
+        // Budget fields are often typed or pasted with thousands separators
+        // (e.g. "50,000") - strip them so a comma doesn't fail the 'numeric'
+        // rule and silently drop the whole submission.
+        $request->merge([
+            'estimated_material_budget' => is_string($request->estimated_material_budget)
+                ? str_replace(',', '', $request->estimated_material_budget)
+                : $request->estimated_material_budget,
+            'estimated_labour_budget' => is_string($request->estimated_labour_budget)
+                ? str_replace(',', '', $request->estimated_labour_budget)
+                : $request->estimated_labour_budget,
+        ]);
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'scope' => ['nullable', 'string'],

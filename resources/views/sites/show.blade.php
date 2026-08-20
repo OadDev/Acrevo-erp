@@ -17,6 +17,17 @@
                 <a href="{{ route('sites.zip', $site) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                     <x-icon name="download" class="h-4 w-4" /> Download All Work Orders (ZIP — Details + Attachments)
                 </a>
+                @can('work_orders.edit')
+                    @if ($workOrders->total() === 0)
+                        <form method="POST" action="{{ route('sites.destroy', $site) }}" onsubmit="return confirm('Permanently remove this site? This cannot be undone.')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove Site</button>
+                        </form>
+                    @else
+                        <span class="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-400 dark:border-gray-700" title="Remove all work orders under this site first">Remove Site</span>
+                    @endif
+                @endcan
             </x-slot>
         </x-page-header>
     </x-slot>

@@ -4,6 +4,11 @@
             <x-slot name="actions">
                 @can('executive_teams.manage')
                     <x-link-button :href="route('executive-teams.edit', $executiveTeam)" variant="secondary">Edit</x-link-button>
+                    <form method="POST" action="{{ route('executive-teams.destroy', $executiveTeam) }}" onsubmit="return confirm('Remove this executive team? This cannot be undone.')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
+                    </form>
                 @endcan
             </x-slot>
         </x-page-header>

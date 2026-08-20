@@ -1214,6 +1214,32 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertNotNull($workOrder->fresh()->deleted_at);
     }
 
+    public function test_editing_a_work_order_updates_the_budget_even_with_comma_formatted_amounts(): void
+    {
+        // Regression test: money is commonly typed/pasted with thousands
+        // separators (e.g. "50,000") - the numeric validation rule used to
+        // reject that outright, so the whole edit silently failed to save.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
+            'title' => 'WO', 'priority' => 'medium',
+            'estimated_material_budget' => '50,000', 'estimated_labour_budget' => '25,000.50',
+        ]);
+        $response->assertRedirect();
+        $response->assertSessionDoesntHaveErrors();
+
+        $fresh = $workOrder->fresh();
+        $this->assertSame('50000.00', $fresh->estimated_material_budget);
+        $this->assertSame('25000.50', $fresh->estimated_labour_budget);
+        $this->assertSame('75000.50', $fresh->budget_amount);
+    }
+
     public function test_only_admin_can_edit_or_remove_tab_entries_on_a_work_order(): void
     {
         $admin = $this->admin();

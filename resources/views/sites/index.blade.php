@@ -24,6 +24,9 @@
                             <th class="px-5 py-3">Address</th>
                             <th class="px-5 py-3">Work Orders</th>
                             <th class="px-5 py-3">Status</th>
+                            @can('work_orders.edit')
+                                <th class="px-5 py-3"></th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -36,6 +39,17 @@
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ collect([$site->address, $site->city, $site->state])->filter()->join(', ') ?: '—' }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $site->work_orders_count }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$site->status" /></td>
+                                @can('work_orders.edit')
+                                    <td class="px-5 py-3 text-right">
+                                        @if ($site->work_orders_count === 0)
+                                            <form method="POST" action="{{ route('sites.destroy', $site) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Permanently remove this site? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="text-xs text-rose-500 hover:underline">Remove</button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                @endcan
                             </tr>
                         @endforeach
                     </tbody>

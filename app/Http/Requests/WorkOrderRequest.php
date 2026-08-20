@@ -11,6 +11,23 @@ class WorkOrderRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Budget fields are often typed or pasted with thousands separators
+     * (e.g. "50,000") - strip them so a comma doesn't fail the 'numeric'
+     * rule and silently drop the whole submission.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'estimated_material_budget' => is_string($this->estimated_material_budget)
+                ? str_replace(',', '', $this->estimated_material_budget)
+                : $this->estimated_material_budget,
+            'estimated_labour_budget' => is_string($this->estimated_labour_budget)
+                ? str_replace(',', '', $this->estimated_labour_budget)
+                : $this->estimated_labour_budget,
+        ]);
+    }
+
     public function rules(): array
     {
         return [

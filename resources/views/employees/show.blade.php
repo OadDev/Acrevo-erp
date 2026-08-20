@@ -35,7 +35,11 @@
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Executive Team Memberships</h3>
             @forelse ($employee->executiveTeamMemberships as $membership)
                 <div class="flex items-center justify-between border-b border-gray-100 py-2 text-sm last:border-0 dark:border-gray-800">
-                    <a href="{{ route('executive-teams.show', $membership->executiveTeam) }}" class="text-indigo-600 hover:underline">{{ $membership->executiveTeam->name }}</a>
+                    @if ($membership->executiveTeam)
+                        <a href="{{ route('executive-teams.show', $membership->executiveTeam) }}" class="text-indigo-600 hover:underline">{{ $membership->executiveTeam->name }}</a>
+                    @else
+                        <span class="text-gray-400">Removed team</span>
+                    @endif
                     <span class="text-gray-400">{{ $membership->role_in_team }}</span>
                 </div>
             @empty

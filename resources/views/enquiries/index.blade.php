@@ -21,7 +21,7 @@
     <x-card :padded="false">
         @if ($enquiries->isEmpty())
             <div class="p-6">
-                <x-empty-state icon="inbox" title="No enquiries found" description="New enquiries from clients start the entire Acrevo workflow." />
+                <x-empty-state icon="inbox" title="No enquiries found" description="New enquiries from clients start the entire Geethan Works workflow." />
             </div>
         @else
             <div class="overflow-x-auto">

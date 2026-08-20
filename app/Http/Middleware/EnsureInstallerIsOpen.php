@@ -19,7 +19,7 @@ class EnsureInstallerIsOpen
     {
         if (file_exists(storage_path('installed'))) {
             return response(
-                'Acrevo ERP is already installed. Delete storage/installed on '.
+                'Geethan Works ERP is already installed. Delete storage/installed on '.
                 'the server (over SSH) if you really need to run the installer again.',
                 403
             );

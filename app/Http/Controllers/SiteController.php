@@ -69,6 +69,19 @@ class SiteController extends Controller
         return redirect()->route('sites.show', $site)->with('success', 'Site added to client.');
     }
 
+    public function destroy(Site $site): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $remainingWorkOrders = $site->workOrders()->count();
+
+        abort_if($remainingWorkOrders > 0, 422, "This site still has {$remainingWorkOrders} work order(s). Remove all work orders under this site before removing the site.");
+
+        $site->delete();
+
+        return redirect()->route('sites.index')->with('success', 'Site removed.');
+    }
+
     public function update(Request $request, Site $site): RedirectResponse
     {
         $data = $request->validate([
