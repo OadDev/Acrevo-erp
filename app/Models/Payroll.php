@@ -26,7 +26,9 @@ class Payroll extends Model
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        // withTrashed() so a permanently removed worker's historical
+        // entries still show their name instead of crashing on null.
+        return $this->belongsTo(Employee::class)->withTrashed();
     }
 
     public function processedBy(): BelongsTo
