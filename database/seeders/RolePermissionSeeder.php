@@ -84,6 +84,9 @@ class RolePermissionSeeder extends Seeder
         'subcontractor_portal' => [
             'subcontractor_sites.view', 'subcontractor_finance.view',
         ],
+        'chat' => [
+            'chat.access',
+        ],
     ];
 
     /**
@@ -97,12 +100,14 @@ class RolePermissionSeeder extends Seeder
             'reports' => '*',
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'HR' => [
             'hr' => '*',
@@ -110,22 +115,26 @@ class RolePermissionSeeder extends Seeder
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Executive Team Leader' => [
             'executive' => '*',
             'tickets' => ['tickets.view', 'tickets.create'],
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'QC Officer' => [
             'qc' => '*',
             'sales' => ['work_orders.view'],
             'tickets' => ['tickets.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Finance' => [
             'finance' => '*',
@@ -134,6 +143,7 @@ class RolePermissionSeeder extends Seeder
             'management' => ['client_records.view'],
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Management' => [
             'finance' => ['finance.view'],
@@ -144,12 +154,14 @@ class RolePermissionSeeder extends Seeder
             'tickets' => ['tickets.view'],
             'reports' => '*',
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Legal' => [
             'legal' => '*',
             'management' => ['company_records.view', 'company_records.manage'],
             'reports' => ['reports.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         'Auditor' => [
             'audit' => '*',
@@ -157,6 +169,7 @@ class RolePermissionSeeder extends Seeder
             'reports' => ['reports.view'],
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
         ],
         // Deliberately scoped to Progress & Media only - no daily_checklist.manage,
         // site_records.manage, approval_requests.manage, or tickets.create, so a
@@ -166,6 +179,7 @@ class RolePermissionSeeder extends Seeder
         'Sub Contractor' => [
             'executive' => ['assigned_work.view', 'daily_progress.manage', 'media.upload'],
             'tasks' => ['tasks.view', 'tasks.create'],
+            'chat' => ['chat.access'],
             'subcontractor_portal' => '*',
         ],
         'Client' => [

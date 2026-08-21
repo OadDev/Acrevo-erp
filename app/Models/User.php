@@ -89,4 +89,27 @@ class User extends Authenticatable
     {
         return $this->hasOne(SubcontractorProfile::class);
     }
+
+    public function conversationParticipations(): HasMany
+    {
+        return $this->hasMany(ConversationParticipant::class);
+    }
+
+    public function conversations()
+    {
+        return Conversation::whereIn('id', $this->conversationParticipations()->pluck('conversation_id'));
+    }
+
+    public function unreadConversationCount(): int
+    {
+        return $this->conversationParticipations()
+            ->get()
+            ->filter(function (ConversationParticipant $p) {
+                return Message::where('conversation_id', $p->conversation_id)
+                    ->where('user_id', '!=', $this->id)
+                    ->when($p->last_read_at, fn ($q) => $q->where('created_at', '>', $p->last_read_at))
+                    ->exists();
+            })
+            ->count();
+    }
 }

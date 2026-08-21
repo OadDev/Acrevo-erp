@@ -41,10 +41,17 @@
                 <p class="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Notifications</p>
                 <div class="max-h-80 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
                     @forelse (auth()->user()->notifications()->latest()->take(8)->get() as $notification)
-                        <div class="px-2 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-                            {{ $notification->data['message'] ?? 'Notification' }}
-                            <p class="mt-0.5 text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</p>
-                        </div>
+                        @if (isset($notification->data['url']))
+                            <a href="{{ $notification->data['url'] }}" class="block rounded-lg px-2 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50">
+                                {{ $notification->data['message'] ?? 'Notification' }}
+                                <p class="mt-0.5 text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</p>
+                            </a>
+                        @else
+                            <div class="px-2 py-2.5 text-sm text-gray-600 dark:text-gray-300">
+                                {{ $notification->data['message'] ?? 'Notification' }}
+                                <p class="mt-0.5 text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</p>
+                            </div>
+                        @endif
                     @empty
                         <p class="px-2 py-4 text-center text-sm text-gray-400">You're all caught up.</p>
                     @endforelse

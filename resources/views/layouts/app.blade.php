@@ -57,6 +57,37 @@
             </div>
         </div>
 
+        @can('chat.access')
+            <script>
+                (function () {
+                    function refreshChatBadge() {
+                        fetch('{{ route('chat.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function (r) { return r.ok ? r.json() : null; })
+                            .then(function (data) {
+                                if (!data) return;
+                                var link = document.getElementById('nav-chats-link');
+                                if (!link) return;
+                                var badge = link.querySelector('span:last-child');
+                                if (data.count > 0) {
+                                    if (badge && badge !== link.querySelector('span:first-of-type')) {
+                                        badge.textContent = data.count;
+                                    } else {
+                                        badge = document.createElement('span');
+                                        badge.className = 'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white';
+                                        badge.textContent = data.count;
+                                        link.appendChild(badge);
+                                    }
+                                } else if (badge && badge.classList.contains('bg-indigo-600')) {
+                                    badge.remove();
+                                }
+                            })
+                            .catch(function () {});
+                    }
+                    setInterval(refreshChatBadge, 20000);
+                })();
+            </script>
+        @endcan
+
         @stack('scripts')
     </body>
 </html>

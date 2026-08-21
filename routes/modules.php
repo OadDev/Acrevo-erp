@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CandidateController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\SubcontractorController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyRecordController;
@@ -399,6 +400,25 @@ Route::middleware('permission:tasks.view')->group(function () {
     Route::post('leave-requests', [LeaveRequestController::class, 'store'])->name('leave-requests.store');
     Route::post('leave-requests/{leaveRequest}/review', [LeaveRequestController::class, 'review'])->name('leave-requests.review');
     Route::delete('leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave-requests.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Communication (Chat, Groups, Discussions)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('permission:chat.access')->group(function () {
+    Route::get('chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('chat/unread-count', [ChatController::class, 'unreadCount'])->name('chat.unread-count');
+    Route::post('chat/direct', [ChatController::class, 'startDirect'])->name('chat.direct');
+    Route::post('chat/groups', [ChatController::class, 'storeGroup'])->name('chat.groups.store');
+
+    Route::post('conversations/{conversation}/participants', [ChatController::class, 'addParticipant'])->name('conversations.participants.store');
+    Route::delete('conversations/{conversation}/participants/{participant}', [ChatController::class, 'removeParticipant'])->name('conversations.participants.destroy');
+    Route::post('conversations/{conversation}/leave', [ChatController::class, 'leaveGroup'])->name('conversations.leave');
+    Route::post('conversations/{conversation}/messages', [ChatController::class, 'store'])->name('conversations.messages.store');
+    Route::get('conversations/{conversation}/poll', [ChatController::class, 'poll'])->name('conversations.poll');
+    Route::delete('conversations/{conversation}/media/{media}', [ChatController::class, 'destroyMedia'])->name('conversations.media.destroy');
 });
 Route::middleware('permission:tasks.manage')->group(function () {
     Route::resource('admin/task-schedules', TaskScheduleController::class)

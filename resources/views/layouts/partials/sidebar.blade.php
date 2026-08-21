@@ -18,6 +18,14 @@
             <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="home">Dashboard</x-nav-link>
         </x-nav-group>
 
+        @can('chat.access')
+            @php($chatUnread = auth()->user()->unreadConversationCount())
+            <x-nav-group label="Communication">
+                <x-nav-link :href="route('chat.index', ['scope' => 'direct'])" :active="request()->routeIs('chat.*') && request('scope') !== 'group'" icon="message-circle" id="nav-chats-link" :badge="$chatUnread > 0 ? $chatUnread : null">Chats</x-nav-link>
+                <x-nav-link :href="route('chat.index', ['scope' => 'group'])" :active="request()->routeIs('chat.*') && request('scope') === 'group'" icon="users-round">Groups</x-nav-link>
+            </x-nav-group>
+        @endcan
+
         @if ($isClient)
             <x-nav-group label="My Projects">
                 <x-nav-link :href="route('portal.quotations.index')" :active="request()->routeIs('portal.quotations.*')" icon="file-text">Quotations</x-nav-link>
