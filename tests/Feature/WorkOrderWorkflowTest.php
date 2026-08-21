@@ -674,6 +674,47 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertSee('Material delivery')->assertSee('Contingency');
     }
 
+    public function test_work_order_pdf_includes_the_same_itemized_budget_details_as_the_overview_tab(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO for PDF budget check',
+            'execution_way' => 'way_2',
+            'priority' => 'medium',
+            'scope' => 'கட்டிட வேலை - Foundation and slab work',
+            'materials' => [['material_name' => 'Cement', 'unit' => 'Bag', 'quantity' => 10, 'rate' => 400]],
+            'labour' => [['labour_type' => 'Mason', 'count' => 2, 'wage_rate' => 800]],
+            'time_schedules' => [['time_to_finish' => '15', 'unit' => 'days', 'remark' => 'Includes curing time']],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO for PDF budget check')->firstOrFail();
+
+        // Regression: the PDF export template used to only show the aggregate
+        // budget total, dropping the itemized rows the live Overview tab shows.
+        $html = view('work-orders.pdf.full', ['workOrder' => $workOrder, 'sections' => ['overview']])->render();
+        $this->assertStringContainsString('Planned Budget Details', $html);
+        $this->assertStringContainsString('Cement', $html);
+        $this->assertStringContainsString('Mason', $html);
+        $this->assertStringContainsString('Includes curing time', $html);
+
+        // Regression: Tamil scope text rendered as "?????" in the PDF because
+        // dompdf had no Tamil-capable font registered for its font-family fallback.
+        $this->assertStringContainsString('கட்டிட வேலை', $html);
+        $this->assertStringContainsString("'Noto Sans Tamil'", $html);
+        $this->assertFileExists(resource_path('fonts/NotoSansTamil-Regular.ttf'));
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/overview")
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
+
     public function test_work_order_overview_shows_the_planned_time_schedule(): void
     {
         $admin = $this->admin();

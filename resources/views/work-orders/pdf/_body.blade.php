@@ -29,6 +29,84 @@
         <tr><td class="muted">Execution Method</td><td colspan="3">{{ \App\Models\WorkOrder::EXECUTION_WAYS[$workOrder->execution_way] ?? '—' }}</td></tr>
     </table>
     <p style="margin-top:8px;"><strong>Scope of Work</strong><br>{{ $workOrder->scope ?: 'No scope defined.' }}</p>
+
+    @php
+        $budgetItemsByCategory = $workOrder->budgetItems->groupBy('category');
+        $budgetCategoryLabels = [
+            'material' => 'Material',
+            'labour' => 'Man Power',
+            'equipment' => 'Equipment / Machinery',
+            'transport' => 'Transport',
+            'misc' => 'Miscellaneous / Contingency',
+        ];
+    @endphp
+    @if ($budgetItemsByCategory->isNotEmpty() || $workOrder->timeSchedules->isNotEmpty())
+        <p style="margin-top:14px;"><strong>Planned Budget Details</strong></p>
+        @foreach ($budgetCategoryLabels as $category => $label)
+            @if ($budgetItemsByCategory->has($category))
+                <p style="margin-bottom:2px;">{{ $label }}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{{ $category === 'labour' ? 'Designation' : 'Item' }}</th>
+                            @if ($category === 'material')
+                                <th>Brand</th>
+                                <th>Size</th>
+                            @endif
+                            @if ($category !== 'labour')
+                                <th>Unit</th>
+                            @endif
+                            <th class="text-right">{{ $category === 'labour' ? 'Count' : 'Qty' }}</th>
+                            @if ($category === 'labour')
+                                <th class="text-right">Hours</th>
+                            @endif
+                            <th class="text-right">{{ $category === 'labour' ? 'Wage Rate' : 'Rate' }}</th>
+                            @if ($category !== 'labour')
+                                <th>Vendor</th>
+                            @endif
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($budgetItemsByCategory[$category] as $item)
+                            <tr>
+                                <td>{{ $item->name }}</td>
+                                @if ($category === 'material')
+                                    <td>{{ $item->brand ?? '—' }}</td>
+                                    <td>{{ $item->size ?? '—' }}</td>
+                                @endif
+                                @if ($category !== 'labour')
+                                    <td>{{ $item->unit ?? '—' }}</td>
+                                @endif
+                                <td class="text-right">{{ $item->quantity }}</td>
+                                @if ($category === 'labour')
+                                    <td class="text-right">{{ $item->hours ?? '—' }}</td>
+                                @endif
+                                <td class="text-right">Rs. {{ number_format($item->rate ?? 0, 2) }}</td>
+                                @if ($category !== 'labour')
+                                    <td>{{ $item->vendor ?? '—' }}</td>
+                                @endif
+                                <td class="text-right">Rs. {{ number_format($item->amount ?? 0, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        @endforeach
+
+        @if ($workOrder->timeSchedules->isNotEmpty())
+            <p style="margin-top:8px; margin-bottom:2px;">Time Schedule</p>
+            <table>
+                <thead><tr><th>Time to Finish</th><th>Unit</th><th>Remark</th></tr></thead>
+                <tbody>
+                    @foreach ($workOrder->timeSchedules as $schedule)
+                        <tr><td>{{ $schedule->time_to_finish }}</td><td>{{ $schedule->unit ?? '—' }}</td><td>{{ $schedule->remark ?? '—' }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    @endif
+
     @if ($workOrder->statusLogs->isNotEmpty())
         <table>
             <thead><tr><th>Status</th><th>Changed By</th><th>Date</th><th>Remarks</th></tr></thead>

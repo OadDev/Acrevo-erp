@@ -1,5 +1,6 @@
+@include('pdf._fonts')
 <style>
-    body { font-family: sans-serif; font-size: 11px; color: #1f2937; }
+    body { font-family: 'DejaVu Sans', 'Noto Sans Tamil', sans-serif; font-size: 11px; color: #1f2937; }
     h1 { font-size: 20px; margin-bottom: 0; color: #4338ca; }
     h2.section-title { font-size: 14px; color: #4338ca; margin: 22px 0 6px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; }
     .wo-heading { margin-top: 0; page-break-before: always; }

@@ -2,8 +2,9 @@
 <html>
 <head>
     <meta charset="utf-8">
+    @include('pdf._fonts')
     <style>
-        body { font-family: sans-serif; font-size: 11px; color: #1f2937; }
+        body { font-family: 'DejaVu Sans', 'Noto Sans Tamil', sans-serif; font-size: 11px; color: #1f2937; }
         h1 { font-size: 20px; margin-bottom: 0; color: #4338ca; }
         h2 { font-size: 14px; margin-top: 20px; margin-bottom: 4px; color: #374151; }
         .muted { color: #6b7280; }
