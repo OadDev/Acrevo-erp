@@ -674,6 +674,46 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertSee('Material delivery')->assertSee('Contingency');
     }
 
+    public function test_work_order_create_page_keeps_itemized_budget_rows_after_a_validation_error(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        // Regression: the create page's Alpine state for materials/labour/
+        // equipment/transport/misc/procedures/time schedules was hardcoded to
+        // a single blank row and never read old() input. Any unrelated
+        // validation failure elsewhere in the same submission (e.g. a
+        // missing priority) silently wiped every itemized row the user had
+        // typed, so a resubmit would create the work order without them.
+        $this->actingAs($admin)
+            ->from(route('work-orders.create', ['quotation_id' => $quotation->id]))
+            ->post('/work-orders', [
+                'quotation_id' => $quotation->id,
+                'site_id' => $site->id,
+                'client_id' => $client->id,
+                'title' => 'WO missing priority',
+                'execution_way' => 'way_2',
+                // 'priority' intentionally omitted to trigger a validation failure.
+                'materials' => [['material_name' => 'Cement', 'unit' => 'Bag', 'quantity' => 10, 'rate' => 400]],
+                'labour' => [['labour_type' => 'Mason', 'count' => 2, 'wage_rate' => 800]],
+                'equipment' => [['item_name' => 'Concrete Mixer', 'unit' => 'Days', 'quantity' => 5, 'rate' => 1000]],
+                'transport' => [['item_name' => 'Material delivery', 'unit' => 'Trip', 'quantity' => 3, 'rate' => 1500]],
+                'misc' => [['item_name' => 'Contingency', 'unit' => 'Lump', 'quantity' => 1, 'rate' => 2000]],
+            ])
+            ->assertRedirect(route('work-orders.create', ['quotation_id' => $quotation->id]))
+            ->assertSessionHasErrors('priority');
+
+        $this->assertSame(0, WorkOrder::count());
+
+        $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}")
+            ->assertOk()
+            ->assertSee('Cement')->assertSee('Mason')
+            ->assertSee('Concrete Mixer')->assertSee('Material delivery')->assertSee('Contingency');
+    }
+
     public function test_work_order_pdf_includes_the_same_itemized_budget_details_as_the_overview_tab(): void
     {
         $admin = $this->admin();
