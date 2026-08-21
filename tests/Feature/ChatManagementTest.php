@@ -207,6 +207,30 @@ class ChatManagementTest extends TestCase
         $this->assertTrue($discussion->hasParticipant($admin));
     }
 
+    public function test_global_search_finds_messages_only_within_the_searchers_own_conversations(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+        $stranger = $this->userWithRole('QC Officer', 'Stranger');
+
+        $this->actingAs($sales)->post('/chat/direct', ['user_id' => $hr->id])->assertRedirect();
+        $conversation = Conversation::where('type', 'direct')->firstOrFail();
+        $this->actingAs($sales)->post("/conversations/{$conversation->id}/messages", [
+            'body' => 'The foundation inspection is scheduled for Monday.',
+        ])->assertRedirect();
+
+        $this->actingAs($hr)->get('/search?q=foundation+inspection')
+            ->assertOk()->assertSee('The foundation inspection is scheduled for Monday');
+
+        // The subtitle always echoes the typed query back, so check for the
+        // actual message content (or lack of it) rather than the query text.
+        $this->actingAs($stranger)->get('/search?q=foundation+inspection')
+            ->assertOk()
+            ->assertDontSee('The foundation inspection is scheduled for Monday')
+            ->assertSee('No results found');
+    }
+
     public function test_the_client_role_cannot_reach_chat_at_all(): void
     {
         $admin = $this->admin();

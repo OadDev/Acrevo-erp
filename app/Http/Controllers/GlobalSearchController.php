@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Employee;
 use App\Models\Enquiry;
+use App\Models\Message;
+use App\Models\Site;
 use App\Models\Ticket;
 use App\Models\WorkOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class GlobalSearchController extends Controller
@@ -68,6 +71,34 @@ class GlobalSearchController extends Controller
                             ->orWhere('email', 'like', "%{$query}%"))
                         ->limit(5)->get()
                         ->map(fn ($c) => ['type' => 'Client', 'title' => $c->client_code.' — '.$c->name, 'url' => route('clients.show', $c)])
+                );
+            }
+
+            if ($user->can('work_orders.view')) {
+                $results = $results->merge(
+                    Site::query()
+                        ->where(fn ($q) => $q->where('site_no', 'like', "%{$query}%")
+                            ->orWhere('address', 'like', "%{$query}%")
+                            ->orWhere('city', 'like', "%{$query}%"))
+                        ->limit(5)->get()
+                        ->map(fn ($s) => ['type' => 'Site', 'title' => $s->site_no.' — '.collect([$s->address, $s->city])->filter()->join(', '), 'url' => route('sites.show', $s)])
+                );
+            }
+
+            if ($user->can('chat.access')) {
+                $conversationIds = $user->conversationParticipations()->pluck('conversation_id');
+                $results = $results->merge(
+                    Message::query()
+                        ->whereIn('conversation_id', $conversationIds)
+                        ->where('body', 'like', "%{$query}%")
+                        ->with('conversation')
+                        ->latest()
+                        ->limit(5)->get()
+                        ->map(fn ($m) => [
+                            'type' => 'Message',
+                            'title' => ($m->conversation?->displayNameFor($user) ?? 'Chat').' — '.Str::limit($m->body, 60),
+                            'url' => route('chat.index', ['conversation' => $m->conversation_id]),
+                        ])
                 );
             }
         }
