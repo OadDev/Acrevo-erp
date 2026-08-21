@@ -29,10 +29,10 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(WorkOrderStatusChanged::class, NotifyWorkOrderStakeholders::class);
 
-        // dompdf writes generated font metrics for @font-face fonts (e.g. the Tamil
-        // PDF font) here; storage/ isn't deployed, so it must exist at runtime.
-        if (! File::isDirectory(storage_path('fonts'))) {
-            File::makeDirectory(storage_path('fonts'), 0755, true);
+        // mPDF needs a writable temp dir for image/font caching; storage/ isn't
+        // deployed, so it must exist at runtime.
+        if (! File::isDirectory(storage_path('app/mpdf'))) {
+            File::makeDirectory(storage_path('app/mpdf'), 0755, true);
         }
     }
 }

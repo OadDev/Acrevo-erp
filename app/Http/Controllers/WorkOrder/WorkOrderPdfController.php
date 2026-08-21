@@ -6,7 +6,7 @@ use App\Http\Controllers\Concerns\LoadsWorkOrderPdfRelations;
 use App\Http\Controllers\Controller;
 use App\Models\WorkOrder;
 use App\Support\WorkOrderPdfSections;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Http\Request;
 
 class WorkOrderPdfController extends Controller

@@ -6,7 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollPayment;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

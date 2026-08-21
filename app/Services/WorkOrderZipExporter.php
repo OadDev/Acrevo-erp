@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\WorkOrder;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use ZipArchive;

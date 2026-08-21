@@ -7,7 +7,7 @@ use App\Models\Enquiry;
 use App\Models\Quotation;
 use App\Models\Site;
 use App\Services\ConversationService;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

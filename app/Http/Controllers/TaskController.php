@@ -6,7 +6,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\TaskScheduleGenerator;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

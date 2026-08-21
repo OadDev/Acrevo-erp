@@ -28,6 +28,20 @@
         <tr><td class="muted">Deadline</td><td>{{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</td><td class="muted">Budget</td><td>Rs. {{ number_format($workOrder->budget_amount ?? 0, 2) }}</td></tr>
         <tr><td class="muted">Execution Method</td><td colspan="3">{{ \App\Models\WorkOrder::EXECUTION_WAYS[$workOrder->execution_way] ?? '—' }}</td></tr>
     </table>
+    <table class="meta-table" style="margin-top:4px;">
+        <tr>
+            <td class="muted">Material</td><td>Rs. {{ number_format($workOrder->estimated_material_budget ?? 0, 2) }}</td>
+            <td class="muted">Man Power</td><td>Rs. {{ number_format($workOrder->estimated_labour_budget ?? 0, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="muted">Equipment / Machinery</td><td>Rs. {{ number_format($workOrder->estimated_equipment_budget ?? 0, 2) }}</td>
+            <td class="muted">Transport</td><td>Rs. {{ number_format($workOrder->estimated_transport_budget ?? 0, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="muted">Miscellaneous / Contingency</td><td>Rs. {{ number_format($workOrder->estimated_misc_budget ?? 0, 2) }}</td>
+            <td></td><td></td>
+        </tr>
+    </table>
     <p style="margin-top:8px;"><strong>Scope of Work</strong><br>{{ $workOrder->scope ?: 'No scope defined.' }}</p>
 
     @php

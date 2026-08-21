@@ -746,10 +746,13 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertStringContainsString('Includes curing time', $html);
 
         // Regression: Tamil scope text rendered as "?????" in the PDF because
-        // dompdf had no Tamil-capable font registered for its font-family fallback.
+        // dompdf has no complex-script text shaping engine at all - no font
+        // fixes that. Rendering now goes through mPDF (autoScriptToLang /
+        // autoLangToFont), which shapes Tamil correctly.
         $this->assertStringContainsString('கட்டிட வேலை', $html);
-        $this->assertStringContainsString("'Noto Sans Tamil'", $html);
-        $this->assertFileExists(resource_path('fonts/NotoSansTamil-Regular.ttf'));
+
+        $bytes = \App\Support\Pdf::loadView('work-orders.pdf.full', ['workOrder' => $workOrder, 'sections' => ['overview']])->output();
+        $this->assertStringStartsWith('%PDF-', $bytes);
 
         $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/overview")
             ->assertOk()->assertHeader('content-type', 'application/pdf');

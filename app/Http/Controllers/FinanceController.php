@@ -10,7 +10,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Models\VendorPayment;
 use App\Models\WorkOrder;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
 use App\Models\WorkOrder;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;

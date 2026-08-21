@@ -18,15 +18,13 @@
                 'Equipment / Machinery' => $workOrder->estimated_equipment_budget,
                 'Transport' => $workOrder->estimated_transport_budget,
                 'Miscellaneous / Contingency' => $workOrder->estimated_misc_budget,
-            ])->filter(fn ($amount) => (float) ($amount ?? 0) > 0);
+            ]);
         @endphp
-        @if ($budgetBreakdown->isNotEmpty())
-            <dl class="mt-2 flex flex-wrap gap-6 border-t border-gray-100 pt-4 text-sm dark:border-gray-800">
-                @foreach ($budgetBreakdown as $label => $amount)
-                    <div><dt class="text-gray-400">{{ $label }}</dt><dd class="font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($amount, 2) }}</dd></div>
-                @endforeach
-            </dl>
-        @endif
+        <dl class="mt-2 flex flex-wrap gap-6 border-t border-gray-100 pt-4 text-sm dark:border-gray-800">
+            @foreach ($budgetBreakdown as $label => $amount)
+                <div><dt class="text-gray-400">{{ $label }}</dt><dd class="font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($amount ?? 0, 2) }}</dd></div>
+            @endforeach
+        </dl>
 
         @php
             $budgetItemsByCategory = $workOrder->budgetItems->groupBy('category');
