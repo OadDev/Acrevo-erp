@@ -6,6 +6,7 @@ use App\Http\Requests\ClientRequest;
 use App\Models\Client;
 use App\Models\ClientLogin;
 use App\Models\User;
+use App\Services\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -46,8 +47,9 @@ class ClientController extends Controller
     public function show(Client $client): View
     {
         $client->load(['contacts', 'enquiries', 'workOrders', 'sites', 'invoices.payments', 'clientLogin.user']);
+        $discussion = app(ConversationService::class)->discussionFor($client, auth()->user());
 
-        return view('clients.show', compact('client'));
+        return view('clients.show', compact('client', 'discussion'));
     }
 
     public function generatePortalAccess(Request $request, Client $client): RedirectResponse

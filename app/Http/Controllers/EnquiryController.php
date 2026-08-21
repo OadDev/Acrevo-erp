@@ -6,6 +6,7 @@ use App\Http\Requests\EnquiryRequest;
 use App\Models\Client;
 use App\Models\Enquiry;
 use App\Models\User;
+use App\Services\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -62,8 +63,9 @@ class EnquiryController extends Controller
     public function show(Enquiry $enquiry): View
     {
         $enquiry->load(['client.clientLogin.user', 'assignedTo', 'followUps.user', 'siteVisits.assignedTo', 'quotations', 'workOrders']);
+        $discussion = app(ConversationService::class)->discussionFor($enquiry, auth()->user());
 
-        return view('enquiries.show', compact('enquiry'));
+        return view('enquiries.show', compact('enquiry', 'discussion'));
     }
 
     public function edit(Enquiry $enquiry): View

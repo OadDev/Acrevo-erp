@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EmployeeRequest;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Services\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -81,8 +82,9 @@ class EmployeeController extends Controller
     public function show(Employee $employee): View
     {
         $employee->load(['department', 'media', 'attendances' => fn ($q) => $q->latest()->limit(30), 'payrolls' => fn ($q) => $q->latest(), 'benefits', 'executiveTeamMemberships.executiveTeam']);
+        $discussion = app(ConversationService::class)->discussionFor($employee, auth()->user());
 
-        return view('employees.show', compact('employee'));
+        return view('employees.show', compact('employee', 'discussion'));
     }
 
     public function edit(Employee $employee): View

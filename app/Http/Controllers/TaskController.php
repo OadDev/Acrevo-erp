@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\User;
+use App\Services\ConversationService;
 use App\Services\TaskScheduleGenerator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -159,8 +160,9 @@ class TaskController extends Controller
         );
 
         $task->load(['assignedBy', 'assignedTo', 'verifier', 'verifiedBy', 'schedule', 'media', 'parentTask', 'retasks.assignedTo']);
+        $discussion = app(ConversationService::class)->discussionFor($task, $user);
 
-        return view('tasks.show', compact('task'));
+        return view('tasks.show', compact('task', 'discussion'));
     }
 
     public function complete(Request $request, Task $task): RedirectResponse

@@ -93,11 +93,13 @@
     @endif
 
     @if ($quotation->terms)
-        <x-card>
+        <x-card class="mb-6">
             <h3 class="mb-2 text-sm font-semibold text-gray-500">Terms &amp; Conditions</h3>
             <p class="whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">{{ $quotation->terms }}</p>
         </x-card>
     @endif
+
+    <x-discussion-card :conversation="$discussion" />
 
     @push('scripts')
     <script>

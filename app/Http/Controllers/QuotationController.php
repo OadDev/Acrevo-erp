@@ -6,6 +6,7 @@ use App\Http\Requests\QuotationRequest;
 use App\Models\Enquiry;
 use App\Models\Quotation;
 use App\Models\Site;
+use App\Services\ConversationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,8 +64,9 @@ class QuotationController extends Controller
     public function show(Quotation $quotation): View
     {
         $quotation->load(['items', 'enquiry', 'client', 'revisions', 'workOrders']);
+        $discussion = app(ConversationService::class)->discussionFor($quotation, auth()->user());
 
-        return view('quotations.show', compact('quotation'));
+        return view('quotations.show', compact('quotation', 'discussion'));
     }
 
     public function edit(Quotation $quotation): View

@@ -14,8 +14,13 @@ class ConversationService
     /**
      * One discussion thread per record - found by its polymorphic subject,
      * created on first use so untouched records don't clutter the table.
+     * Anyone who can view the record (already checked by the calling
+     * controller's own permission gate before this is called) is silently
+     * added as a participant the moment they open its Discussion section -
+     * there's no separate invite step, since access to the discussion
+     * should simply mirror access to the record itself.
      */
-    public function discussionFor(Model $subject): Conversation
+    public function discussionFor(Model $subject, ?User $viewer = null): Conversation
     {
         $conversation = Conversation::firstOrCreate([
             'type' => 'discussion',
@@ -23,7 +28,11 @@ class ConversationService
             'subject_id' => (string) $subject->getKey(),
         ]);
 
-        return $conversation;
+        if ($viewer) {
+            $this->addParticipant($conversation, $viewer);
+        }
+
+        return $conversation->load(['participants.user', 'messages.user', 'messages.media']);
     }
 
     public function directBetween(User $a, User $b): Conversation

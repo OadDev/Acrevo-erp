@@ -89,5 +89,9 @@
                 @endforelse
             </div>
         </x-card>
+
+        <div class="lg:col-span-2">
+            <x-discussion-card :conversation="$discussion" />
+        </div>
     </div>
 </x-app-layout>

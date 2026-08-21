@@ -170,4 +170,8 @@
             @endif
         </div>
     </div>
+
+    <div class="mt-6">
+        <x-discussion-card :conversation="$discussion" />
+    </div>
 </x-app-layout>

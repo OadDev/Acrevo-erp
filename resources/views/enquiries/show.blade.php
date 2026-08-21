@@ -52,6 +52,8 @@
                     @endforelse
                 </div>
             </x-card>
+
+            <x-discussion-card :conversation="$discussion" />
         </div>
 
         <div class="space-y-6">

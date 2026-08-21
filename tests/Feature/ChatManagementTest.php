@@ -163,6 +163,50 @@ class ChatManagementTest extends TestCase
         $this->assertSame((string) $client->id, $first->subject_id);
     }
 
+    public function test_the_enquiry_page_shows_a_discussion_thread_that_can_be_posted_to(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $client = \App\Models\Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = \App\Models\Enquiry::create([
+            'client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1',
+            'status' => 'new', 'source' => 'website', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($sales)->get("/enquiries/{$enquiry->id}")->assertOk()->assertSee('Discussion');
+
+        $discussion = Conversation::where('type', 'discussion')
+            ->where('subject_type', \App\Models\Enquiry::class)
+            ->where('subject_id', (string) $enquiry->id)
+            ->firstOrFail();
+
+        $this->actingAs($sales)->post("/conversations/{$discussion->id}/messages", [
+            'body' => 'Client wants a site visit this week.',
+        ])->assertRedirect();
+
+        $this->actingAs($sales)->get("/enquiries/{$enquiry->id}")->assertOk()->assertSee('Client wants a site visit this week.');
+    }
+
+    public function test_the_work_order_discussion_tab_shows_the_same_shared_thread(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $client = \App\Models\Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = \App\Models\Enquiry::create([
+            'client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1',
+            'status' => 'new', 'source' => 'website', 'created_by' => $admin->id,
+        ]);
+        $workOrder = \App\Models\WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")->assertOk()->assertSee('Discussion');
+
+        $discussion = app(ConversationService::class)->discussionFor($workOrder);
+        $this->assertTrue($discussion->hasParticipant($admin));
+    }
+
     public function test_the_client_role_cannot_reach_chat_at_all(): void
     {
         $admin = $this->admin();

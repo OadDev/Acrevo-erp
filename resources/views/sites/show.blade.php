@@ -153,4 +153,8 @@
     </x-card>
 
     <div class="mt-4">{{ $workOrders->links() }}</div>
+
+    <div class="mt-6">
+        <x-discussion-card :conversation="$discussion" />
+    </div>
 </x-app-layout>

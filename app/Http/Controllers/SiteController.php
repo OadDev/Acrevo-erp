@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\LoadsWorkOrderPdfRelations;
 use App\Models\Client;
 use App\Models\Site;
+use App\Services\ConversationService;
 use App\Services\WorkOrderZipExporter;
 use App\Support\WorkOrderPdfSections;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -40,8 +41,9 @@ class SiteController extends Controller
     {
         $site->load(['client', 'quotation', 'media']);
         $workOrders = $site->workOrders()->latest()->paginate(15);
+        $discussion = app(ConversationService::class)->discussionFor($site, auth()->user());
 
-        return view('sites.show', compact('site', 'workOrders'));
+        return view('sites.show', compact('site', 'workOrders', 'discussion'));
     }
 
     public function create(Request $request): View

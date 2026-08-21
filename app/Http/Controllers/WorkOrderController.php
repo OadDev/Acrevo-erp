@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderExecutiveTeam;
 use App\Models\WorkOrderSubContractor;
+use App\Services\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -437,8 +438,9 @@ class WorkOrderController extends Controller
         $availableTeams = ExecutiveTeam::where('is_active', true)->get();
         $activeEmployees = Employee::where('status', 'active')->orderBy('name')->get();
         $subContractorUsers = User::role('Sub Contractor')->where('is_active', true)->orderBy('name')->get();
+        $discussion = app(ConversationService::class)->discussionFor($workOrder, auth()->user());
 
-        return view('work-orders.show', compact('workOrder', 'availableTeams', 'activeEmployees', 'subContractorUsers'));
+        return view('work-orders.show', compact('workOrder', 'availableTeams', 'activeEmployees', 'subContractorUsers', 'discussion'));
     }
 
     public function cancel(Request $request, WorkOrder $workOrder): RedirectResponse

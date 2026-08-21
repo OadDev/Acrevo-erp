@@ -105,6 +105,8 @@
                     <p class="text-sm text-gray-400">No work orders yet.</p>
                 @endforelse
             </x-card>
+
+            <x-discussion-card :conversation="$discussion" />
         </div>
     </div>
 </x-app-layout>
