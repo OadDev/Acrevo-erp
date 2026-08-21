@@ -42,6 +42,26 @@
                         <div><dt class="text-gray-400">Verifier</dt><dd class="text-gray-800 dark:text-gray-200">{{ $task->verifier?->name ?? '—' }}</dd></div>
                     </div>
                 </dl>
+
+                @if ($task->getMedia('attachments')->isNotEmpty())
+                    <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                        <p class="mb-2 text-sm font-medium text-gray-500">Attachments from {{ $task->assignedBy?->name ?? 'Assigner' }}</p>
+                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                            @foreach ($task->getMedia('attachments') as $item)
+                                <a href="{{ $item->getUrl() }}" target="_blank" class="block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                    @if (str_starts_with($item->mime_type, 'image'))
+                                        <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
+                                    @else
+                                        <div class="flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center">
+                                            <x-icon name="file-text" class="h-6 w-6 text-gray-400" />
+                                            <span class="w-full truncate text-[10px] text-gray-500">{{ $item->file_name }}</span>
+                                        </div>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </x-card>
 
             @if ($task->parentTask)
@@ -56,9 +76,9 @@
                     <p class="text-sm text-gray-700 dark:text-gray-300">{{ $task->completion_notes }}</p>
                     <p class="mt-1 text-xs text-gray-400">Submitted {{ $task->completed_at?->format('d M Y, h:i A') }}</p>
 
-                    @if ($task->media->isNotEmpty())
+                    @if ($task->getMedia('proof')->isNotEmpty())
                         <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                            @foreach ($task->media as $item)
+                            @foreach ($task->getMedia('proof') as $item)
                                 <a href="{{ $item->getUrl() }}" target="_blank" class="block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
                                     @if (str_starts_with($item->mime_type, 'image'))
                                         <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">

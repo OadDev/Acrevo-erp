@@ -382,6 +382,7 @@ Route::middleware('permission:tasks.create')->group(function () {
     Route::get('tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
     Route::put('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+    Route::delete('tasks/{task}/media/{media}', [TaskController::class, 'destroyMedia'])->name('tasks.media.destroy');
 });
 Route::middleware('permission:tasks.manage')->group(function () {
     Route::get('tasks/pdf', [TaskController::class, 'pdf'])->name('tasks.pdf');

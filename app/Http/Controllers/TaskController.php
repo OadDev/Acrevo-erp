@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class TaskController extends Controller
 {
@@ -132,13 +133,19 @@ class TaskController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'due_date' => ['required', 'date'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:20480'],
         ]);
 
-        $task = Task::create($data + [
+        $task = Task::create(collect($data)->except('attachments')->all() + [
             'assigned_by' => $request->user()->id,
             'verifier_id' => $request->user()->id,
             'status' => 'pending',
         ]);
+
+        if ($error = $this->attachFiles($task, $request)) {
+            return back()->withErrors(['attachments' => $error]);
+        }
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task assigned.');
     }
@@ -236,11 +243,40 @@ class TaskController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'due_date' => ['required', 'date'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'max:20480'],
         ]);
 
-        $task->update($data);
+        $task->update(collect($data)->except('attachments')->all());
+
+        if ($error = $this->attachFiles($task, $request)) {
+            return back()->withErrors(['attachments' => $error]);
+        }
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task updated.');
+    }
+
+    public function destroyMedia(Request $request, Task $task, Media $media): RedirectResponse
+    {
+        $this->authorizeTaskManager($task, $request->user());
+        abort_unless((string) $media->model_id === (string) $task->id && $media->collection_name === 'attachments', 404);
+
+        $media->delete();
+
+        return back()->with('success', 'Attachment removed.');
+    }
+
+    private function attachFiles(Task $task, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('attachments', []) as $file) {
+                $task->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 20MB).';
+        }
+
+        return null;
     }
 
     public function destroy(Request $request, Task $task): RedirectResponse

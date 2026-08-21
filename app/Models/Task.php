@@ -32,6 +32,7 @@ class Task extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('proof');
+        $this->addMediaCollection('attachments');
     }
 
     public function schedule(): BelongsTo

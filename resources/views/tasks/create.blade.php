@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-card class="max-w-2xl">
-        <form method="POST" action="{{ route('tasks.store') }}">
+        <form method="POST" action="{{ route('tasks.store') }}" enctype="multipart/form-data">
             @csrf
 
             <div class="space-y-5">
@@ -31,6 +31,12 @@
                 <div>
                     <x-input-label for="due_date" value="Due Date" />
                     <x-text-input id="due_date" type="date" name="due_date" class="mt-1 block w-full" value="{{ old('due_date', now()->format('Y-m-d')) }}" required />
+                </div>
+
+                <div>
+                    <x-input-label value="Attachments (documents/images for the assignee, optional, multiple allowed)" />
+                    <input type="file" name="attachments[]" multiple class="mt-1 block w-full text-sm">
+                    @error('attachments')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
             </div>
 

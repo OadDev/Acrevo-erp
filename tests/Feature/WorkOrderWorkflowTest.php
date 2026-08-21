@@ -666,6 +666,32 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertSee('Equipment / Machinery')
             ->assertSee('Transport')
             ->assertSee('Miscellaneous / Contingency');
+
+        // Regression: Overview used to show only the aggregate totals, not
+        // the itemized material/manpower/etc. rows entered at creation.
+        $response->assertSee('Planned Budget Details')
+            ->assertSee('Cement')->assertSee('Mason')->assertSee('Concrete Mixer')
+            ->assertSee('Material delivery')->assertSee('Contingency');
+    }
+
+    public function test_work_order_overview_shows_the_planned_time_schedule(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id, 'site_id' => $site->id, 'client_id' => $client->id,
+            'title' => 'WO with time schedule', 'execution_way' => 'way_2', 'priority' => 'medium',
+            'time_schedules' => [['time_to_finish' => '10', 'unit' => 'Days', 'remark' => 'Foundation to roofing']],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with time schedule')->firstOrFail();
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")
+            ->assertOk()->assertSee('Time Schedule')->assertSee('Foundation to roofing');
     }
 
     public function test_a_ledger_entry_can_be_recorded_with_a_bill_attachment(): void

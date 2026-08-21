@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\TaskSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class TaskManagementTest extends TestCase
@@ -39,6 +40,58 @@ class TaskManagementTest extends TestCase
         $user->syncRoles([$role]);
 
         return $user;
+    }
+
+    public function test_the_assigner_can_attach_files_when_assigning_a_task_and_the_assignee_can_see_them(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id,
+            'title' => 'Review the attached drawing',
+            'due_date' => now()->addDay()->toDateString(),
+            'attachments' => [
+                UploadedFile::fake()->create('drawing.pdf', 100, 'application/pdf'),
+                UploadedFile::fake()->image('site-photo.jpg'),
+            ],
+        ])->assertRedirect();
+
+        $task = Task::firstOrFail();
+        $this->assertSame(2, $task->getMedia('attachments')->count());
+        $this->assertSame(0, $task->getMedia('proof')->count());
+
+        $this->actingAs($hr)->get("/tasks/{$task->id}")
+            ->assertOk()->assertSee('drawing.pdf')->assertSee('Attachments from Sales Person');
+    }
+
+    public function test_more_attachments_can_be_added_and_removed_while_editing_a_task(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id, 'title' => 'Original task', 'due_date' => now()->addDay()->toDateString(),
+            'attachments' => [UploadedFile::fake()->create('first.pdf', 50)],
+        ])->assertRedirect();
+        $task = Task::firstOrFail();
+
+        $this->actingAs($sales)->put("/tasks/{$task->id}", [
+            'assigned_to' => $hr->id, 'title' => 'Original task', 'due_date' => now()->addDay()->toDateString(),
+            'attachments' => [UploadedFile::fake()->create('second.pdf', 50)],
+        ])->assertRedirect();
+        $this->assertSame(2, $task->fresh()->getMedia('attachments')->count());
+
+        $media = $task->getMedia('attachments')->firstWhere('file_name', 'first.pdf');
+        $this->actingAs($sales)->delete("/tasks/{$task->id}/media/{$media->id}")->assertRedirect();
+        $this->assertSame(1, $task->fresh()->getMedia('attachments')->count());
+
+        // Someone uninvolved with the task can't remove its attachments.
+        $stranger = $this->userWithRole('QC Officer', 'Stranger');
+        $remaining = $task->fresh()->getMedia('attachments')->first();
+        $this->actingAs($stranger)->delete("/tasks/{$task->id}/media/{$remaining->id}")->assertForbidden();
     }
 
     public function test_a_common_task_can_be_assigned_completed_and_verified(): void
