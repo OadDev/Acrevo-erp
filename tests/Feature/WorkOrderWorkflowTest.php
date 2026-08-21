@@ -1506,6 +1506,44 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('5000.00', $fresh->budget_amount);
     }
 
+    public function test_editing_a_work_order_with_existing_labour_rows_does_not_fail_integer_validation(): void
+    {
+        // Regression: WorkOrderBudgetItem::quantity is cast 'decimal:2', so
+        // reloading a saved labour row's count on the Edit page produced
+        // "20.00" instead of "20". The count input is validated as a strict
+        // integer, so re-saving the form without touching that field failed
+        // with "The labour.0.count field must be an integer."
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id, 'site_id' => $site->id, 'client_id' => $client->id,
+            'title' => 'WO with labour', 'execution_way' => 'way_2', 'priority' => 'medium',
+            'labour' => [
+                ['labour_type' => 'technician', 'count' => 20, 'wage_rate' => 1200],
+                ['labour_type' => 'helper', 'count' => 80, 'wage_rate' => 1000],
+            ],
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with labour')->firstOrFail();
+
+        $editPage = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/edit")->assertOk();
+        $editPage->assertDontSee('20.00')->assertDontSee('80.00');
+
+        $response = $this->actingAs($admin)->put("/work-orders/{$workOrder->id}", [
+            'title' => $workOrder->title, 'priority' => $workOrder->priority,
+            'labour' => [
+                ['labour_type' => 'technician', 'count' => 20, 'wage_rate' => 1200],
+                ['labour_type' => 'helper', 'count' => 80, 'wage_rate' => 1000],
+            ],
+        ]);
+        $response->assertRedirect();
+        $response->assertSessionDoesntHaveErrors();
+    }
+
     public function test_editing_a_work_order_preserves_and_updates_the_work_procedure_and_time_schedule_rows(): void
     {
         $admin = $this->admin();

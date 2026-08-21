@@ -208,7 +208,7 @@ class WorkOrderController extends Controller
         ])->all() ?: [['material_name' => '', 'brand' => '', 'size' => '', 'unit' => 'Nos', 'quantity' => '', 'rate' => '', 'vendor' => '']];
 
         $labour = $byCategory('labour')->map(fn ($i) => [
-            'labour_type' => $i->name, 'count' => $i->quantity, 'hours' => $i->hours, 'wage_rate' => $i->rate,
+            'labour_type' => $i->name, 'count' => (int) $i->quantity, 'hours' => $i->hours, 'wage_rate' => $i->rate,
         ])->all() ?: [['labour_type' => '', 'count' => 1, 'hours' => '', 'wage_rate' => '']];
 
         $equipment = $byCategory('equipment')->map(fn ($i) => [
