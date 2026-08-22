@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\UserController;
@@ -456,6 +457,11 @@ Route::middleware('permission:masters.manage')->group(function () {
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
+});
+Route::middleware('permission:system_settings.manage')->group(function () {
+    Route::get('admin/settings/mail', [SettingsController::class, 'editMail'])->name('admin.settings.mail.edit');
+    Route::put('admin/settings/mail', [SettingsController::class, 'updateMail'])->name('admin.settings.mail.update');
+    Route::post('admin/settings/mail/test', [SettingsController::class, 'sendTest'])->name('admin.settings.mail.test');
 });
 
 /*

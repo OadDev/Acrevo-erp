@@ -138,7 +138,7 @@
                 </x-nav-group>
             @endcan
 
-            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage', 'masters.manage'])
+            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage', 'masters.manage', 'system_settings.manage'])
                 <x-nav-group label="Administration">
                     @can('users.view')
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')" icon="user-cog">Users</x-nav-link>
@@ -154,6 +154,9 @@
                     @endcan
                     @can('activity_logs.view')
                         <x-nav-link :href="route('admin.activity-logs.index')" :active="request()->routeIs('admin.activity-logs.*')" icon="history">Activity Logs</x-nav-link>
+                    @endcan
+                    @can('system_settings.manage')
+                        <x-nav-link :href="route('admin.settings.mail.edit')" :active="request()->routeIs('admin.settings.*')" icon="mail">Mail Settings</x-nav-link>
                     @endcan
                 </x-nav-group>
             @endcanany

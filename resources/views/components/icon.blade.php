@@ -122,6 +122,11 @@
             <path d="M12 8v4.5l3 2" />
             @break
 
+        @case('mail')
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+            @break
+
         @case('briefcase')
             <rect x="3" y="7.5" width="18" height="12" rx="1.5" />
             <path d="M8.5 7.5V6a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 15.5 6v1.5" />
