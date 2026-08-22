@@ -8,7 +8,7 @@
     <h1>{{ config('app.name') }}</h1>
     <p class="muted">Site {{ $site->site_no }} — {{ $site->client?->name }}</p>
     <p class="muted">{{ collect([$site->address, $site->city, $site->state, $site->pincode])->filter()->join(', ') ?: '—' }}</p>
-    <p class="muted">{{ $workOrders->count() }} work order(s) &middot; Generated {{ now()->format('d M Y, h:i A') }}</p>
+    <p class="muted">{{ $workOrders->count() }} work order(s) &middot; Generated {{ now()->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p>
 
     @forelse ($workOrders as $workOrder)
         <h1 class="wo-heading">{{ $workOrder->work_order_no }} — {{ $workOrder->title }}</h1>

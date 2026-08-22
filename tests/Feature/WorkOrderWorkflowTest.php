@@ -758,6 +758,31 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertOk()->assertHeader('content-type', 'application/pdf');
     }
 
+    public function test_work_order_pdf_shows_ist_timestamps_not_raw_utc(): void
+    {
+        // Regression: app.timezone is UTC (Carbon::now() and stored datetimes
+        // are UTC), but the PDF's "Generated" line and status-log timestamps
+        // were formatted without converting to IST first, so they displayed
+        // times ~5.5 hours behind the real Indian creation time.
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-08-21 16:00:00', 'UTC'));
+
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $html = view('work-orders.pdf.full', ['workOrder' => $workOrder, 'sections' => ['overview']])->render();
+
+        // 16:00 UTC = 21:30 IST (09:30 PM), not 04:00 PM.
+        $this->assertStringContainsString('09:30 PM', $html);
+        $this->assertStringNotContainsString('04:00 PM', $html);
+
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
     public function test_work_order_overview_shows_the_planned_time_schedule(): void
     {
         $admin = $this->admin();

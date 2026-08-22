@@ -14,7 +14,7 @@
 <body>
     <h1>{{ config('app.name') }}</h1>
     <p class="muted">Approved Requests &middot; {{ $workOrder->work_order_no }} &mdash; {{ $workOrder->title }}</p>
-    <p class="muted">Generated {{ now()->format('d M Y, h:i A') }}</p>
+    <p class="muted">Generated {{ now()->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p>
 
     <table>
         <thead>

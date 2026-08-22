@@ -129,7 +129,7 @@
                     <tr>
                         <td>{{ Str::title(str_replace('_', ' ', $log->to_status)) }}</td>
                         <td>{{ $log->changedBy?->name ?? 'System' }}</td>
-                        <td>{{ $log->changed_at->format('d M Y, h:i A') }}</td>
+                        <td>{{ $log->changed_at->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</td>
                         <td>{{ $log->remarks ?? '—' }}</td>
                     </tr>
                 @endforeach
