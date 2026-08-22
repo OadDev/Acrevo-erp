@@ -16,7 +16,16 @@ class MailSettings
 {
     public static function apply(): void
     {
-        if (! Schema::hasTable('settings')) {
+        // Runs on every boot, including contexts with no usable database
+        // connection yet (composer install's package:discover, a fresh
+        // install before migrations have run, artisan commands with no
+        // .env). Never let this take the app - or the deploy pipeline -
+        // down; just fall back to config/mail.php's own defaults.
+        try {
+            if (! Schema::hasTable('settings')) {
+                return;
+            }
+        } catch (\Throwable) {
             return;
         }
 
