@@ -72,6 +72,27 @@ class ChatManagementTest extends TestCase
         $this->actingAs($stranger)->post("/conversations/{$conversation->id}/messages", ['body' => 'Hi'])->assertForbidden();
     }
 
+    public function test_message_timestamps_show_ist_not_raw_utc(): void
+    {
+        // Regression: app.timezone is UTC, so Message::created_at is stored
+        // in UTC. The chat thread displayed it raw, ~5.5 hours behind the
+        // real IST send time.
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        $this->actingAs($sales)->post('/chat/direct', ['user_id' => $hr->id])->assertRedirect();
+        $conversation = Conversation::where('type', 'direct')->firstOrFail();
+
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-08-21 16:00:00', 'UTC'));
+        $this->actingAs($sales)->post("/conversations/{$conversation->id}/messages", ['body' => 'Hello'])->assertRedirect();
+        \Illuminate\Support\Carbon::setTestNow();
+
+        // 16:00 UTC = 21:30 IST (09:30 PM), not 04:00 PM.
+        $this->actingAs($hr)->get('/chat?conversation='.$conversation->id)
+            ->assertOk()->assertSee('09:30 PM')->assertDontSee('04:00 PM');
+    }
+
     public function test_a_group_can_be_created_managed_and_left(): void
     {
         $admin = $this->admin();

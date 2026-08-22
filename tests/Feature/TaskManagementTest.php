@@ -142,6 +142,34 @@ class TaskManagementTest extends TestCase
         $this->assertSame($sales->id, $task->verified_by);
     }
 
+    public function test_task_show_page_displays_completion_and_verification_times_in_ist_not_raw_utc(): void
+    {
+        // Regression: app.timezone is UTC, so completed_at/verified_at (set
+        // via now()) are stored/displayed as raw UTC unless explicitly
+        // converted, showing times ~5.5 hours behind the real IST moment.
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-08-21 16:00:00', 'UTC'));
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id,
+            'title' => 'Print the plan',
+            'due_date' => now()->addDay()->toDateString(),
+        ])->assertRedirect();
+        $task = Task::firstOrFail();
+
+        $this->actingAs($hr)->post("/tasks/{$task->id}/complete", ['completion_notes' => 'Done'])->assertRedirect();
+        $this->actingAs($sales)->post("/tasks/{$task->id}/verify")->assertRedirect();
+
+        // 16:00 UTC = 21:30 IST (09:30 PM), not 04:00 PM.
+        $response = $this->actingAs($hr)->get("/tasks/{$task->id}");
+        $response->assertOk()->assertSee('09:30 PM')->assertDontSee('04:00 PM');
+
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
     public function test_an_unsatisfactory_task_can_be_retasked_to_another_user(): void
     {
         $admin = $this->admin();

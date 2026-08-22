@@ -74,7 +74,7 @@
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">Completion Details</h3>
                     <p class="text-sm text-gray-700 dark:text-gray-300">{{ $task->completion_notes }}</p>
-                    <p class="mt-1 text-xs text-gray-400">Submitted {{ $task->completed_at?->format('d M Y, h:i A') }}</p>
+                    <p class="mt-1 text-xs text-gray-400">Submitted {{ $task->completed_at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p>
 
                     @if ($task->getMedia('proof')->isNotEmpty())
                         <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -92,7 +92,7 @@
 
                     @if ($task->status === 'verified')
                         <div class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-                            Verified by {{ $task->verifiedBy?->name }} on {{ $task->verified_at?->format('d M Y, h:i A') }}.
+                            Verified by {{ $task->verifiedBy?->name }} on {{ $task->verified_at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}.
                         </div>
                     @endif
                 </x-card>

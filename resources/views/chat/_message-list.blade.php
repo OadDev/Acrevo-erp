@@ -18,7 +18,7 @@
                     @endforeach
                 </div>
             @endif
-            <p class="mt-1 text-right text-[10px] {{ $mine ? 'text-indigo-200' : 'text-gray-400' }}">{{ $message->created_at->format('h:i A, d M') }}</p>
+            <p class="mt-1 text-right text-[10px] {{ $mine ? 'text-indigo-200' : 'text-gray-400' }}">{{ $message->created_at->timezone('Asia/Kolkata')->format('h:i A, d M') }}</p>
         </div>
     </div>
 @empty
