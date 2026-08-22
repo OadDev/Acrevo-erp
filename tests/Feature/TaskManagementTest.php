@@ -170,6 +170,34 @@ class TaskManagementTest extends TestCase
         \Illuminate\Support\Carbon::setTestNow();
     }
 
+    public function test_task_assigned_date_shows_the_correct_ist_calendar_day_near_midnight(): void
+    {
+        // Regression: date-only displays (created_at->format('d M Y')) have
+        // the same UTC-vs-IST bug, but it only shows up as a wrong *date*
+        // during the IST-midnight-to-05:30-AM window (18:30-23:59 UTC) - a
+        // task assigned then showed "yesterday" as its Assigned Date.
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+
+        // 21:00 UTC on the 21st = 02:30 AM IST on the 22nd.
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2026-08-21 21:00:00', 'UTC'));
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id,
+            'title' => 'Late night task',
+            'due_date' => now()->addDay()->toDateString(),
+        ])->assertRedirect();
+        $task = Task::firstOrFail();
+
+        $this->actingAs($sales)->get("/tasks/{$task->id}")
+            ->assertOk()->assertSee('22 Aug 2026')->assertDontSee('21 Aug 2026');
+        $this->actingAs($sales)->get('/tasks?scope=assigned')
+            ->assertOk()->assertSee('22 Aug 2026')->assertDontSee('21 Aug 2026');
+
+        \Illuminate\Support\Carbon::setTestNow();
+    }
+
     public function test_an_unsatisfactory_task_can_be_retasked_to_another_user(): void
     {
         $admin = $this->admin();

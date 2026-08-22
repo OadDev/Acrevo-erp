@@ -151,7 +151,7 @@
 
             @if ($profile?->is_verified)
                 <p class="mt-4 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-800">
-                    Verified by {{ $profile->verifiedBy?->name ?? '—' }} on {{ optional($profile->verified_at)->format('d M Y') }}
+                    Verified by {{ $profile->verifiedBy?->name ?? '—' }} on {{ $profile->verified_at?->timezone('Asia/Kolkata')->format('d M Y') }}
                 </p>
             @endif
         </x-card>

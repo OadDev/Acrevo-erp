@@ -105,7 +105,7 @@
 
     @if ($site->status === 'completed')
         <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-            This site was marked completed and handed over to the client{{ $site->completed_at ? ' on '.$site->completed_at->format('d M Y') : '' }}.
+            This site was marked completed and handed over to the client{{ $site->completed_at ? ' on '.$site->completed_at->timezone('Asia/Kolkata')->format('d M Y') : '' }}.
         </div>
     @endif
 

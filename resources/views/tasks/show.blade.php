@@ -37,7 +37,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div><dt class="text-gray-400">Assigned By</dt><dd class="text-gray-800 dark:text-gray-200">{{ $task->assignedBy?->name ?? 'System (Calendar)' }}</dd></div>
                         <div><dt class="text-gray-400">Assign To</dt><dd class="text-gray-800 dark:text-gray-200">{{ $task->assignedTo?->name }}</dd></div>
-                        <div><dt class="text-gray-400">Assigned Date</dt><dd class="text-gray-800 dark:text-gray-200">{{ $task->created_at->format('d M Y') }}</dd></div>
+                        <div><dt class="text-gray-400">Assigned Date</dt><dd class="text-gray-800 dark:text-gray-200">{{ $task->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</dd></div>
                         <div><dt class="text-gray-400">Due Date</dt><dd class="{{ $task->isOverdue() ? 'font-semibold text-rose-600' : 'text-gray-800 dark:text-gray-200' }}">{{ $task->due_date->format('d M Y') }}</dd></div>
                         <div><dt class="text-gray-400">Verifier</dt><dd class="text-gray-800 dark:text-gray-200">{{ $task->verifier?->name ?? '—' }}</dd></div>
                     </div>
@@ -100,7 +100,7 @@
 
             @if ($task->delay_reason)
                 <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
-                    <span class="font-semibold">Delay reason</span> (reported {{ $task->delay_reported_at?->format('d M Y') }}): {{ $task->delay_reason }}
+                    <span class="font-semibold">Delay reason</span> (reported {{ $task->delay_reported_at?->timezone('Asia/Kolkata')->format('d M Y') }}): {{ $task->delay_reason }}
                 </div>
             @endif
 

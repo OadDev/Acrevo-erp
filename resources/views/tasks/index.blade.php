@@ -94,7 +94,7 @@
                                 $canManageRow = in_array(auth()->id(), [$task->assigned_by, $task->verifier_id], true) || auth()->user()->hasRole('Admin');
                             @endphp
                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('tasks.show', $task) }}'">
-                                <td class="px-5 py-3 text-sm text-gray-500">{{ $task->created_at->format('d M Y') }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-500">{{ $task->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $task->assignedBy?->name ?? 'System (Calendar)' }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $task->assignedTo?->name }}</td>
                                 <td class="px-5 py-3">

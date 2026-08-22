@@ -28,7 +28,7 @@
                 {{ $quotation->client->phone }} · {{ $quotation->client->email }}
             </td>
             <td style="border: none; width: 50%;" class="text-right">
-                Date: {{ $quotation->created_at->format('d M Y') }}<br>
+                Date: {{ $quotation->created_at->timezone('Asia/Kolkata')->format('d M Y') }}<br>
                 Valid Until: {{ optional($quotation->valid_until)->format('d M Y') ?? '—' }}
             </td>
         </tr>

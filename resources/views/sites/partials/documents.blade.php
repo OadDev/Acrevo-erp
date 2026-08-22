@@ -19,7 +19,7 @@
                 </a>
                 <div class="flex shrink-0 items-center gap-3 text-xs text-gray-400">
                     <span>{{ $documentLabels[$document->collection_name] ?? Str::title(str_replace('_', ' ', $document->collection_name)) }}</span>
-                    <span>{{ $document->created_at->format('d M Y') }}</span>
+                    <span>{{ $document->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</span>
                     @if (auth()->user()->hasRole('Admin'))
                         <form method="POST" action="{{ route('sites.documents.destroy', [$site, $document]) }}" onsubmit="return confirm('Remove this document?')">
                             @csrf

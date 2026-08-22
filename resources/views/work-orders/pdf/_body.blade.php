@@ -184,7 +184,7 @@
                         <td>{{ $item->description }}</td>
                         <td>{{ $item->is_done ? 'Done' : 'Pending' }}</td>
                         <td>{{ $item->doneBy?->name ?? '—' }}</td>
-                        <td>{{ $item->done_at?->format('d M Y') ?? '—' }}</td>
+                        <td>{{ $item->done_at?->timezone('Asia/Kolkata')->format('d M Y') ?? '—' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -203,7 +203,7 @@
     @if ($workOrder->media->isNotEmpty())
         <p><strong>Files Stored on This Work Order</strong> (videos are not included in this PDF)</p>
         @foreach ($workOrder->media as $item)
-            @include('work-orders.pdf._media', ['media' => $item, 'label' => Str::title(str_replace('_', ' ', $item->collection_name)).' ('.$item->created_at->format('d M Y').')'])
+            @include('work-orders.pdf._media', ['media' => $item, 'label' => Str::title(str_replace('_', ' ', $item->collection_name)).' ('.$item->created_at->timezone('Asia/Kolkata')->format('d M Y').')'])
         @endforeach
     @endif
     @forelse ($workOrder->dailyProgressReports as $report)

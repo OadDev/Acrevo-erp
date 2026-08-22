@@ -44,7 +44,7 @@
                         </a>
                         <div class="flex shrink-0 items-center gap-3 text-xs text-gray-400">
                             <span>{{ Str::title(str_replace('_', ' ', $item->collection_name)) }}</span>
-                            <span>{{ $item->created_at->format('d M Y') }}</span>
+                            <span>{{ $item->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</span>
                             @if (auth()->user()->hasRole('Admin'))
                                 <form method="POST" action="{{ route('work-orders.media.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this file?')">
                                     @csrf

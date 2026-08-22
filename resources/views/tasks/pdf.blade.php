@@ -81,8 +81,8 @@
                     <td>{{ $task->title }}</td>
                     <td>{{ $task->assignedBy?->name ?? 'System (Calendar)' }}</td>
                     <td>{{ $task->due_date->format('d M Y') }}</td>
-                    <td>{{ $task->completed_at?->format('d M Y') ?? '—' }}</td>
-                    <td>{{ $task->verified_at?->format('d M Y') ?? '—' }}</td>
+                    <td>{{ $task->completed_at?->timezone('Asia/Kolkata')->format('d M Y') ?? '—' }}</td>
+                    <td>{{ $task->verified_at?->timezone('Asia/Kolkata')->format('d M Y') ?? '—' }}</td>
                     <td><span class="badge badge-{{ $task->isOverdue() ? 'overdue' : $task->status }}">{{ $task->isOverdue() ? 'Overdue' : Str::title($task->status) }}</span></td>
                 </tr>
             @empty

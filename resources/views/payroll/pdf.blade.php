@@ -33,7 +33,7 @@
             <td style="border: none; width: 50%;" class="text-right">
                 <span class="badge badge-{{ $payroll->status }}">{{ ucfirst($payroll->status) }}</span><br>
                 @if ($payroll->paid_at)
-                    Fully Paid: {{ $payroll->paid_at->format('d M Y') }}
+                    Fully Paid: {{ $payroll->paid_at->timezone('Asia/Kolkata')->format('d M Y') }}
                 @endif
             </td>
         </tr>
