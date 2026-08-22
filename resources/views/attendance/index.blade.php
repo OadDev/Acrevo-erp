@@ -61,4 +61,67 @@
             <x-primary-button>Save Attendance</x-primary-button>
         </div>
     </form>
+
+    <x-card :padded="false" class="mt-8">
+        <div class="flex flex-wrap items-end justify-between gap-4 p-4">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500">Attendance Records</h3>
+                <p class="mt-1 text-xs text-gray-400">Filter by staff member and date range to review or export attendance history.</p>
+            </div>
+            <form method="GET" action="{{ route('attendance.index') }}" class="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="date" value="{{ $date }}">
+                <div>
+                    <label class="mb-1 block text-xs text-gray-400">Staff</label>
+                    <select name="employee_id" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                        <option value="">All</option>
+                        @foreach ($filterEmployees as $fe)
+                            <option value="{{ $fe->id }}" @selected($filterEmployeeId == $fe->id)>{{ $fe->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs text-gray-400">From</label>
+                    <input type="date" name="from" value="{{ $from }}" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs text-gray-400">To</label>
+                    <input type="date" name="to" value="{{ $to }}" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                </div>
+                <button type="submit" class="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:text-gray-200">Filter</button>
+                @if ($filterEmployeeId)
+                    <a href="{{ route('attendance.pdf', ['employee_id' => $filterEmployeeId, 'from' => $from, 'to' => $to]) }}" class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+                        <x-icon name="download" class="h-4 w-4" /> PDF
+                    </a>
+                @endif
+            </form>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th class="px-5 py-3">Date</th>
+                        <th class="px-5 py-3">Staff</th>
+                        <th class="px-5 py-3">Status</th>
+                        <th class="px-5 py-3">Work Details</th>
+                        <th class="px-5 py-3 text-right">Salary</th>
+                        <th class="px-5 py-3 text-right">Advance</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse ($history as $record)
+                        <tr>
+                            <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $record->date->format('d M Y') }}</td>
+                            <td class="px-5 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{{ $record->employee->name }}</td>
+                            <td class="px-5 py-3"><x-badge :status="$record->status" /></td>
+                            <td class="px-5 py-3 text-sm text-gray-500">{{ $record->work_details ?? '—' }}</td>
+                            <td class="px-5 py-3 text-right text-sm">{{ $record->salary ? '₹'.number_format($record->salary, 2) : '—' }}</td>
+                            <td class="px-5 py-3 text-right text-sm text-gray-500">{{ $record->advance ? '₹'.number_format($record->advance, 2) : '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-5 py-6 text-center text-gray-400">No attendance records for this range.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </x-card>
 </x-app-layout>

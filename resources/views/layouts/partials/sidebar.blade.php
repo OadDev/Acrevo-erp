@@ -62,6 +62,7 @@
                     @can('tasks.view')
                         @if (auth()->user()->employee)
                             <x-nav-link :href="route('my-payroll.index')" :active="request()->routeIs('my-payroll.*')" icon="wallet">My Payroll</x-nav-link>
+                            <x-nav-link :href="route('my-attendance.index')" :active="request()->routeIs('my-attendance.*')" icon="calendar-check">My Attendance</x-nav-link>
                         @endif
                     @endcan
                     @can('subcontractor_finance.view')

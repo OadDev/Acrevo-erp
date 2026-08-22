@@ -48,6 +48,7 @@
             <tr><td>Allowances</td><td class="text-right">Rs. {{ number_format($payroll->allowances, 2) }}</td></tr>
             <tr><td>Overtime</td><td class="text-right">Rs. {{ number_format($payroll->overtime_amount, 2) }}</td></tr>
             <tr><td>Incentive</td><td class="text-right">Rs. {{ number_format($payroll->incentive, 2) }}</td></tr>
+            <tr><td>Other Payments</td><td class="text-right">Rs. {{ number_format($payroll->other_payments, 2) }}</td></tr>
             <tr><td>Deductions</td><td class="text-right">-Rs. {{ number_format($payroll->deductions, 2) }}</td></tr>
             <tr><td>Advance Deducted</td><td class="text-right">-Rs. {{ number_format($payroll->advance_deducted, 2) }}</td></tr>
         </tbody>

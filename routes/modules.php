@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\SubcontractorController;
@@ -233,6 +234,7 @@ Route::middleware('permission:assigned_work.view')->group(function () {
 Route::middleware('permission:tasks.view')->group(function () {
     Route::get('my-payroll', [MyPayrollController::class, 'index'])->name('my-payroll.index');
     Route::get('my-payroll/{payroll}/pdf', [MyPayrollController::class, 'pdf'])->name('my-payroll.pdf');
+    Route::get('my-attendance', [MyAttendanceController::class, 'index'])->name('my-attendance.index');
 });
 
 /*
@@ -254,6 +256,7 @@ Route::middleware('permission:employees.view')->group(function () {
 Route::middleware('permission:attendance.view')->group(function () {
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+    Route::get('attendance/pdf', [AttendanceController::class, 'pdf'])->name('attendance.pdf');
 });
 Route::middleware('permission:payroll.view')->group(function () {
     Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
@@ -261,6 +264,7 @@ Route::middleware('permission:payroll.view')->group(function () {
     Route::post('payroll', [PayrollController::class, 'store'])->name('payroll.store');
     Route::post('payroll/generate-from-attendance', [PayrollController::class, 'generateFromAttendance'])->name('payroll.generate-from-attendance');
     Route::post('payroll/{payroll}/record-payment', [PayrollController::class, 'recordPayment'])->name('payroll.record-payment');
+    Route::delete('payroll/{payroll}/payments/{payment}', [PayrollController::class, 'destroyPayment'])->name('payroll.payments.destroy');
     Route::get('payroll/{payroll}/pdf', [PayrollController::class, 'pdf'])->name('payroll.pdf');
 });
 Route::middleware('permission:executive_teams.view')->group(function () {

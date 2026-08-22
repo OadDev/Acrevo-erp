@@ -98,13 +98,20 @@
                                     </details>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <form method="POST" action="{{ route('payroll.generate-from-attendance') }}">
-                                        @csrf
-                                        <input type="hidden" name="employee_id" value="{{ $employee->id }}">
-                                        <input type="hidden" name="month" value="{{ $month }}">
-                                        <input type="hidden" name="year" value="{{ $year }}">
-                                        <button class="text-sm text-indigo-600 hover:underline">Generate Payroll</button>
-                                    </form>
+                                    <details>
+                                        <summary class="cursor-pointer list-none text-sm font-medium text-indigo-600 hover:underline">Generate Payroll</summary>
+                                        <form method="POST" action="{{ route('payroll.generate-from-attendance') }}" class="mt-2 space-y-1 text-left">
+                                            @csrf
+                                            <input type="hidden" name="employee_id" value="{{ $employee->id }}">
+                                            <input type="hidden" name="month" value="{{ $month }}">
+                                            <input type="hidden" name="year" value="{{ $year }}">
+                                            <input type="number" step="0.01" min="0" name="allowances" placeholder="Allowance" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
+                                            <input type="number" step="0.01" min="0" name="overtime_amount" placeholder="Overtime" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
+                                            <input type="number" step="0.01" min="0" name="incentive" placeholder="Incentive" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
+                                            <input type="number" step="0.01" min="0" name="other_payments" placeholder="Other Payments" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
+                                            <button class="mt-1 w-32 rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-500">Generate</button>
+                                        </form>
+                                    </details>
                                 </td>
                             </tr>
                         @endif
@@ -148,6 +155,7 @@
                                                     <tr class="text-left text-gray-400">
                                                         <th class="pr-3 py-1">Date</th>
                                                         <th class="pr-3 py-1 text-right">Amount</th>
+                                                        <th class="pr-3 py-1"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -155,6 +163,13 @@
                                                         <tr>
                                                             <td class="pr-3 py-1">{{ $payment->paid_on->format('d M Y') }}</td>
                                                             <td class="pr-3 py-1 text-right">₹{{ number_format($payment->amount, 2) }}</td>
+                                                            <td class="pr-3 py-1 text-right">
+                                                                <form method="POST" action="{{ route('payroll.payments.destroy', [$payroll, $payment]) }}" onsubmit="return confirm('Remove this settlement record? This cannot be undone.')">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit" class="text-red-600 hover:underline">Remove</button>
+                                                                </form>
+                                                            </td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -201,6 +216,7 @@
                 <x-text-input type="number" step="0.01" name="allowances" placeholder="Allowances" class="w-full" />
                 <x-text-input type="number" step="0.01" name="overtime_amount" placeholder="Overtime" class="w-full" />
                 <x-text-input type="number" step="0.01" name="incentive" placeholder="Incentive" class="w-full" />
+                <x-text-input type="number" step="0.01" name="other_payments" placeholder="Other Payments" class="w-full" />
                 <x-text-input type="number" step="0.01" name="deductions" placeholder="Deductions" class="w-full" />
                 <x-text-input type="number" step="0.01" name="advance_deducted" placeholder="Advance Deducted" class="w-full" />
                 <x-primary-button class="w-full justify-center">Save Payroll</x-primary-button>

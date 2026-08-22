@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,7 +23,48 @@ class AttendanceController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('attendance.index', compact('employees', 'date'));
+        // withTrashed() so a relieved staff member's historical attendance
+        // can still be filtered/exported, not just currently-active staff.
+        $filterEmployees = Employee::staff()->withTrashed()->orderBy('name')->get();
+
+        $filterEmployeeId = $request->get('employee_id');
+        $from = $request->get('from', now()->startOfMonth()->toDateString());
+        $to = $request->get('to', now()->toDateString());
+
+        $history = Attendance::whereIn('employee_id', $filterEmployees->pluck('id'))
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->when($filterEmployeeId, fn ($q) => $q->where('employee_id', $filterEmployeeId))
+            ->with('employee')
+            ->orderByDesc('date')
+            ->get();
+
+        return view('attendance.index', compact('employees', 'date', 'filterEmployees', 'filterEmployeeId', 'from', 'to', 'history'));
+    }
+
+    public function pdf(Request $request)
+    {
+        $data = $request->validate([
+            'employee_id' => ['required', 'exists:employees,id'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
+        $employee = Employee::withTrashed()->findOrFail($data['employee_id']);
+        $from = $data['from'] ?? now()->startOfMonth()->toDateString();
+        $to = $data['to'] ?? now()->toDateString();
+
+        $records = Attendance::where('employee_id', $employee->id)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->orderBy('date')
+            ->get();
+
+        $pdf = Pdf::loadView('attendance.pdf', compact('employee', 'records', 'from', 'to'));
+
+        $filename = $employee->name.'-Attendance-'.$from.'-to-'.$to.'.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function store(Request $request): RedirectResponse

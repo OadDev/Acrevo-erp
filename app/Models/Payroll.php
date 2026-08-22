@@ -10,7 +10,7 @@ class Payroll extends Model
 {
     protected $fillable = [
         'employee_id', 'month', 'year', 'basic_salary', 'allowances', 'deductions',
-        'advance_deducted', 'overtime_amount', 'incentive', 'net_salary', 'paid_amount',
+        'advance_deducted', 'overtime_amount', 'incentive', 'other_payments', 'net_salary', 'paid_amount',
         'status', 'paid_at', 'payslip_path', 'processed_by',
     ];
 
