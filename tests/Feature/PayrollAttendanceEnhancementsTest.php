@@ -116,6 +116,41 @@ class PayrollAttendanceEnhancementsTest extends TestCase
         $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
     }
 
+    public function test_an_admin_can_remove_a_completed_payroll_record_and_its_settlement_history(): void
+    {
+        $admin = $this->admin();
+        $hr = $this->staffUser($admin, 'HR');
+
+        $payroll = Payroll::create([
+            'employee_id' => $hr->employee->id, 'month' => now()->month, 'year' => now()->year,
+            'basic_salary' => 10000, 'net_salary' => 10000, 'paid_amount' => 10000, 'status' => 'paid',
+            'paid_at' => now(), 'processed_by' => $admin->id,
+        ]);
+        $payment = PayrollPayment::create(['payroll_id' => $payroll->id, 'amount' => 10000, 'paid_on' => now(), 'paid_by' => $admin->id]);
+
+        $this->actingAs($admin)->delete("/payroll/{$payroll->id}")->assertRedirect();
+
+        $this->assertDatabaseMissing('payrolls', ['id' => $payroll->id]);
+        $this->assertDatabaseMissing('payroll_payments', ['id' => $payment->id]);
+    }
+
+    public function test_a_non_admin_cannot_remove_a_payroll_record(): void
+    {
+        $admin = $this->admin();
+        $hr = $this->staffUser($admin, 'HR');
+        $finance = $this->staffUser($admin, 'Finance');
+
+        $payroll = Payroll::create([
+            'employee_id' => $hr->employee->id, 'month' => now()->month, 'year' => now()->year,
+            'basic_salary' => 10000, 'net_salary' => 10000, 'paid_amount' => 10000, 'status' => 'paid',
+            'paid_at' => now(), 'processed_by' => $admin->id,
+        ]);
+
+        $this->actingAs($finance)->delete("/payroll/{$payroll->id}")->assertForbidden();
+
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id]);
+    }
+
     public function test_generating_payroll_from_attendance_accepts_manual_allowance_overtime_incentive_and_other_payments(): void
     {
         $admin = $this->admin();

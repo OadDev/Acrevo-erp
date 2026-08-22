@@ -196,6 +196,15 @@ class PayrollController extends Controller
         return back()->with('success', 'Payroll generated from attendance.');
     }
 
+    public function destroy(Payroll $payroll): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $payroll->delete();
+
+        return back()->with('success', 'Payroll record removed.');
+    }
+
     public function pdf(Payroll $payroll)
     {
         $payroll->load('employee', 'payments');

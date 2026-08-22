@@ -189,8 +189,15 @@
                                         </form>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-right space-x-3">
                                     <a href="{{ route('payroll.pdf', $payroll) }}" class="text-sm text-indigo-600 hover:underline">PDF</a>
+                                    @if (auth()->user()->hasRole('Admin'))
+                                        <form method="POST" action="{{ route('payroll.destroy', $payroll) }}" class="inline" onsubmit="return confirm('Remove this payroll record for {{ $payroll->employee->name }} ({{ \Carbon\Carbon::create($payroll->year, $payroll->month, 1)->format('F Y') }})? This also removes its settlement history and cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-sm text-red-600 hover:underline">Remove</button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

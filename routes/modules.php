@@ -266,6 +266,7 @@ Route::middleware('permission:payroll.view')->group(function () {
     Route::post('payroll/{payroll}/record-payment', [PayrollController::class, 'recordPayment'])->name('payroll.record-payment');
     Route::delete('payroll/{payroll}/payments/{payment}', [PayrollController::class, 'destroyPayment'])->name('payroll.payments.destroy');
     Route::get('payroll/{payroll}/pdf', [PayrollController::class, 'pdf'])->name('payroll.pdf');
+    Route::delete('payroll/{payroll}', [PayrollController::class, 'destroy'])->name('payroll.destroy');
 });
 Route::middleware('permission:executive_teams.view')->group(function () {
     Route::resource('executive-teams', ExecutiveTeamController::class);
