@@ -560,6 +560,8 @@ class WorkOrderController extends Controller
 
     public function complete(WorkOrder $workOrder): RedirectResponse
     {
+        abort_unless($workOrder->status === 'client_review', 422, 'This work order can only be marked completed after Final QC has passed and it is awaiting client review.');
+
         $workOrder->transitionTo('completed', 'Work order marked complete after final QC and client confirmation.');
 
         $workOrder->completionCertificates()->create([

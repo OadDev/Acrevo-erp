@@ -346,6 +346,71 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame('qc_pending', $workOrder->fresh()->status);
     }
 
+    public function test_a_passed_daily_qc_check_does_not_move_the_work_order_out_of_in_progress(): void
+    {
+        // Regression: any passed QC inspection - daily or final - used to
+        // unconditionally route the work order to client_review, making a
+        // single day-one Daily QC check look like the whole work order was
+        // done and awaiting the client's final sign-off.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post('/qc', [
+            'work_order_id' => $workOrder->id,
+            'inspection_date' => now()->toDateString(),
+            'inspection_type' => 'daily',
+            'status' => 'passed',
+        ])->assertRedirect();
+
+        $this->assertSame('in_progress', $workOrder->fresh()->status);
+        $this->assertDatabaseHas('qc_inspections', ['work_order_id' => $workOrder->id, 'inspection_type' => 'daily', 'status' => 'passed']);
+    }
+
+    public function test_final_qc_cannot_be_recorded_before_the_work_order_is_submitted_for_qc(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post('/qc', [
+            'work_order_id' => $workOrder->id,
+            'inspection_date' => now()->toDateString(),
+            'inspection_type' => 'final',
+            'status' => 'passed',
+        ])->assertStatus(422);
+
+        $this->assertSame('in_progress', $workOrder->fresh()->status);
+        $this->assertDatabaseMissing('qc_inspections', ['work_order_id' => $workOrder->id, 'inspection_type' => 'final']);
+    }
+
+    public function test_internal_complete_action_requires_the_work_order_to_be_awaiting_client_review(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/complete")->assertStatus(422);
+        $this->assertSame('in_progress', $workOrder->fresh()->status);
+
+        $workOrder->update(['status' => 'client_review']);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/complete")->assertRedirect();
+        $this->assertSame('completed', $workOrder->fresh()->status);
+    }
+
     public function test_site_can_only_be_marked_completed_once_its_work_orders_are_done(): void
     {
         $admin = $this->admin();

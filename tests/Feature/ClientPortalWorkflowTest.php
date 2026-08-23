@@ -111,6 +111,9 @@ class ClientPortalWorkflowTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
 
+        // Final QC can only be recorded once the work is submitted for QC.
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/submit-for-qc")->assertRedirect();
+
         // A final QC pass must reach client review too, not skip straight to internal completion.
         $this->actingAs($admin)->post('/qc', [
             'work_order_id' => $workOrder->id,

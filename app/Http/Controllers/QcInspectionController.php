@@ -41,17 +41,30 @@ class QcInspectionController extends Controller
 
         $workOrder = WorkOrder::findOrFail($data['work_order_id']);
 
+        // Final QC is the gate that follows "Work Completed — Submit for QC"
+        // (which puts the work order into qc_pending) - it can't be recorded
+        // before the executive team has actually submitted the work.
+        if ($data['inspection_type'] === 'final') {
+            abort_unless($workOrder->status === 'qc_pending', 422, 'Final QC can only be recorded after the work order has been submitted for QC.');
+        }
+
         $workOrder->qcInspections()->create($data + [
             'inspected_by' => $request->user()->id,
         ]);
 
+        // Daily QC checks each day's work as it happens and never drives the
+        // work order's overall status - only Final QC does. Recording a
+        // daily inspection here used to unconditionally move the work order
+        // to client_review (making it look "completed" after day one), which
+        // is exactly what this guard prevents.
+        if ($data['inspection_type'] === 'daily') {
+            return redirect()->route('qc.index')->with('success', 'Daily QC inspection recorded.');
+        }
+
         match (true) {
-            $data['status'] === 'passed' => $workOrder->transitionTo(
-                'client_review',
-                $data['inspection_type'] === 'final' ? 'Final QC passed — routed to client review.' : 'Daily QC passed — routed to client review.'
-            ),
-            $data['status'] === 'failed' => $workOrder->transitionTo('qc_failed', 'QC failed: '.($data['remarks'] ?? '')),
-            default => $workOrder->transitionTo('rework_in_progress', 'Rework required after QC.'),
+            $data['status'] === 'passed' => $workOrder->transitionTo('client_review', 'Final QC passed — routed to client for final confirmation.'),
+            $data['status'] === 'failed' => $workOrder->transitionTo('qc_failed', 'Final QC failed: '.($data['remarks'] ?? '')),
+            default => $workOrder->transitionTo('rework_in_progress', 'Rework required after final QC.'),
         };
 
         return redirect()->route('qc.index')->with('success', 'QC inspection recorded.');

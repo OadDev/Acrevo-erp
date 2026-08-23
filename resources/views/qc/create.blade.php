@@ -14,12 +14,17 @@
                     <x-text-input type="date" id="inspection_date" name="inspection_date" value="{{ old('inspection_date', now()->toDateString()) }}" class="mt-1 block w-full" required />
                 </div>
 
+                @php($canFinal = $workOrder->status === 'qc_pending')
                 <div>
                     <x-input-label for="inspection_type" value="Inspection Type" />
                     <x-select-input id="inspection_type" name="inspection_type" class="mt-1 block w-full">
-                        <option value="daily">Daily QC</option>
-                        <option value="final">Final QC</option>
+                        <option value="daily" @selected(! $canFinal)>Daily QC</option>
+                        <option value="final" @selected($canFinal) @disabled(! $canFinal)>Final QC{{ $canFinal ? '' : ' — submit the work order for QC first' }}</option>
                     </x-select-input>
+                    <p class="mt-1 text-xs text-gray-400">
+                        Daily QC checks each day's work and never changes the work order's overall status.
+                        Final QC is only available once the executive team has clicked "Work Completed — Submit for QC" — passing it routes the work order to the client for final confirmation.
+                    </p>
                 </div>
 
                 <div>
