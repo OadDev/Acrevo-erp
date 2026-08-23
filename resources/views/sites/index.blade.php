@@ -35,7 +35,7 @@
                                 <td class="px-5 py-3">
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $site->site_no }}</span>
                                 </td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $site->client->name }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $site->client?->name ?? 'Removed client' }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ collect([$site->address, $site->city, $site->state])->filter()->join(', ') ?: '—' }}</td>
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $site->work_orders_count }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$site->status" /></td>

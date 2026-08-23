@@ -114,6 +114,10 @@ class ClientController extends Controller
 
     public function destroy(Client $client): RedirectResponse
     {
+        $remainingSites = $client->sites()->count();
+
+        abort_if($remainingSites > 0, 422, "This client still has {$remainingSites} site(s). Remove all sites under this client before removing the client.");
+
         $client->delete();
 
         return redirect()->route('clients.index')->with('success', 'Client removed.');

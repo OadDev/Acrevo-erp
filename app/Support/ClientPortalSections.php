@@ -15,6 +15,11 @@ class ClientPortalSections
         'summary' => 'Monthly Summary',
         'ledger' => 'Site Ledger',
         'mb' => 'Measurement Book',
+        'materials' => 'Material Inward',
+        'material_usage' => 'Used Material',
+        'manpower' => 'Used Manpower',
+        'company_ledger' => 'Company Ledger',
+        'qc' => 'QC',
         'approvals' => 'Approval Requests',
         'tickets' => 'Tickets',
     ];

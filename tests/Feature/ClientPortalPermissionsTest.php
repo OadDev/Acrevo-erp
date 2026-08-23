@@ -4,10 +4,15 @@ namespace Tests\Feature;
 
 use App\Models\Client;
 use App\Models\ClientLogin;
+use App\Models\CompanyLedger;
 use App\Models\Department;
 use App\Models\Enquiry;
+use App\Models\LabourEntry;
 use App\Models\Ledger;
+use App\Models\MaterialEntry;
+use App\Models\MaterialUsageEntry;
 use App\Models\MeasurementBook;
+use App\Models\QcInspection;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderSummary;
@@ -112,6 +117,57 @@ class ClientPortalPermissionsTest extends TestCase
             ->assertDontSee('Monthly Summary')
             ->assertDontSee('Approval Requests')
             ->assertDontSee('Progress Photos');
+    }
+
+    public function test_admin_can_restrict_a_client_to_the_new_execution_sections(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        MaterialEntry::create([
+            'work_order_id' => $workOrder->id, 'material_name' => 'Cement', 'unit' => 'Bag',
+            'quantity' => 10, 'rate' => 400, 'amount' => 4000, 'entry_date' => now(), 'added_by' => $admin->id,
+        ]);
+        MaterialUsageEntry::create([
+            'work_order_id' => $workOrder->id, 'material_name' => 'Sand', 'unit' => 'Cft',
+            'quantity' => 5, 'date' => now(), 'added_by' => $admin->id,
+        ]);
+        LabourEntry::create([
+            'work_order_id' => $workOrder->id, 'labour_type' => 'Mason', 'count' => 2,
+            'wage_rate' => 800, 'amount' => 1600, 'entry_date' => now(), 'added_by' => $admin->id,
+        ]);
+        CompanyLedger::create([
+            'work_order_id' => $workOrder->id, 'entry_date' => now(), 'type' => 'debit',
+            'category' => 'Fuel', 'description' => 'Vehicle fuel', 'amount' => 500, 'balance' => -500, 'created_by' => $admin->id,
+        ]);
+        QcInspection::create([
+            'work_order_id' => $workOrder->id, 'inspection_type' => 'daily', 'inspected_by' => $admin->id,
+            'inspection_date' => now(), 'status' => 'passed', 'remarks' => 'Looks good',
+        ]);
+
+        $this->actingAs($admin)->put("/clients/{$client->id}/portal-permissions", [
+            'visible_sections' => ['materials', 'material_usage', 'manpower', 'company_ledger', 'qc'],
+        ])->assertRedirect();
+
+        $response = $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}");
+        $response->assertOk()
+            ->assertSee('Material Inward')
+            ->assertSee('Cement')
+            ->assertSee('Used Material')
+            ->assertSee('Sand')
+            ->assertSee('Used Manpower')
+            ->assertSee('Mason')
+            ->assertSee('Company Ledger')
+            ->assertSee('Vehicle fuel')
+            ->assertSee('QC')
+            ->assertSee('Looks good')
+            ->assertDontSee('Site Ledger')
+            ->assertDontSee('Measurement Book');
     }
 
     public function test_admin_can_reset_a_client_back_to_unrestricted(): void

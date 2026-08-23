@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header :title="$site->site_no" :subtitle="$site->client->name">
+        <x-page-header :title="$site->site_no" :subtitle="$site->client?->name ?? 'Removed client'">
             <x-slot name="actions">
                 <x-badge :status="$site->status" class="text-sm" />
                 @can('work_orders.edit')
@@ -89,7 +89,13 @@
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Client</h3>
             <dl class="space-y-2 text-sm">
-                <div><dt class="text-gray-400">Client</dt><dd class="text-gray-800 dark:text-gray-200"><a href="{{ route('clients.show', $site->client) }}" class="text-indigo-600 hover:underline">{{ $site->client->name }}</a></dd></div>
+                <div><dt class="text-gray-400">Client</dt><dd class="text-gray-800 dark:text-gray-200">
+                    @if ($site->client)
+                        <a href="{{ route('clients.show', $site->client) }}" class="text-indigo-600 hover:underline">{{ $site->client->name }}</a>
+                    @else
+                        Removed client
+                    @endif
+                </dd></div>
                 <div><dt class="text-gray-400">Quotation</dt><dd class="text-gray-800 dark:text-gray-200">
                     @if ($site->quotation)
                         <a href="{{ route('quotations.show', $site->quotation) }}" class="text-indigo-600 hover:underline">{{ $site->quotation->quotation_no }}</a>

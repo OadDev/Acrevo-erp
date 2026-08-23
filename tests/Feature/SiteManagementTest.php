@@ -94,6 +94,31 @@ class SiteManagementTest extends TestCase
         $this->assertSame('Updated client location', $fresh->client_living_location);
     }
 
+    public function test_a_client_with_a_site_cannot_be_removed(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->delete("/clients/{$client->id}")->assertStatus(422);
+        $this->assertNotNull($client->fresh());
+    }
+
+    public function test_sites_index_does_not_500_when_its_client_was_removed(): void
+    {
+        // Regression test: a client soft-deleted while still owning a site
+        // left the site's `client` relation resolving to null (SoftDeletes
+        // excludes trashed rows), which crashed the Sites list with
+        // "Attempt to read property 'name' on null".
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $site = Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $client->delete();
+
+        $this->actingAs($admin)->get('/sites')->assertOk()->assertSee('Removed client');
+        $this->actingAs($admin)->get("/sites/{$site->id}")->assertOk()->assertSee('Removed client');
+    }
+
     public function test_only_admin_can_remove_a_site(): void
     {
         $admin = $this->admin();
