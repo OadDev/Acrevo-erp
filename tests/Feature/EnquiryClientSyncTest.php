@@ -63,6 +63,26 @@ class EnquiryClientSyncTest extends TestCase
         $this->assertSame('original@example.com', $client->fresh()->email);
     }
 
+    public function test_checking_sync_to_client_overwrites_an_existing_client_email(): void
+    {
+        // A placeholder email entered when the enquiry/client were first
+        // created can be corrected here by explicitly opting in, without
+        // that becoming the silent default for every enquiry edit.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'phone' => '1', 'email' => 'placeholder@example.com', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create([
+            'client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1',
+            'status' => 'new', 'source' => 'website', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put("/enquiries/{$enquiry->id}", [
+            'contact_name' => 'C', 'contact_phone' => '1', 'contact_email' => 'correct@example.com',
+            'source' => 'website', 'sync_to_client' => '1',
+        ])->assertRedirect();
+
+        $this->assertSame('correct@example.com', $client->fresh()->email);
+    }
+
     public function test_only_admin_can_remove_an_enquiry(): void
     {
         $admin = $this->admin();
