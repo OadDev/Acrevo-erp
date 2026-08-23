@@ -36,6 +36,50 @@ class QuotationTaxTest extends TestCase
         return Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
     }
 
+    public function test_quotation_pages_survive_a_soft_deleted_client(): void
+    {
+        // Regression test: removing a client left any quotation still
+        // pointing at it (client_id resolves to null via SoftDeletes'
+        // global scope) crashing the Quotations list/show/PDF with
+        // "Attempt to read property 'name' on null".
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+
+        $this->actingAs($admin)->post('/quotations', [
+            'enquiry_id' => $enquiry->id,
+            'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat',
+            'discount_value' => 0,
+            'items' => [
+                ['item_type' => 'service', 'name' => 'Plastering', 'unit' => 'Sqft', 'quantity' => 100, 'unit_price' => 50, 'discount' => 0],
+            ],
+        ])->assertRedirect();
+        $quotation = Quotation::firstOrFail();
+
+        $enquiry->client->delete();
+
+        $this->actingAs($admin)->get('/quotations')->assertOk()->assertSee('Unknown client');
+        $this->actingAs($admin)->get("/quotations/{$quotation->id}")->assertOk()->assertSee('Unknown client');
+        $this->actingAs($admin)->get("/quotations/{$quotation->id}/pdf")->assertOk();
+    }
+
+    public function test_a_client_with_a_quotation_or_enquiry_cannot_be_removed(): void
+    {
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+
+        $this->actingAs($admin)->delete("/clients/{$enquiry->client_id}")->assertStatus(422);
+        $this->assertNotNull($enquiry->client->fresh());
+
+        Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'draft', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->delete("/clients/{$enquiry->client_id}")->assertStatus(422);
+        $this->assertNotNull($enquiry->client->fresh());
+    }
+
     public function test_a_quotation_can_be_created_with_nil_tax(): void
     {
         $admin = $this->admin();

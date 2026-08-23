@@ -111,6 +111,44 @@ class LeaveRequestTest extends TestCase
         $this->assertNotNull(LeaveRequest::find($reviewed->id));
     }
 
+    public function test_hr_can_remove_any_leave_request_regardless_of_status(): void
+    {
+        $admin = $this->admin();
+        $hrReviewer = $this->staffUser($admin, 'HR');
+        $qc = $this->staffUser($admin, 'QC Officer');
+
+        $pending = LeaveRequest::create([
+            'employee_id' => $qc->employee->id, 'type' => 'sick',
+            'from_date' => now(), 'to_date' => now(), 'status' => 'pending', 'created_by' => $qc->id,
+        ]);
+        $reviewed = LeaveRequest::create([
+            'employee_id' => $qc->employee->id, 'type' => 'casual',
+            'from_date' => now(), 'to_date' => now(), 'status' => 'approved',
+            'reviewed_by' => $admin->id, 'reviewed_at' => now(), 'created_by' => $qc->id,
+        ]);
+
+        $this->actingAs($hrReviewer)->delete("/leave-requests/{$pending->id}")->assertRedirect();
+        $this->assertNull(LeaveRequest::find($pending->id));
+
+        $this->actingAs($hrReviewer)->delete("/leave-requests/{$reviewed->id}")->assertRedirect();
+        $this->assertNull(LeaveRequest::find($reviewed->id));
+    }
+
+    public function test_a_non_reviewer_cannot_remove_someone_elses_leave_request(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->staffUser($admin, 'Sales');
+        $qc = $this->staffUser($admin, 'QC Officer');
+
+        $leaveRequest = LeaveRequest::create([
+            'employee_id' => $qc->employee->id, 'type' => 'sick',
+            'from_date' => now(), 'to_date' => now(), 'status' => 'pending', 'created_by' => $qc->id,
+        ]);
+
+        $this->actingAs($sales)->delete("/leave-requests/{$leaveRequest->id}")->assertForbidden();
+        $this->assertNotNull(LeaveRequest::find($leaveRequest->id));
+    }
+
     public function test_client_role_cannot_reach_leave_requests(): void
     {
         $admin = $this->admin();

@@ -23,9 +23,9 @@
         <tr style="border: none;">
             <td style="border: none; width: 50%;">
                 <strong>Bill To</strong><br>
-                {{ $quotation->client->name }}<br>
-                {{ $quotation->client->address }}<br>
-                {{ $quotation->client->phone }} · {{ $quotation->client->email }}
+                {{ $quotation->client?->name ?? 'Unknown client' }}<br>
+                {{ $quotation->client?->address }}<br>
+                {{ $quotation->client?->phone }} · {{ $quotation->client?->email }}
             </td>
             <td style="border: none; width: 50%;" class="text-right">
                 Date: {{ $quotation->created_at->timezone('Asia/Kolkata')->format('d M Y') }}<br>

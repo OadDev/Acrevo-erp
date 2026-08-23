@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header :title="$quotation->quotation_no" :subtitle="'v'.$quotation->version.' — '.$quotation->client->name">
+        <x-page-header :title="$quotation->quotation_no" :subtitle="'v'.$quotation->version.' — '.($quotation->client?->name ?? 'Unknown client')">
             <x-slot name="actions">
                 <x-badge :status="$quotation->status" class="text-sm" />
                 <x-link-button :href="route('quotations.pdf', $quotation)" variant="secondary"><x-icon name="download" class="h-4 w-4" /> PDF</x-link-button>

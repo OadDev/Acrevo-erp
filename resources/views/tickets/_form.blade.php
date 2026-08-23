@@ -2,7 +2,7 @@
 <input type="hidden" name="work_order_id" value="{{ $workOrder->id }}">
 
 <div class="mb-5 rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-    {{ $workOrder->work_order_no }} — {{ $workOrder->title }} ({{ $workOrder->client->name }})
+    {{ $workOrder->work_order_no }} — {{ $workOrder->title }} ({{ $workOrder->client?->name ?? 'Unknown client' }})
 </div>
 
 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">

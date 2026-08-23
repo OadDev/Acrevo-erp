@@ -11,7 +11,7 @@
                         <p class="font-medium text-gray-900 dark:text-white">{{ $workOrder->title }}</p>
                         <x-badge :status="$workOrder->status" />
                     </div>
-                    <p class="mt-1 text-xs text-gray-400">{{ $workOrder->work_order_no }} — {{ $workOrder->client->name }}</p>
+                    <p class="mt-1 text-xs text-gray-400">{{ $workOrder->work_order_no }} — {{ $workOrder->client?->name ?? 'Unknown client' }}</p>
                     <p class="mt-3 text-sm text-gray-500">Deadline: {{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</p>
                 </x-card>
             </a>

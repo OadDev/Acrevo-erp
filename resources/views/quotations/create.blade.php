@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="New Quotation" :subtitle="$enquiry->enquiry_no.' — '.$enquiry->client->name" />
+        <x-page-header title="New Quotation" :subtitle="$enquiry->enquiry_no.' — '.($enquiry->client?->name ?? 'Unknown client')" />
     </x-slot>
 
     <div
