@@ -26,7 +26,7 @@
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $quotation->quotation_no }}</span>
                                     <p class="text-xs text-gray-400">v{{ $quotation->version }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $quotation->client->name }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $quotation->client?->name ?? 'Unknown client' }}</td>
                                 <td class="px-5 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($quotation->total_amount, 2) }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$quotation->status" /></td>
                             </tr>

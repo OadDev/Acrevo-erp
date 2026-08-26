@@ -331,6 +331,34 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $leader->id, 'deleted_at' => null]);
     }
 
+    public function test_my_work_orders_survives_a_soft_deleted_client(): void
+    {
+        // Regression test: an already-orphaned client (soft-deleted while
+        // still owning a work order, from before the removal guard existed)
+        // left $workOrder->client resolving to null and crashed the
+        // "My Work Order" list with "Attempt to read property 'name' on null".
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $site = Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'site_id' => $site->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $leader = User::create([
+            'name' => 'Leader', 'email' => 'leader+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $leader->syncRoles(['Executive Team Leader']);
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
+
+        $client->delete();
+
+        $this->actingAs($leader)->get('/my-work-orders')->assertOk()->assertSee('Unknown client');
+    }
+
     public function test_work_order_moves_to_qc_pending_when_marked_completed_by_the_team(): void
     {
         $admin = $this->admin();

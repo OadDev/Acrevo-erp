@@ -41,6 +41,12 @@ class PortalWorkOrderController extends Controller
             'ledgers' => fn ($q) => $q->orderBy('entry_date'),
             'measurementBooks' => fn ($q) => $q->where('type', 'actual')->orderBy('date'),
             'measurementBooks.items',
+            'materialEntries' => fn ($q) => $q->orderBy('entry_date'),
+            'materialUsageEntries',
+            'labourEntries' => fn ($q) => $q->orderBy('entry_date'),
+            'companyLedgers' => fn ($q) => $q->orderBy('entry_date'),
+            'qcInspections' => fn ($q) => $q->orderBy('inspection_date'),
+            'qcInspections.inspectedBy',
         ]);
 
         return view('portal.work-orders.show', compact('workOrder'));

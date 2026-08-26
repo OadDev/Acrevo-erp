@@ -45,7 +45,7 @@
                 </div>
             @endif
             <div class="mb-6 rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-                Generating from approved quotation for <strong>{{ $quotation->client->name }}</strong> — Total ₹{{ number_format($quotation->total_amount, 2) }}
+                Generating from approved quotation for <strong>{{ $quotation->client?->name ?? 'Unknown client' }}</strong> — Total ₹{{ number_format($quotation->total_amount, 2) }}
             </div>
 
             <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900">

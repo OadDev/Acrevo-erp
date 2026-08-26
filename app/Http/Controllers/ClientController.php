@@ -114,6 +114,20 @@ class ClientController extends Controller
 
     public function destroy(Client $client): RedirectResponse
     {
+        // Every one of these still points client_id/enquiry_id back at this
+        // client after a soft delete (SoftDeletes' global scope just makes
+        // the client invisible to the belongsTo lookup) - leaving any of
+        // them behind turns every page that displays them into a 500.
+        $blockers = collect([
+            'enquiry' => $client->enquiries()->count(),
+            'quotation' => $client->quotations()->count(),
+            'site' => $client->sites()->count(),
+        ])->filter(fn ($count) => $count > 0);
+
+        abort_if($blockers->isNotEmpty(), 422, 'This client still has '.
+            $blockers->map(fn ($count, $label) => "{$count} {$label}".($count === 1 ? '' : 's'))->join(', ').
+            '. Remove them before removing the client.');
+
         $client->delete();
 
         return redirect()->route('clients.index')->with('success', 'Client removed.');

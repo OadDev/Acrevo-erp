@@ -177,6 +177,159 @@
                     @endforelse
                 </x-card>
             @endif
+
+            @if ($workOrder->client->canViewSection('materials'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Material Inward</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Material Description</th>
+                                    <th class="px-4 py-2">Nos</th>
+                                    <th class="px-4 py-2">Unit</th>
+                                    <th class="px-4 py-2 text-right">Rate/Unit</th>
+                                    <th class="px-4 py-2 text-right">Total Rate</th>
+                                    <th class="px-4 py-2">Supplier Details</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->materialEntries as $entry)
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date?->format('d M Y') ?? '—' }}</td>
+                                        <td class="px-4 py-2">{{ $entry->material_name }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->quantity }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->unit }}</td>
+                                        <td class="px-4 py-2 text-right text-gray-500">₹{{ number_format($entry->rate, 2) }}</td>
+                                        <td class="px-4 py-2 text-right font-medium">₹{{ number_format($entry->amount, 2) }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->vendor ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">No material inward entries yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('material_usage'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Used Material</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Material Name</th>
+                                    <th class="px-4 py-2">Nos</th>
+                                    <th class="px-4 py-2">Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->materialUsageEntries as $entry)
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->date->format('d M Y') }}</td>
+                                        <td class="px-4 py-2">{{ $entry->material_name }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->quantity }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->unit }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">No used material entries yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('manpower'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Used Manpower</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Designation</th>
+                                    <th class="px-4 py-2">Nos</th>
+                                    <th class="px-4 py-2">Target Hrs</th>
+                                    <th class="px-4 py-2">Actual Time Taken</th>
+                                    <th class="px-4 py-2">Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->labourEntries as $entry)
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date?->format('d M Y') ?? '—' }}</td>
+                                        <td class="px-4 py-2">{{ $entry->labour_type }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->count }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->hours ?? '—' }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->total_time_to_finish ?? '—' }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No used manpower entries yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('company_ledger'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Company Ledger</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Category</th>
+                                    <th class="px-4 py-2">Description</th>
+                                    <th class="px-4 py-2">Type</th>
+                                    <th class="px-4 py-2 text-right">Amount</th>
+                                    <th class="px-4 py-2 text-right">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->companyLedgers as $entry)
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date->format('d M Y') }}</td>
+                                        <td class="px-4 py-2 text-gray-500">{{ $entry->category ?? '—' }}</td>
+                                        <td class="px-4 py-2">{{ $entry->description ?? '—' }}</td>
+                                        <td class="px-4 py-2"><x-badge :status="$entry->type" /></td>
+                                        <td class="px-4 py-2 text-right">₹{{ number_format($entry->amount, 2) }}</td>
+                                        <td class="px-4 py-2 text-right font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($entry->balance, 2) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No company ledger entries yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
+            @if ($workOrder->client->canViewSection('qc'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">QC</h3>
+                    @forelse ($workOrder->qcInspections as $inspection)
+                        <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-medium text-gray-800 dark:text-gray-200">{{ Str::title($inspection->inspection_type) }} QC — {{ $inspection->inspection_date->format('d M Y') }}</span>
+                                <x-badge :status="$inspection->status" />
+                            </div>
+                            @if ($inspection->remarks)
+                                <p class="mt-1 text-gray-500">{{ $inspection->remarks }}</p>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400">No QC inspections yet.</p>
+                    @endforelse
+                </x-card>
+            @endif
         </div>
 
         <div class="space-y-6">

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\LedgerCategoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
@@ -67,7 +68,7 @@ Route::middleware('permission:enquiries.view')->group(function () {
 });
 
 Route::middleware('permission:site_visits.view')->group(function () {
-    Route::resource('site-visits', SiteVisitController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+    Route::resource('site-visits', SiteVisitController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     Route::post('site-visits/{siteVisit}/complete', [SiteVisitController::class, 'complete'])->name('site-visits.complete');
 });
 
@@ -459,6 +460,8 @@ Route::middleware('permission:roles.view')->group(function () {
 });
 Route::middleware('permission:masters.manage')->group(function () {
     Route::resource('admin/departments', DepartmentController::class)->except(['create', 'edit', 'show'])->names('admin.departments');
+    Route::post('admin/ledger-categories', [LedgerCategoryController::class, 'store'])->name('admin.ledger-categories.store');
+    Route::delete('admin/ledger-categories/{ledgerCategory}', [LedgerCategoryController::class, 'destroy'])->name('admin.ledger-categories.destroy');
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');

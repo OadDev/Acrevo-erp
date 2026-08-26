@@ -44,16 +44,23 @@
                                             @endif
                                         </td>
                                         <td class="px-4 py-2">
-                                            @if ($leaveRequest->status === 'pending')
-                                                <form method="POST" action="{{ route('leave-requests.review', $leaveRequest) }}" class="flex flex-wrap items-center gap-1">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                @if ($leaveRequest->status === 'pending')
+                                                    <form method="POST" action="{{ route('leave-requests.review', $leaveRequest) }}" class="flex flex-wrap items-center gap-1">
+                                                        @csrf
+                                                        <x-text-input name="review_remarks" placeholder="Remarks (optional)" class="w-32 text-xs" />
+                                                        <button name="status" value="approved" class="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500">Approve</button>
+                                                        <button name="status" value="rejected" class="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Reject</button>
+                                                    </form>
+                                                @elseif ($leaveRequest->review_remarks)
+                                                    <span class="text-xs text-gray-400">{{ $leaveRequest->review_remarks }}</span>
+                                                @endif
+                                                <form method="POST" action="{{ route('leave-requests.destroy', $leaveRequest) }}" onsubmit="return confirm('Permanently remove this leave request?')">
                                                     @csrf
-                                                    <x-text-input name="review_remarks" placeholder="Remarks (optional)" class="w-32 text-xs" />
-                                                    <button name="status" value="approved" class="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500">Approve</button>
-                                                    <button name="status" value="rejected" class="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Reject</button>
+                                                    @method('DELETE')
+                                                    <button class="text-xs font-medium text-rose-600 hover:underline">Remove</button>
                                                 </form>
-                                            @elseif ($leaveRequest->review_remarks)
-                                                <span class="text-xs text-gray-400">{{ $leaveRequest->review_remarks }}</span>
-                                            @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty

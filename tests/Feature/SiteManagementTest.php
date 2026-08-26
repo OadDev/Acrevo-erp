@@ -94,6 +94,57 @@ class SiteManagementTest extends TestCase
         $this->assertSame('Updated client location', $fresh->client_living_location);
     }
 
+    public function test_a_client_with_a_site_cannot_be_removed(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->delete("/clients/{$client->id}")->assertStatus(422);
+        $this->assertNotNull($client->fresh());
+    }
+
+    public function test_sites_index_does_not_500_when_its_client_was_removed(): void
+    {
+        // Regression test: a client soft-deleted while still owning a site
+        // left the site's `client` relation resolving to null (SoftDeletes
+        // excludes trashed rows), which crashed the Sites list with
+        // "Attempt to read property 'name' on null".
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $site = Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+        $client->delete();
+
+        $this->actingAs($admin)->get('/sites')->assertOk()->assertSee('Removed client');
+        $this->actingAs($admin)->get("/sites/{$site->id}")->assertOk()->assertSee('Removed client');
+    }
+
+    public function test_site_numbering_skips_past_a_gap_left_by_a_deleted_site(): void
+    {
+        // Regression test: HasSequenceNumber used to compute the "next"
+        // number from a COUNT of existing rows. Deleting a site in the
+        // middle of the sequence (site_no unique, no work orders) dropped
+        // the count without freeing the number the highest-numbered
+        // remaining site already has - so the next site created that month
+        // recomputed that same number and failed the unique constraint,
+        // permanently 500ing "Generate Work Order" for whatever quotation
+        // triggered the auto-create.
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+
+        $siteA = Site::create(['client_id' => $client->id, 'address' => 'A', 'created_by' => $admin->id]);
+        $siteB = Site::create(['client_id' => $client->id, 'address' => 'B', 'created_by' => $admin->id]);
+        $siteC = Site::create(['client_id' => $client->id, 'address' => 'C', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->delete("/sites/{$siteB->id}")->assertRedirect();
+
+        $siteD = Site::create(['client_id' => $client->id, 'address' => 'D', 'created_by' => $admin->id]);
+
+        $this->assertNotSame($siteC->site_no, $siteD->site_no);
+        $suffix = fn ($siteNo) => (int) substr($siteNo, -4);
+        $this->assertSame($suffix($siteC->site_no) + 1, $suffix($siteD->site_no));
+    }
+
     public function test_only_admin_can_remove_a_site(): void
     {
         $admin = $this->admin();

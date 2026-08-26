@@ -71,13 +71,20 @@ class LeaveRequestController extends Controller
 
     public function destroy(Request $request, LeaveRequest $leaveRequest): RedirectResponse
     {
-        $employee = $request->user()->employee;
+        $user = $request->user();
+        $employee = $user->employee;
+        $canManage = $user->can('attendance.manage');
 
-        abort_unless($employee && $leaveRequest->employee_id === $employee->id, 403);
-        abort_unless($leaveRequest->status === 'pending', 422, 'This request has already been reviewed and can no longer be withdrawn.');
+        // Admin/HR can remove any leave request regardless of status. Anyone
+        // else can only withdraw their own request, and only while it's
+        // still pending - once reviewed, that decision stands.
+        if (! $canManage) {
+            abort_unless($employee && $leaveRequest->employee_id === $employee->id, 403);
+            abort_unless($leaveRequest->status === 'pending', 422, 'This request has already been reviewed and can no longer be withdrawn.');
+        }
 
         $leaveRequest->delete();
 
-        return back()->with('success', 'Leave request withdrawn.');
+        return back()->with('success', $canManage ? 'Leave request removed.' : 'Leave request withdrawn.');
     }
 }

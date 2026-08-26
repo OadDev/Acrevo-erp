@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header :title="$quotation->quotation_no" :subtitle="'v'.$quotation->version.' — '.$quotation->client->name">
+        <x-page-header :title="$quotation->quotation_no" :subtitle="'v'.$quotation->version.' — '.($quotation->client?->name ?? 'Unknown client')">
             <x-slot name="actions">
                 <x-badge :status="$quotation->status" class="text-sm" />
                 <x-link-button :href="route('quotations.pdf', $quotation)" variant="secondary"><x-icon name="download" class="h-4 w-4" /> PDF</x-link-button>
@@ -44,6 +44,18 @@
                     @can('work_orders.create')
                         <x-link-button :href="route('work-orders.create', ['quotation_id' => $quotation->id])">Generate Work Order</x-link-button>
                     @endcan
+                @endif
+
+                @if (auth()->user()->hasRole('Admin'))
+                    @if ($quotation->workOrders->isEmpty())
+                        <form method="POST" action="{{ route('quotations.destroy', $quotation) }}" onsubmit="return confirm('Permanently remove this quotation? This cannot be undone.')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
+                        </form>
+                    @else
+                        <span class="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-400 dark:border-gray-700" title="Remove all work orders generated from this quotation first">Remove</span>
+                    @endif
                 @endif
             </x-slot>
         </x-page-header>

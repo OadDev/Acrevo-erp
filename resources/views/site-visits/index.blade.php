@@ -44,6 +44,13 @@
                                     @if ($visit->enquiry)
                                         <a href="{{ route('site-visits.edit', $visit) }}" class="ml-2 text-sm text-indigo-600 hover:underline">Edit</a>
                                     @endif
+                                    @if (auth()->user()->hasRole('Admin'))
+                                        <form method="POST" action="{{ route('site-visits.destroy', $visit) }}" class="ml-2 inline" onsubmit="return confirm('Permanently remove this site visit? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="text-sm text-rose-600 hover:underline">Remove</button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
