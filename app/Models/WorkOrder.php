@@ -130,9 +130,7 @@ class WorkOrder extends Model implements HasMedia
 
     public function client(): BelongsTo
     {
-        // withTrashed() so a removed client's existing work orders still show
-        // their name instead of crashing on null.
-        return $this->belongsTo(Client::class)->withTrashed();
+        return $this->belongsTo(Client::class);
     }
 
     public function creator(): BelongsTo

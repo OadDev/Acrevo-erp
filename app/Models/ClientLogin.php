@@ -11,9 +11,7 @@ class ClientLogin extends Model
 
     public function client(): BelongsTo
     {
-        // withTrashed() so a removed client's login record still resolves
-        // instead of crashing on null.
-        return $this->belongsTo(Client::class)->withTrashed();
+        return $this->belongsTo(Client::class);
     }
 
     public function user(): BelongsTo

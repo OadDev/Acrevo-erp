@@ -21,8 +21,6 @@ class ClientReview extends Model
 
     public function client(): BelongsTo
     {
-        // withTrashed() so a removed client's past reviews still show their
-        // name instead of crashing on null.
-        return $this->belongsTo(Client::class)->withTrashed();
+        return $this->belongsTo(Client::class);
     }
 }

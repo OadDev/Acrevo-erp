@@ -30,9 +30,7 @@ class Invoice extends Model
 
     public function client(): BelongsTo
     {
-        // withTrashed() so a removed client's invoices still show their name
-        // instead of crashing on null.
-        return $this->belongsTo(Client::class)->withTrashed();
+        return $this->belongsTo(Client::class);
     }
 
     public function issuedBy(): BelongsTo
