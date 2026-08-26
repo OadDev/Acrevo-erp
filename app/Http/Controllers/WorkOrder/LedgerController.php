@@ -20,6 +20,7 @@ class LedgerController extends Controller
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
+            'entry_date' => ['nullable', 'date'],
             'type' => ['required', 'in:credit,debit,borrow,lended'],
             'category' => ['nullable', 'string', 'max:150'],
             'description' => ['nullable', 'string'],
@@ -28,18 +29,14 @@ class LedgerController extends Controller
             'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
-        $previousBalance = (float) ($workOrder->ledgers()->latest('id')->value('balance') ?? 0);
-        $increasesBalance = in_array($data['type'], ['credit', 'borrow'], true);
-        $balance = $increasesBalance ? $previousBalance + $data['amount'] : $previousBalance - $data['amount'];
-
         $ledger = $workOrder->ledgers()->create([
             'type' => $data['type'],
             'category' => $data['category'] ?? null,
             'description' => $data['description'] ?? null,
             'remark' => $data['remark'] ?? null,
             'amount' => $data['amount'],
-            'entry_date' => now()->toDateString(),
-            'balance' => $balance,
+            'entry_date' => $data['entry_date'] ?? now()->toDateString(),
+            'balance' => 0,
             'created_by' => $request->user()->id,
         ]);
 
@@ -50,6 +47,11 @@ class LedgerController extends Controller
                 return back()->withErrors(['bill' => 'That file is too large (max 20MB).']);
             }
         }
+
+        // A backdated entry shifts every running balance after it, not just
+        // its own row, so recalculate the whole chain in date order rather
+        // than assuming this entry is always the latest one.
+        $this->recalculateBalances($workOrder);
 
         return back()->with('success', 'Ledger entry recorded.');
     }

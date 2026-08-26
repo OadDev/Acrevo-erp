@@ -165,6 +165,7 @@
     @can('site_records.manage')
         <form method="POST" action="{{ route('work-orders.ledger.store', $workOrder) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
             @csrf
+            <x-text-input type="date" name="entry_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />
             <x-select-input name="type" class="text-sm">
                 <option value="debit">Debit</option>
                 <option value="credit">Credit</option>

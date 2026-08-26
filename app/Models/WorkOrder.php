@@ -175,17 +175,19 @@ class WorkOrder extends Model implements HasMedia
 
     public function materialEntries(): HasMany
     {
-        return $this->hasMany(MaterialEntry::class);
+        // Ordered by entry date (not insertion order), so a backdated entry
+        // added later still lands in the right chronological place.
+        return $this->hasMany(MaterialEntry::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function materialUsageEntries(): HasMany
     {
-        return $this->hasMany(MaterialUsageEntry::class)->latest('date');
+        return $this->hasMany(MaterialUsageEntry::class)->orderBy('date')->orderBy('id');
     }
 
     public function labourEntries(): HasMany
     {
-        return $this->hasMany(LabourEntry::class);
+        return $this->hasMany(LabourEntry::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function timeSchedules(): HasMany
@@ -200,17 +202,17 @@ class WorkOrder extends Model implements HasMedia
 
     public function attendances(): HasMany
     {
-        return $this->hasMany(Attendance::class)->latest('date');
+        return $this->hasMany(Attendance::class)->orderBy('date')->orderBy('id');
     }
 
     public function measurementBooks(): HasMany
     {
-        return $this->hasMany(MeasurementBook::class);
+        return $this->hasMany(MeasurementBook::class)->orderBy('date')->orderBy('id');
     }
 
     public function ledgers(): HasMany
     {
-        return $this->hasMany(Ledger::class);
+        return $this->hasMany(Ledger::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function companyLedgers(): HasMany
