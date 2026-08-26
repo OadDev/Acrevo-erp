@@ -70,4 +70,13 @@ class SiteVisitController extends Controller
 
         return back()->with('success', 'Site visit marked complete.');
     }
+
+    public function destroy(SiteVisit $siteVisit): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $siteVisit->delete();
+
+        return redirect()->route('site-visits.index')->with('success', 'Site visit removed.');
+    }
 }

@@ -80,6 +80,54 @@ class QuotationTaxTest extends TestCase
         $this->assertNotNull($enquiry->client->fresh());
     }
 
+    public function test_admin_can_remove_a_quotation_without_work_orders(): void
+    {
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+        $quotation = Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertRedirect(route('quotations.index'));
+        $this->assertNull(Quotation::find($quotation->id));
+    }
+
+    public function test_a_quotation_with_work_orders_cannot_be_removed(): void
+    {
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+        $quotation = Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
+        ]);
+        \App\Models\WorkOrder::create([
+            'client_id' => $enquiry->client_id, 'quotation_id' => $quotation->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertStatus(422);
+        $this->assertNotNull(Quotation::find($quotation->id));
+    }
+
+    public function test_non_admin_cannot_remove_a_quotation(): void
+    {
+        $admin = $this->admin();
+        $sales = User::create([
+            'name' => 'Sales', 'email' => 'sales+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $sales->syncRoles(['Sales']);
+        $enquiry = $this->enquiry($admin);
+        $quotation = Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($sales)->delete("/quotations/{$quotation->id}")->assertForbidden();
+        $this->assertNotNull(Quotation::find($quotation->id));
+    }
+
     public function test_a_quotation_can_be_created_with_nil_tax(): void
     {
         $admin = $this->admin();
