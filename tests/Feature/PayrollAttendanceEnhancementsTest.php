@@ -54,6 +54,26 @@ class PayrollAttendanceEnhancementsTest extends TestCase
         $this->actingAs($admin)->get('/clients')->assertOk()->assertDontSee('Removable Client');
     }
 
+    public function test_removing_a_client_does_not_break_pages_listing_their_existing_sites_and_work_orders(): void
+    {
+        // Regression: Site/WorkOrder/Quotation/Enquiry all belongsTo(Client)
+        // without withTrashed(), so once a client with existing records was
+        // actually removable (the previous test), soft-deleting one crashed
+        // every page that displayed $site->client->name (etc.) with
+        // "Attempt to read property name on null".
+        $admin = $this->admin();
+        $client = \App\Models\Client::create([
+            'client_code' => 'CLI-'.uniqid(), 'name' => 'Client With History', 'phone' => '9999999999', 'type' => 'individual',
+        ]);
+        $site = \App\Models\Site::create(['client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->delete("/clients/{$client->id}")->assertRedirect('/clients');
+        $this->assertSoftDeleted('clients', ['id' => $client->id]);
+
+        $this->actingAs($admin)->get('/sites')->assertOk()->assertSee('Client With History');
+        $this->actingAs($admin)->get("/sites/{$site->id}")->assertOk()->assertSee('Client With History');
+    }
+
     public function test_removing_a_settlement_record_recalculates_paid_amount_and_status(): void
     {
         $admin = $this->admin();

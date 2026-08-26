@@ -31,7 +31,9 @@ class Payment extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        // withTrashed() so a removed client's payment history still shows
+        // their name instead of crashing on null.
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 
     public function receivedBy(): BelongsTo

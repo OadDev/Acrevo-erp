@@ -30,7 +30,9 @@ class LegalDocument extends Model implements HasMedia
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        // withTrashed() so a removed client's legal documents still show
+        // their name instead of crashing on null.
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 
     public function createdBy(): BelongsTo

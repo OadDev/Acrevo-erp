@@ -16,6 +16,8 @@ class ClientContact extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        // withTrashed() so a removed client's contacts still resolve instead
+        // of crashing on null.
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 }
