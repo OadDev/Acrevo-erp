@@ -165,6 +165,18 @@ class QuotationController extends Controller
         return redirect()->route('quotations.edit', $revision)->with('success', 'New revision created. Update the details below.');
     }
 
+    public function destroy(Quotation $quotation): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        $remainingWorkOrders = $quotation->workOrders()->count();
+        abort_if($remainingWorkOrders > 0, 422, "This quotation has {$remainingWorkOrders} work order(s). Remove them before removing the quotation.");
+
+        $quotation->delete();
+
+        return redirect()->route('quotations.index')->with('success', 'Quotation removed.');
+    }
+
     public function pdf(Quotation $quotation)
     {
         $quotation->load(['items', 'client', 'enquiry']);
