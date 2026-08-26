@@ -5,8 +5,37 @@
         ->when(request('ledger_category'), fn ($c) => $c->filter(fn ($e) => $e->category === request('ledger_category')))
         ->when(request('ledger_type'), fn ($c) => $c->filter(fn ($e) => $e->type === request('ledger_type')));
     $categories = $workOrder->ledgers->pluck('category')->filter()->unique()->sort();
+    $ledgerCategories = \App\Models\LedgerCategory::orderBy('name')->get();
     $currentBalance = $workOrder->ledgers->last()?->balance ?? 0;
 @endphp
+
+@if (auth()->user()->hasRole('Admin'))
+    <x-card class="mb-6" :padded="false">
+        <div class="p-4">
+            <h3 class="text-sm font-semibold text-gray-500">Ledger Categories</h3>
+            <p class="mt-1 text-xs text-gray-400">Manage the predefined categories selectable when entering Site Ledger entries.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
+            @forelse ($ledgerCategories as $ledgerCategory)
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                    {{ $ledgerCategory->name }}
+                    <form method="POST" action="{{ route('admin.ledger-categories.destroy', $ledgerCategory) }}" onsubmit="return confirm('Remove the category &quot;{{ $ledgerCategory->name }}&quot;? Existing ledger entries keep their category text.')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="text-gray-400 hover:text-rose-500" title="Remove category">&times;</button>
+                    </form>
+                </span>
+            @empty
+                <p class="text-xs text-gray-400">No categories yet - add one below.</p>
+            @endforelse
+        </div>
+        <form method="POST" action="{{ route('admin.ledger-categories.store') }}" class="flex gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
+            @csrf
+            <x-text-input name="name" placeholder="New category name" class="text-sm" required />
+            <x-primary-button class="whitespace-nowrap">Add Category</x-primary-button>
+        </form>
+    </x-card>
+@endif
 
 <x-card class="mb-6">
     <h3 class="text-sm font-semibold text-gray-500">Current Balance</h3>
@@ -110,7 +139,12 @@
                                         <option value="lended" @selected($entry->type === 'lended')>Lended</option>
                                     </x-select-input>
                                     <x-text-input type="number" step="0.01" name="amount" value="{{ $entry->amount }}" class="text-xs" required />
-                                    <x-text-input name="category" value="{{ $entry->category }}" class="text-xs" />
+                                    <x-select-input name="category" class="text-xs">
+                                        <option value="">No category</option>
+                                        @foreach ($ledgerCategories as $ledgerCategory)
+                                            <option value="{{ $ledgerCategory->name }}" @selected($entry->category === $ledgerCategory->name)>{{ $ledgerCategory->name }}</option>
+                                        @endforeach
+                                    </x-select-input>
                                     <x-text-input name="description" value="{{ $entry->description }}" class="col-span-2 text-xs" />
                                     <x-text-input name="remark" value="{{ $entry->remark }}" class="col-span-2 text-xs" />
                                     <div class="col-span-2 sm:col-span-4">
@@ -138,7 +172,12 @@
                 <option value="lended">Lended</option>
             </x-select-input>
             <x-text-input type="number" step="0.01" name="amount" placeholder="Amount" class="text-sm" required />
-            <x-text-input name="category" placeholder="Category" class="text-sm" />
+            <x-select-input name="category" class="text-sm">
+                <option value="">No category</option>
+                @foreach ($ledgerCategories as $ledgerCategory)
+                    <option value="{{ $ledgerCategory->name }}">{{ $ledgerCategory->name }}</option>
+                @endforeach
+            </x-select-input>
             <x-text-input name="description" placeholder="Description" class="text-sm" />
             <x-text-input name="remark" placeholder="Remark (optional)" class="col-span-2 text-sm sm:col-span-4" />
             <div class="col-span-2 sm:col-span-4">
