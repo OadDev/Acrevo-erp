@@ -194,6 +194,8 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
+        Route::put('attendance/{attendance}', [WorkOrderAttendanceController::class, 'update'])->name('attendance.update');
+        Route::delete('attendance/{attendance}', [WorkOrderAttendanceController::class, 'destroy'])->name('attendance.destroy');
     });
     // Company Ledger tracks the company's own expenses against a work order
     // and is restricted to Finance and Admin only (enforced in the

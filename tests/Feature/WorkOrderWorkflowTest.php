@@ -1872,6 +1872,42 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertNull(\App\Models\QcInspection::find($inspection->id));
     }
 
+    public function test_only_admin_can_edit_or_remove_a_work_order_attendance_entry(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $nonAdmin = $this->executiveTeamLeader();
+        $worker = \App\Models\Employee::create([
+            'employee_code' => 'EMP-'.uniqid(), 'name' => 'Site Worker', 'status' => 'active',
+            'department_id' => Department::first()->id, 'employment_type' => 'permanent',
+            'salary_type' => 'daily', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/attendance", [
+            'employee_id' => $worker->id, 'date' => now()->toDateString(), 'status' => 'present',
+        ])->assertRedirect();
+        $attendance = \App\Models\Attendance::where('employee_id', $worker->id)->firstOrFail();
+
+        $this->actingAs($nonAdmin)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
+            'date' => now()->toDateString(), 'status' => 'absent',
+        ])->assertForbidden();
+        $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertForbidden();
+
+        // Marked Present by mistake - Admin corrects it to Absent.
+        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
+            'date' => now()->toDateString(), 'status' => 'absent',
+        ])->assertRedirect();
+        $this->assertSame('absent', $attendance->fresh()->status);
+
+        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertRedirect();
+        $this->assertNull(\App\Models\Attendance::find($attendance->id));
+    }
+
     public function test_site_documents_can_be_uploaded_and_only_admin_can_remove_them(): void
     {
         $admin = $this->admin();

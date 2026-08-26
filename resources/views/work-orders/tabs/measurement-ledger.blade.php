@@ -181,7 +181,7 @@
         @endcan
     </x-card>
 
-    <x-card :padded="false">
+    <x-card :padded="false" x-data="{ editAttendance: null }">
         <div class="p-4">
             <h3 class="text-sm font-semibold text-gray-500">Worker Attendance</h3>
         </div>
@@ -191,12 +191,16 @@
                     <tr class="text-left text-gray-400">
                         <th class="px-4 py-1">Worker</th>
                         <th class="px-4 py-1">Date</th>
+                        <th class="px-4 py-1">Status</th>
                         <th class="px-4 py-1">In</th>
                         <th class="px-4 py-1">Out</th>
                         <th class="px-4 py-1">Break</th>
                         <th class="px-4 py-1">Hours</th>
                         <th class="px-4 py-1 text-right">Salary</th>
                         <th class="px-4 py-1 text-right">Advance</th>
+                        @if (auth()->user()->hasRole('Admin'))
+                            <th class="px-4 py-1">Actions</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -204,15 +208,49 @@
                         <tr>
                             <td class="px-4 py-1">{{ $attendance->employee?->name }}</td>
                             <td class="px-4 py-1">{{ $attendance->date->format('d M') }}</td>
+                            <td class="px-4 py-1"><x-badge :status="$attendance->status" /></td>
                             <td class="px-4 py-1">{{ $attendance->check_in ?? '—' }}</td>
                             <td class="px-4 py-1">{{ $attendance->check_out ?? '—' }}</td>
                             <td class="px-4 py-1">{{ $attendance->break_minutes ? $attendance->break_minutes.' min' : '—' }}</td>
                             <td class="px-4 py-1">{{ $attendance->hours_worked ?? '—' }}</td>
                             <td class="px-4 py-1 text-right">{{ $attendance->salary ? '₹'.number_format($attendance->salary, 2) : '—' }}</td>
                             <td class="px-4 py-1 text-right">{{ $attendance->advance ? '₹'.number_format($attendance->advance, 2) : '—' }}</td>
+                            @if (auth()->user()->hasRole('Admin'))
+                                <td class="whitespace-nowrap px-4 py-1">
+                                    <button type="button" @click="editAttendance === {{ $attendance->id }} ? editAttendance = null : editAttendance = {{ $attendance->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
+                                    <form method="POST" action="{{ route('work-orders.attendance.destroy', [$workOrder, $attendance]) }}" onsubmit="return confirm('Remove this attendance entry?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-2 font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                </td>
+                            @endif
                         </tr>
+                        @if (auth()->user()->hasRole('Admin'))
+                            <tr x-show="editAttendance === {{ $attendance->id }}" x-cloak>
+                                <td colspan="10" class="bg-gray-50 px-4 py-2 dark:bg-gray-900">
+                                    <form method="POST" action="{{ route('work-orders.attendance.update', [$workOrder, $attendance]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                        @csrf
+                                        @method('PUT')
+                                        <x-text-input type="date" name="date" value="{{ $attendance->date->format('Y-m-d') }}" class="text-xs" required />
+                                        <x-select-input name="status" class="text-xs">
+                                            <option value="present" @selected($attendance->status === 'present')>Present</option>
+                                            <option value="half_day" @selected($attendance->status === 'half_day')>Half Day</option>
+                                            <option value="absent" @selected($attendance->status === 'absent')>Absent</option>
+                                            <option value="leave" @selected($attendance->status === 'leave')>Leave</option>
+                                        </x-select-input>
+                                        <x-text-input type="time" name="check_in" value="{{ $attendance->check_in }}" class="text-xs" />
+                                        <x-text-input type="time" name="check_out" value="{{ $attendance->check_out }}" class="text-xs" />
+                                        <x-text-input type="number" min="0" name="break_minutes" value="{{ $attendance->break_minutes }}" placeholder="Break (mins)" class="text-xs" />
+                                        <x-text-input type="number" step="0.01" name="salary" value="{{ $attendance->salary }}" placeholder="Salary" class="text-xs" />
+                                        <x-text-input type="number" step="0.01" name="advance" value="{{ $attendance->advance }}" placeholder="Advance" class="text-xs" />
+                                        <button class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Save</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endif
                     @empty
-                        <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">No attendance recorded yet.</td></tr>
+                        <tr><td colspan="10" class="px-4 py-6 text-center text-gray-400">No attendance recorded yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
