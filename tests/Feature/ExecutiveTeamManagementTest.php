@@ -49,6 +49,29 @@ class ExecutiveTeamManagementTest extends TestCase
         $this->actingAs($admin)->get('/executive-teams')->assertOk()->assertDontSee('Team A');
     }
 
+    public function test_creating_a_team_survives_a_numbering_gap_from_a_removed_team(): void
+    {
+        // Regression test: team_number was generated as
+        // "TEAM-" . (ExecutiveTeam::count() + 1), but count() excludes
+        // soft-deleted rows. Removing any team then made the next created
+        // team recompute a team_number that collided with the unique
+        // constraint on an existing (or soft-deleted) row, 500ing the
+        // "Create Team" form.
+        $admin = $this->admin();
+        $teamA = ExecutiveTeam::create([
+            'team_number' => 'TEAM-001', 'name' => 'Team A', 'team_leader_id' => $admin->id,
+            'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        $this->actingAs($admin)->delete("/executive-teams/{$teamA->id}")->assertRedirect('/executive-teams');
+
+        $response = $this->actingAs($admin)->post('/executive-teams', [
+            'name' => 'Team B', 'team_leader_id' => $admin->id,
+        ]);
+        $response->assertRedirect();
+        $teamB = ExecutiveTeam::where('name', 'Team B')->firstOrFail();
+        $this->assertNotSame($teamA->team_number, $teamB->team_number);
+    }
+
     public function test_removing_an_executive_team_still_assigned_to_a_work_order_is_blocked(): void
     {
         $admin = $this->admin();

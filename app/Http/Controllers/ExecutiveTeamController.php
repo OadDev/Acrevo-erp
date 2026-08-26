@@ -31,10 +31,20 @@ class ExecutiveTeamController extends Controller
     public function store(ExecutiveTeamRequest $request): RedirectResponse
     {
         $team = DB::transaction(function () use ($request) {
-            $count = ExecutiveTeam::count() + 1;
+            $prefix = 'TEAM-';
+            $next = ExecutiveTeam::withTrashed()
+                ->where('team_number', 'like', "{$prefix}%")
+                ->pluck('team_number')
+                ->map(fn ($value) => (int) substr($value, strlen($prefix)))
+                ->max() ?? 0;
+
+            do {
+                $next++;
+                $candidate = sprintf('%s%03d', $prefix, $next);
+            } while (ExecutiveTeam::withTrashed()->where('team_number', $candidate)->exists());
 
             return ExecutiveTeam::create($request->validated() + [
-                'team_number' => sprintf('TEAM-%03d', $count),
+                'team_number' => $candidate,
                 'is_active' => true,
                 'created_by' => $request->user()->id,
             ]);
