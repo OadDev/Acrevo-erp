@@ -164,6 +164,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('progress', [DailyProgressController::class, 'store'])->name('progress.store');
         Route::put('progress/{report}', [DailyProgressController::class, 'update'])->name('progress.update');
         Route::delete('progress/{report}', [DailyProgressController::class, 'destroy'])->name('progress.destroy');
+        Route::delete('progress/{report}/media/{media}', [DailyProgressController::class, 'destroyMedia'])->name('progress.media.destroy');
     });
     Route::middleware('permission:media.upload')->group(function () {
         Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');

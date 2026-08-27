@@ -23,8 +23,7 @@ class DailyProgressReport extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('images');
-        $this->addMediaCollection('videos');
+        $this->addMediaCollection('attachments');
     }
 
     public function workOrder(): BelongsTo

@@ -95,9 +95,34 @@
                     @if ($report->problems)<p class="text-amber-600"><span class="text-gray-400">Problems:</span> {{ $report->problems }}</p>@endif
                     @if ($report->materials_required)<p class="text-gray-600 dark:text-gray-300"><span class="text-gray-400">Materials Needed:</span> {{ $report->materials_required }}</p>@endif
 
+                    @if ($report->getMedia('attachments')->isNotEmpty())
+                        <div class="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                            @foreach ($report->getMedia('attachments') as $item)
+                                <div class="group relative block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                    <a href="{{ $item->getUrl() }}" target="_blank" class="block h-full w-full">
+                                        @if (str_starts_with($item->mime_type, 'image'))
+                                            <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
+                                        @elseif (str_starts_with($item->mime_type, 'video'))
+                                            <div class="flex h-full w-full items-center justify-center"><x-icon name="video" class="h-5 w-5 text-gray-400" /></div>
+                                        @else
+                                            <div class="flex h-full w-full items-center justify-center"><x-icon name="file-text" class="h-5 w-5 text-gray-400" /></div>
+                                        @endif
+                                    </a>
+                                    @if (auth()->user()->hasRole('Admin'))
+                                        <form method="POST" action="{{ route('work-orders.progress.media.destroy', [$workOrder, $report, $item]) }}" onsubmit="return confirm('Remove this file?')" class="absolute right-1 top-1">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white hover:bg-rose-600">Delete</button>
+                                        </form>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
                     @if (auth()->user()->hasRole('Admin'))
                         @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
-                        <form method="POST" action="{{ route('work-orders.progress.update', [$workOrder, $report]) }}" x-show="openReport === {{ $report->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
+                        <form method="POST" action="{{ route('work-orders.progress.update', [$workOrder, $report]) }}" enctype="multipart/form-data" x-show="openReport === {{ $report->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                             @csrf
                             @method('PUT')
                             @if ($activeTeams->isNotEmpty())
@@ -112,6 +137,10 @@
                             <x-textarea-input name="pending_work" rows="2" class="w-full text-xs">{{ $report->pending_work }}</x-textarea-input>
                             <x-textarea-input name="problems" rows="2" class="w-full text-xs">{{ $report->problems }}</x-textarea-input>
                             <x-textarea-input name="materials_required" rows="2" class="w-full text-xs">{{ $report->materials_required }}</x-textarea-input>
+                            <div>
+                                <x-input-label value="Add more files (optional)" class="text-xs" />
+                                <input type="file" name="files[]" multiple class="mt-1 w-full text-xs">
+                            </div>
                             <button class="w-full rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Save</button>
                         </form>
                     @endif
@@ -127,7 +156,8 @@
             @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
             <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Submit Progress</h3>
-                <form method="POST" action="{{ route('work-orders.progress.store', $workOrder) }}" class="space-y-3">
+                <p class="mb-3 -mt-2 text-xs text-gray-400">The report and any files attached below are saved together as one progress entry.</p>
+                <form method="POST" action="{{ route('work-orders.progress.store', $workOrder) }}" enctype="multipart/form-data" class="space-y-3">
                     @csrf
                     @if ($activeTeams->isNotEmpty())
                         <x-select-input name="executive_team_id" class="w-full" required>
@@ -143,24 +173,12 @@
                     <x-textarea-input name="pending_work" rows="2" class="w-full" placeholder="Pending work"></x-textarea-input>
                     <x-textarea-input name="problems" rows="2" class="w-full" placeholder="Problems encountered"></x-textarea-input>
                     <x-textarea-input name="materials_required" rows="2" class="w-full" placeholder="Materials required"></x-textarea-input>
+                    <div>
+                        <x-input-label value="Relevant Media / Files (optional)" />
+                        <input type="file" name="files[]" multiple class="mt-1 w-full text-sm">
+                        <x-input-error :messages="$errors->get('files')" class="mt-1" />
+                    </div>
                     <x-primary-button class="w-full justify-center">Save Report</x-primary-button>
-                </form>
-            </x-card>
-        @endcan
-
-        @can('media.upload')
-            <x-card>
-                <h3 class="mb-4 text-sm font-semibold text-gray-500">Upload Media</h3>
-                <form method="POST" action="{{ route('work-orders.media.store', $workOrder) }}" enctype="multipart/form-data" class="space-y-3">
-                    @csrf
-                    <x-select-input name="collection" class="w-full">
-                        <option value="documents">Document</option>
-                        <option value="images">Image</option>
-                        <option value="videos">Video</option>
-                        <option value="other">Other</option>
-                    </x-select-input>
-                    <input type="file" name="file" class="w-full text-sm" required>
-                    <x-primary-button class="w-full justify-center">Upload</x-primary-button>
                 </form>
             </x-card>
         @endcan
