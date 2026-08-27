@@ -57,9 +57,39 @@
                 <x-card>
                     <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Updates</h3>
                     @forelse ($workOrder->dailyProgressReports as $report)
+                        @php
+                            $images = $report->getMedia('attachments')->filter(fn ($m) => str_starts_with($m->mime_type, 'image'));
+                            $documents = $report->getMedia('attachments')->reject(fn ($m) => str_starts_with($m->mime_type, 'image'));
+                        @endphp
                         <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                             <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }}</p>
                             <p class="text-gray-600 dark:text-gray-300">{{ $report->completed_work }}</p>
+
+                            @if ($images->isNotEmpty())
+                                <div class="mt-2">
+                                    <p class="text-xs font-medium text-gray-400">Related Images</p>
+                                    <div class="mt-1 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                                        @foreach ($images as $item)
+                                            <a href="{{ $item->getUrl() }}" target="_blank" class="block aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                                                <img src="{{ $item->getUrl() }}" class="h-full w-full object-cover">
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if ($documents->isNotEmpty())
+                                <div class="mt-2">
+                                    <p class="text-xs font-medium text-gray-400">Related Documents</p>
+                                    <div class="mt-1 space-y-1">
+                                        @foreach ($documents as $item)
+                                            <a href="{{ $item->getUrl() }}" target="_blank" class="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:underline">
+                                                <x-icon name="file-text" class="h-3.5 w-3.5 shrink-0" /> {{ $item->file_name }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     @empty
                         <p class="text-sm text-gray-400">No updates yet.</p>

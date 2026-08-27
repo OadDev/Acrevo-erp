@@ -33,7 +33,7 @@ class PortalWorkOrderController extends Controller
         $this->authorize('view', $workOrder);
 
         $workOrder->load([
-            'dailyProgressReports' => fn ($q) => $q->latest(), 'media', 'tickets', 'clientReviews', 'completionCertificates',
+            'dailyProgressReports' => fn ($q) => $q->latest(), 'dailyProgressReports.media', 'media', 'tickets', 'clientReviews', 'completionCertificates',
             'dailyChecklists' => fn ($q) => $q->latest(),
             'dailyChecklists.checklistItems.media',
             'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',

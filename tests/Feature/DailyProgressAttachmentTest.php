@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\ClientLogin;
 use App\Models\DailyProgressReport;
 use App\Models\Department;
 use App\Models\Enquiry;
@@ -90,6 +91,32 @@ class DailyProgressAttachmentTest extends TestCase
 
         $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/progress/{$report->id}/media/{$media->id}")->assertRedirect();
         $this->assertSame(1, $report->fresh()->getMedia('attachments')->count());
+    }
+
+    public function test_client_can_see_a_progress_reports_related_images_and_documents_on_the_portal(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+        $client = $workOrder->client;
+        $clientUser = User::create([
+            'name' => $client->name, 'email' => $client->email ?? 'client+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'is_active' => true, 'must_change_password' => false,
+        ]);
+        $clientUser->syncRoles(['Client']);
+        ClientLogin::create(['client_id' => $client->id, 'user_id' => $clientUser->id]);
+
+        $report = $workOrder->dailyProgressReports()->create([
+            'date' => now()->toDateString(), 'completed_work' => 'Floor 1 plastering completed', 'submitted_by' => $admin->id,
+        ]);
+        $report->addMedia(UploadedFile::fake()->image('site-photo.jpg'))->toMediaCollection('attachments');
+        $report->addMedia(UploadedFile::fake()->create('inspection-note.pdf', 50))->toMediaCollection('attachments');
+
+        $response = $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}");
+        $response->assertOk()
+            ->assertSee('Floor 1 plastering completed')
+            ->assertSee('Related Images')
+            ->assertSee('Related Documents')
+            ->assertSee('inspection-note.pdf');
     }
 
     public function test_removing_a_progress_report_removes_its_attached_media_too(): void
