@@ -46,28 +46,12 @@ class EnquiryClientSyncTest extends TestCase
         $this->assertSame('yoyo1@example.com', $client->fresh()->email);
     }
 
-    public function test_editing_an_enquirys_contact_email_never_overwrites_an_existing_client_email(): void
-    {
-        $admin = $this->admin();
-        $client = Client::create(['name' => 'C', 'phone' => '1', 'email' => 'original@example.com', 'is_active' => true, 'created_by' => $admin->id]);
-        $enquiry = Enquiry::create([
-            'client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1',
-            'status' => 'new', 'source' => 'website', 'created_by' => $admin->id,
-        ]);
-
-        $this->actingAs($admin)->put("/enquiries/{$enquiry->id}", [
-            'contact_name' => 'C', 'contact_phone' => '1', 'contact_email' => 'different@example.com',
-            'source' => 'website',
-        ])->assertRedirect();
-
-        $this->assertSame('original@example.com', $client->fresh()->email);
-    }
-
-    public function test_checking_sync_to_client_overwrites_an_existing_client_email(): void
+    public function test_editing_an_enquirys_contact_email_always_updates_an_existing_client_email(): void
     {
         // A placeholder email entered when the enquiry/client were first
-        // created can be corrected here by explicitly opting in, without
-        // that becoming the silent default for every enquiry edit.
+        // created (e.g. to get a quotation moving) must actually stick once
+        // corrected here later - this early in the pipeline the enquiry's
+        // contact details ARE the client's details.
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'phone' => '1', 'email' => 'placeholder@example.com', 'is_active' => true, 'created_by' => $admin->id]);
         $enquiry = Enquiry::create([
@@ -77,10 +61,32 @@ class EnquiryClientSyncTest extends TestCase
 
         $this->actingAs($admin)->put("/enquiries/{$enquiry->id}", [
             'contact_name' => 'C', 'contact_phone' => '1', 'contact_email' => 'correct@example.com',
-            'source' => 'website', 'sync_to_client' => '1',
+            'source' => 'website',
         ])->assertRedirect();
 
         $this->assertSame('correct@example.com', $client->fresh()->email);
+    }
+
+    public function test_editing_an_enquirys_address_and_city_always_updates_the_client(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create([
+            'name' => 'C', 'phone' => '1', 'address' => 'Old Address', 'city' => 'Old City',
+            'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        $enquiry = Enquiry::create([
+            'client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1',
+            'status' => 'new', 'source' => 'website', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put("/enquiries/{$enquiry->id}", [
+            'contact_name' => 'C', 'contact_phone' => '1', 'address' => 'New Address', 'city' => 'New City',
+            'source' => 'website',
+        ])->assertRedirect();
+
+        $client->refresh();
+        $this->assertSame('New Address', $client->address);
+        $this->assertSame('New City', $client->city);
     }
 
     public function test_only_admin_can_remove_an_enquiry(): void

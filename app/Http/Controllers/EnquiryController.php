@@ -82,22 +82,16 @@ class EnquiryController extends Controller
 
         // The Client record is a separate row from the enquiry's own contact_*
         // fields, so editing "the client's email/address" here never used to
-        // reach it. By default, fill in whatever the Client is still missing -
-        // never overwrite a value it already has, since the enquiry's contact
-        // may legitimately differ from the client's own registered details.
-        // Checking "sync_to_client" is an explicit opt-in to overwrite too -
-        // for correcting a placeholder entered when the enquiry/client were
-        // first created, without that becoming the silent default for everyone.
-        $client = $enquiry->client;
-        $overwrite = $request->boolean('sync_to_client');
-        $fields = array_filter([
-            'email' => ($overwrite || ! $client->email) ? ($data['contact_email'] ?? null) : null,
-            'address' => ($overwrite || ! $client->address) ? ($data['address'] ?? null) : null,
-            'city' => ($overwrite || ! $client->city) ? ($data['city'] ?? null) : null,
-        ]);
-        if ($fields) {
-            $client->update($fields);
-        }
+        // reach it. This early in the pipeline the enquiry's contact details
+        // ARE the client's details - e.g. a placeholder email entered while
+        // creating the enquiry, corrected here once the real one is known -
+        // so always push the latest values through rather than leaving a
+        // stale Client record around just because it already had something.
+        $enquiry->client->update(array_filter([
+            'email' => $data['contact_email'] ?? null,
+            'address' => $data['address'] ?? null,
+            'city' => $data['city'] ?? null,
+        ]));
 
         return redirect()->route('enquiries.show', $enquiry)->with('success', 'Enquiry updated successfully.');
     }
