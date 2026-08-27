@@ -80,6 +80,40 @@ class QuotationTaxTest extends TestCase
         $this->assertNotNull($enquiry->client->fresh());
     }
 
+    public function test_admin_can_remove_an_approved_quotation_from_the_list_page(): void
+    {
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+        $quotation = Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get('/quotations')->assertOk()->assertSee('Remove');
+
+        $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertRedirect('/quotations');
+        $this->assertSoftDeleted('quotations', ['id' => $quotation->id]);
+    }
+
+    public function test_a_quotation_with_a_work_order_cannot_be_removed_and_the_list_page_shows_it_blocked(): void
+    {
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+        $quotation = Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
+        ]);
+        \App\Models\WorkOrder::create([
+            'client_id' => $enquiry->client_id, 'quotation_id' => $quotation->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get('/quotations')->assertOk()->assertSee('Remove all work orders');
+
+        $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertStatus(422);
+        $this->assertNotSoftDeleted('quotations', ['id' => $quotation->id]);
+    }
+
     public function test_a_quotation_can_be_created_with_nil_tax(): void
     {
         $admin = $this->admin();

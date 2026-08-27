@@ -18,7 +18,7 @@ class QuotationController extends Controller
     public function index(Request $request): View
     {
         $quotations = Quotation::query()
-            ->with(['client', 'enquiry'])
+            ->with(['client', 'enquiry', 'workOrders'])
             ->when($request->get('status'), fn ($q, $status) => $q->where('status', $status))
             ->latest()
             ->paginate(15)
