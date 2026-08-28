@@ -217,7 +217,7 @@ class WorkOrder extends Model implements HasMedia
 
     public function companyLedgers(): HasMany
     {
-        return $this->hasMany(CompanyLedger::class);
+        return $this->hasMany(CompanyLedger::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function summaries(): HasMany

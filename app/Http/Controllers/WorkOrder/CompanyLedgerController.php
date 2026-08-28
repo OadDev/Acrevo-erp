@@ -26,10 +26,6 @@ class CompanyLedgerController extends Controller
             'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
-        $previousBalance = (float) ($workOrder->companyLedgers()->latest('id')->value('balance') ?? 0);
-        $increasesBalance = in_array($data['type'], ['credit', 'borrow'], true);
-        $balance = $increasesBalance ? $previousBalance + $data['amount'] : $previousBalance - $data['amount'];
-
         $ledger = $workOrder->companyLedgers()->create([
             'entry_date' => $data['entry_date'],
             'type' => $data['type'],
@@ -37,7 +33,7 @@ class CompanyLedgerController extends Controller
             'description' => $data['description'] ?? null,
             'remark' => $data['remark'] ?? null,
             'amount' => $data['amount'],
-            'balance' => $balance,
+            'balance' => 0,
             'created_by' => $request->user()->id,
         ]);
 
@@ -48,6 +44,11 @@ class CompanyLedgerController extends Controller
                 return back()->withErrors(['bill' => 'That file is too large (max 20MB).']);
             }
         }
+
+        // A backdated entry shifts every running balance after it, not just
+        // its own row, so recalculate the whole chain in date order rather
+        // than assuming this entry is always the latest one.
+        $this->recalculateBalances($workOrder);
 
         return back()->with('success', 'Company ledger entry recorded.');
     }

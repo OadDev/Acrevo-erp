@@ -132,4 +132,26 @@ class WorkOrderDateOrderingTest extends TestCase
         $this->assertEquals(-300, (float) $entries->first()->balance);
         $this->assertEquals(700, (float) $entries->last()->balance);
     }
+
+    public function test_company_ledger_orders_entries_chronologically_and_recalculates_balances(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        // Entered out of order: later date first, then a backdated entry.
+        $this->actingAs($admin)->post(route('work-orders.company-ledger.store', $workOrder), [
+            'entry_date' => '2026-08-20', 'type' => 'credit', 'amount' => 1000,
+        ])->assertRedirect();
+        $this->actingAs($admin)->post(route('work-orders.company-ledger.store', $workOrder), [
+            'entry_date' => '2026-08-10', 'type' => 'debit', 'amount' => 300,
+        ])->assertRedirect();
+
+        $entries = $workOrder->companyLedgers()->get();
+        $this->assertSame(['2026-08-10', '2026-08-20'], $entries->map(fn ($e) => $e->entry_date->format('Y-m-d'))->all());
+
+        // Balances recalculated in date order: the backdated debit applies
+        // BEFORE the credit chronologically, not after it was inserted.
+        $this->assertEquals(-300, (float) $entries->first()->balance);
+        $this->assertEquals(700, (float) $entries->last()->balance);
+    }
 }
