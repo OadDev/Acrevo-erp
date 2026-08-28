@@ -43,8 +43,7 @@
     </x-card>
 @endif
 
-<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <x-card x-data="{ editMb: null, editItem: null }">
+<x-card x-data="{ editMb: null, editItem: null }" class="mb-6">
         <h3 class="mb-4 text-sm font-semibold text-gray-500">Measurement Book — Actual Work Done</h3>
         @forelse ($actualBooks as $mb)
             @php
@@ -184,39 +183,40 @@
     <x-card :padded="false" x-data="{ editAttendance: null }">
         <div class="p-4">
             <h3 class="text-sm font-semibold text-gray-500">Worker Attendance</h3>
+            <p class="mt-1 text-xs text-gray-400">Kept separate from the Measurement Book above, full width, so there's enough room to enter and review attendance details.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-100 text-xs dark:divide-gray-800">
                 <thead>
                     <tr class="text-left text-gray-400">
-                        <th class="px-4 py-1">Worker</th>
-                        <th class="px-4 py-1">Date</th>
-                        <th class="px-4 py-1">Status</th>
-                        <th class="px-4 py-1">In</th>
-                        <th class="px-4 py-1">Out</th>
-                        <th class="px-4 py-1">Break</th>
-                        <th class="px-4 py-1">Hours</th>
+                        <th class="px-4 py-2">Worker</th>
+                        <th class="px-4 py-2">Date</th>
+                        <th class="px-4 py-2">Status</th>
+                        <th class="px-4 py-2">In</th>
+                        <th class="px-4 py-2">Out</th>
+                        <th class="px-4 py-2">Break</th>
+                        <th class="px-4 py-2">Hours</th>
                         <th class="px-4 py-1 text-right">Salary</th>
                         <th class="px-4 py-1 text-right">Advance</th>
                         @if (auth()->user()->hasRole('Admin'))
-                            <th class="px-4 py-1">Actions</th>
+                            <th class="px-4 py-2">Actions</th>
                         @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @forelse ($workOrder->attendances as $attendance)
                         <tr>
-                            <td class="px-4 py-1">{{ $attendance->employee?->name }}</td>
-                            <td class="px-4 py-1">{{ $attendance->date->format('d M') }}</td>
-                            <td class="px-4 py-1"><x-badge :status="$attendance->status" /></td>
-                            <td class="px-4 py-1">{{ $attendance->check_in ?? '—' }}</td>
-                            <td class="px-4 py-1">{{ $attendance->check_out ?? '—' }}</td>
-                            <td class="px-4 py-1">{{ $attendance->break_minutes ? $attendance->break_minutes.' min' : '—' }}</td>
-                            <td class="px-4 py-1">{{ $attendance->hours_worked ?? '—' }}</td>
+                            <td class="px-4 py-2">{{ $attendance->employee?->name }}</td>
+                            <td class="px-4 py-2">{{ $attendance->date->format('d M') }}</td>
+                            <td class="px-4 py-2"><x-badge :status="$attendance->status" /></td>
+                            <td class="px-4 py-2">{{ $attendance->check_in ?? '—' }}</td>
+                            <td class="px-4 py-2">{{ $attendance->check_out ?? '—' }}</td>
+                            <td class="px-4 py-2">{{ $attendance->break_minutes ? $attendance->break_minutes.' min' : '—' }}</td>
+                            <td class="px-4 py-2">{{ $attendance->hours_worked ?? '—' }}</td>
                             <td class="px-4 py-1 text-right">{{ $attendance->salary ? '₹'.number_format($attendance->salary, 2) : '—' }}</td>
                             <td class="px-4 py-1 text-right">{{ $attendance->advance ? '₹'.number_format($attendance->advance, 2) : '—' }}</td>
                             @if (auth()->user()->hasRole('Admin'))
-                                <td class="whitespace-nowrap px-4 py-1">
+                                <td class="whitespace-nowrap px-4 py-2">
                                     <button type="button" @click="editAttendance === {{ $attendance->id }} ? editAttendance = null : editAttendance = {{ $attendance->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
                                     <form method="POST" action="{{ route('work-orders.attendance.destroy', [$workOrder, $attendance]) }}" onsubmit="return confirm('Remove this attendance entry?')" class="inline">
                                         @csrf
@@ -256,7 +256,7 @@
             </table>
         </div>
         @can('site_records.manage')
-            <form method="POST" action="{{ route('work-orders.attendance.store', $workOrder) }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
+            <form method="POST" action="{{ route('work-orders.attendance.store', $workOrder) }}" class="grid grid-cols-2 gap-3 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4 lg:grid-cols-9">
                 @csrf
                 <x-select-input name="employee_id" class="col-span-2 text-sm" required>
                     <option value="">Worker</option>
@@ -264,7 +264,7 @@
                         <option value="{{ $employee->id }}">{{ $employee->name }}</option>
                     @endforeach
                 </x-select-input>
-                <x-select-input name="status" class="col-span-2 text-sm">
+                <x-select-input name="status" class="col-span-2 text-sm lg:col-span-1">
                     <option value="present">Present</option>
                     <option value="half_day">Half Day</option>
                     <option value="absent">Absent</option>
@@ -275,9 +275,8 @@
                 <x-text-input type="time" name="check_out" placeholder="Out Time" class="text-sm" />
                 <x-text-input type="number" min="0" name="break_minutes" placeholder="Lunch/Break (mins)" class="text-sm" />
                 <x-text-input type="number" step="0.01" name="salary" placeholder="Salary" class="text-sm" />
-                <x-text-input type="number" step="0.01" name="advance" placeholder="Advance" class="col-span-2 text-sm sm:col-span-1" />
-                <x-primary-button class="col-span-2 justify-center sm:col-span-4">Record Attendance</x-primary-button>
+                <x-text-input type="number" step="0.01" name="advance" placeholder="Advance" class="text-sm" />
+                <x-primary-button class="col-span-2 justify-center sm:col-span-4 lg:col-span-9">Record Attendance</x-primary-button>
             </form>
         @endcan
     </x-card>
-</div>
