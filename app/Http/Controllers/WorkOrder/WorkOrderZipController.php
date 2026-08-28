@@ -33,4 +33,25 @@ class WorkOrderZipController extends Controller
 
         return response()->download($zipPath, "{$workOrder->work_order_no}.zip")->deleteFileAfterSend();
     }
+
+    public function section(Request $request, WorkOrder $workOrder, string $section, WorkOrderZipExporter $exporter): BinaryFileResponse
+    {
+        $this->authorize('view', $workOrder);
+
+        $available = WorkOrderPdfSections::forUser($request->user());
+        abort_unless(array_key_exists($section, $available), 404);
+
+        $this->loadWorkOrderPdfRelations($workOrder);
+
+        $zipPath = sys_get_temp_dir().'/wo-zip-'.Str::random(20).'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $exporter->addSection($zip, $workOrder, $section);
+        $zip->close();
+
+        $label = $exporter->safeName($available[$section]);
+
+        return response()->download($zipPath, "{$workOrder->work_order_no}-{$label}.zip")->deleteFileAfterSend();
+    }
 }

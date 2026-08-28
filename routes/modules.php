@@ -129,6 +129,7 @@ Route::get('work-orders/{workOrder}', [WorkOrderController::class, 'show'])->nam
 Route::get('work-orders/{workOrder}/pdf', [WorkOrderPdfController::class, 'full'])->name('work-orders.pdf');
 Route::get('work-orders/{workOrder}/pdf/{section}', [WorkOrderPdfController::class, 'section'])->name('work-orders.pdf.section');
 Route::get('work-orders/{workOrder}/zip', WorkOrderZipController::class)->name('work-orders.zip');
+Route::get('work-orders/{workOrder}/zip/{section}', [WorkOrderZipController::class, 'section'])->name('work-orders.zip.section');
 
 Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');

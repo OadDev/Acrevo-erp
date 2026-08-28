@@ -254,4 +254,25 @@ class WorkOrder extends Model implements HasMedia
     {
         return $this->hasMany(Invoice::class);
     }
+
+    /**
+     * Whether a given PDF section (see WorkOrderPdfSections) has any files
+     * attached, used to decide whether that section's "ZIP Download"
+     * button is worth showing. Relies on the relations already being
+     * eager-loaded (see LoadsWorkOrderPdfRelations) so this never queries.
+     */
+    public function hasAttachmentsForSection(string $section): bool
+    {
+        return match ($section) {
+            'progress' => $this->media->isNotEmpty()
+                || $this->dailyProgressReports->contains(fn (DailyProgressReport $report) => $report->getMedia('attachments')->isNotEmpty()),
+            'checklist' => $this->dailyChecklists->contains(
+                fn (DailyChecklist $checklist) => $checklist->checklistItems->contains(fn (DailyChecklistItem $item) => $item->getMedia('proof')->isNotEmpty())
+            ),
+            'ledger' => $this->ledgers->contains(fn (Ledger $entry) => $entry->getMedia('bill')->isNotEmpty()),
+            'company-ledger' => $this->companyLedgers->contains(fn (CompanyLedger $entry) => $entry->getMedia('bill')->isNotEmpty()),
+            'approvals' => $this->approvalRequests->contains(fn (ApprovalRequest $approval) => $approval->getMedia('attachment')->isNotEmpty()),
+            default => false,
+        };
+    }
 }
