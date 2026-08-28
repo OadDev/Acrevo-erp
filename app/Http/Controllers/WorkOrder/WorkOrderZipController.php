@@ -16,6 +16,11 @@ class WorkOrderZipController extends Controller
 {
     use LoadsWorkOrderPdfRelations;
 
+    // Every ZIP is built fresh from the current DB state on each request -
+    // never let a browser or intermediate proxy cache and replay a stale
+    // copy (e.g. one that still contains a just-deleted attachment).
+    private const NO_CACHE_HEADERS = ['Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0', 'Pragma' => 'no-cache'];
+
     public function __invoke(Request $request, WorkOrder $workOrder, WorkOrderZipExporter $exporter): BinaryFileResponse
     {
         $this->authorize('view', $workOrder);
@@ -31,7 +36,7 @@ class WorkOrderZipController extends Controller
         $exporter->addWorkOrder($zip, $workOrder, $sections);
         $zip->close();
 
-        return response()->download($zipPath, "{$workOrder->work_order_no}.zip")->deleteFileAfterSend();
+        return response()->download($zipPath, "{$workOrder->work_order_no}.zip", self::NO_CACHE_HEADERS)->deleteFileAfterSend();
     }
 
     public function section(Request $request, WorkOrder $workOrder, string $section, WorkOrderZipExporter $exporter): BinaryFileResponse
@@ -52,6 +57,6 @@ class WorkOrderZipController extends Controller
 
         $label = $exporter->safeName($available[$section]);
 
-        return response()->download($zipPath, "{$workOrder->work_order_no}-{$label}.zip")->deleteFileAfterSend();
+        return response()->download($zipPath, "{$workOrder->work_order_no}-{$label}.zip", self::NO_CACHE_HEADERS)->deleteFileAfterSend();
     }
 }

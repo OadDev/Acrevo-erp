@@ -46,6 +46,12 @@ class PdfDocument
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => HeaderUtils::makeDisposition('attachment', $filename, $this->fallbackName($filename)),
             'Content-Length' => strlen($output),
+            // Every download is generated fresh from the current DB state
+            // (e.g. a just-deleted attachment must never come back on the
+            // next download) - never let a browser or intermediate proxy
+            // cache and replay a stale copy.
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
     }
 

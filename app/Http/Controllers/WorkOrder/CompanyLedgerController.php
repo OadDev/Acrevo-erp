@@ -103,6 +103,17 @@ class CompanyLedgerController extends Controller
         return back()->with('success', 'Company ledger entry removed.');
     }
 
+    public function destroyBill(WorkOrder $workOrder, CompanyLedger $companyLedger): RedirectResponse
+    {
+        $this->authorizeFinanceOrAdmin();
+
+        abort_unless($companyLedger->work_order_id === $workOrder->id, 404);
+
+        $companyLedger->clearMediaCollection('bill');
+
+        return back()->with('success', 'Bill removed.');
+    }
+
     private function recalculateBalances(WorkOrder $workOrder): void
     {
         $balance = 0;

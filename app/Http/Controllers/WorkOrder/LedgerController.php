@@ -107,6 +107,17 @@ class LedgerController extends Controller
         return back()->with('success', 'Ledger entry removed.');
     }
 
+    public function destroyBill(WorkOrder $workOrder, Ledger $ledger): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($ledger->work_order_id === $workOrder->id, 404);
+
+        $ledger->clearMediaCollection('bill');
+
+        return back()->with('success', 'Bill removed.');
+    }
+
     private function recalculateBalances(WorkOrder $workOrder): void
     {
         $balance = 0;

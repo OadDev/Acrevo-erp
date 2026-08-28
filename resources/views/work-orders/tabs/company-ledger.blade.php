@@ -84,6 +84,11 @@
                                 <a href="{{ $entry->getFirstMediaUrl('bill') }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
                                     <x-icon name="paperclip" class="h-3.5 w-3.5" /> Bill
                                 </a>
+                                <form method="POST" action="{{ route('work-orders.company-ledger.bill.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this bill?')" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="ml-1 text-xs text-rose-600 hover:underline">✕</button>
+                                </form>
                             @endif
                         </td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>

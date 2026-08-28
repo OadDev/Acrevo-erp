@@ -70,6 +70,13 @@
                                         @endif
                                         <span class="text-xs font-medium text-indigo-600">View Proof</span>
                                     </a>
+                                    @if (auth()->user()->hasRole('Admin'))
+                                        <form method="POST" action="{{ route('work-orders.checklist-items.proof.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this proof? The item will go back to pending.')" class="mt-1">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="text-xs font-medium text-rose-600 hover:underline">Remove Proof</button>
+                                        </form>
+                                    @endif
                                 @endif
                             @else
                                 <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300">

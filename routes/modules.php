@@ -159,6 +159,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::delete('checklists/{checklist}', [DailyChecklistController::class, 'destroy'])->name('checklists.destroy');
         Route::post('checklist-items/{item}/done', [DailyChecklistItemController::class, 'markDone'])->name('checklist-items.done');
         Route::delete('checklist-items/{item}', [DailyChecklistItemController::class, 'destroy'])->name('checklist-items.destroy');
+        Route::delete('checklist-items/{item}/proof', [DailyChecklistItemController::class, 'destroyProof'])->name('checklist-items.proof.destroy');
     });
     Route::middleware('permission:daily_progress.manage')->group(function () {
         Route::get('progress', [DailyProgressController::class, 'index'])->name('progress.index');
@@ -194,6 +195,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
         Route::put('ledger/{ledger}', [LedgerController::class, 'update'])->name('ledger.update');
         Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
+        Route::delete('ledger/{ledger}/bill', [LedgerController::class, 'destroyBill'])->name('ledger.bill.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
         Route::put('attendance/{attendance}', [WorkOrderAttendanceController::class, 'update'])->name('attendance.update');
@@ -207,6 +209,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::post('company-ledger', [CompanyLedgerController::class, 'store'])->name('company-ledger.store');
     Route::put('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'update'])->name('company-ledger.update');
     Route::delete('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'destroy'])->name('company-ledger.destroy');
+    Route::delete('company-ledger/{companyLedger}/bill', [CompanyLedgerController::class, 'destroyBill'])->name('company-ledger.bill.destroy');
     Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
     // Monthly Summary is entered by the office (Sales/HR/Admin, enforced in
     // the controller), not the site team, so it also skips the
