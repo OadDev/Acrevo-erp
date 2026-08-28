@@ -73,6 +73,23 @@ jobs:
              \$PHP_BIN artisan route:cache && \
              \$PHP_BIN artisan view:cache"
 
+      - name: Diagnostics (temporary)
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "cd '${{ secrets.HOSTINGER_DEPLOY_PATH }}' && \
+             PHP_BIN=\$(command -v php8.5 || echo /opt/alt/php85/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.3 || echo /opt/alt/php83/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=\$(command -v php8.2 || echo /opt/alt/php82/usr/bin/php) && \
+             [ -x \"\$PHP_BIN\" ] || PHP_BIN=php && \
+             echo '--- ZipArchive availability ---' && \
+             \$PHP_BIN -r 'echo class_exists(\"ZipArchive\") ? \"ZipArchive: available\\n\" : \"ZipArchive: MISSING\\n\";' && \
+             echo '--- last 200 lines of storage/logs/laravel.log ---' && \
+             tail -n 200 storage/logs/laravel.log 2>&1 || echo 'no laravel.log found'"
+
       - name: Print install link (only if not yet installed)
         env:
           SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
