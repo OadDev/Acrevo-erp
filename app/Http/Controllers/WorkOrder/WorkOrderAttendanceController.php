@@ -4,7 +4,9 @@ namespace App\Http\Controllers\WorkOrder;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\Employee;
 use App\Models\WorkOrder;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -100,5 +102,33 @@ class WorkOrderAttendanceController extends Controller
         $attendance->delete();
 
         return back()->with('success', 'Attendance entry removed.');
+    }
+
+    public function pdf(Request $request, WorkOrder $workOrder)
+    {
+        $data = $request->validate([
+            'employee_id' => ['required', 'exists:employees,id'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
+        // withTrashed() so a relieved worker's historical attendance on
+        // this work order can still be exported, not just active workers.
+        $employee = Employee::withTrashed()->findOrFail($data['employee_id']);
+        $from = $data['from'] ?? now()->startOfMonth()->toDateString();
+        $to = $data['to'] ?? now()->toDateString();
+
+        $records = Attendance::where('work_order_id', $workOrder->id)
+            ->where('employee_id', $employee->id)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->orderBy('date')
+            ->get();
+
+        $pdf = Pdf::loadView('work-orders.attendance-pdf', compact('workOrder', 'employee', 'records', 'from', 'to'));
+
+        $filename = $employee->name.'-'.$workOrder->work_order_no.'-Attendance-'.$from.'-to-'.$to.'.pdf';
+
+        return $pdf->download($filename);
     }
 }
