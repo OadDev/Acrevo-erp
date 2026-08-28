@@ -20,7 +20,7 @@ trait LoadsWorkOrderPdfRelations
             'dailyChecklists' => fn ($q) => $q->latest(),
             'dailyChecklists.checklistItems.doneBy', 'dailyChecklists.checklistItems.media',
             'dailyChecklists.executiveTeam',
-            'dailyProgressReports' => fn ($q) => $q->latest(),
+            'dailyProgressReports' => fn ($q) => $q->latest(), 'dailyProgressReports.media',
             'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'timeSchedules', 'budgetItems', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
             'companyLedgers.media', 'companyLedgers.createdBy',
             'summaries' => fn ($q) => $q->orderBy('entry_date'),

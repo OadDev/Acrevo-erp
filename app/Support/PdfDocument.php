@@ -13,6 +13,15 @@ class PdfDocument
 
     public function __construct(string $html)
     {
+        // mPDF's HTML parser leans on PCRE, and the default 1MB
+        // pcre.backtrack_limit is easy to exceed once a work order has
+        // enough entries across enough sections (the full multi-section
+        // export, e.g. inside the ZIP download) - past that, WriteHTML()
+        // throws instead of rendering. Raise it well above anything this
+        // app's PDFs realistically produce.
+        ini_set('pcre.backtrack_limit', '10000000');
+        ini_set('pcre.recursion_limit', '10000000');
+
         $this->mpdf = new Mpdf([
             'format' => 'A4',
             'default_font' => 'dejavusans',

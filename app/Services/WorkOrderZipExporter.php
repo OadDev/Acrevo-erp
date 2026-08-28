@@ -35,6 +35,10 @@ class WorkOrderZipExporter
             }
         }
 
+        foreach ($workOrder->dailyProgressReports as $report) {
+            $this->addCollection($zip, $report->getMedia('attachments'), "{$prefix}Progress Report Attachments");
+        }
+
         foreach ($workOrder->ledgers as $ledger) {
             $this->addCollection($zip, $ledger->getMedia('bill'), "{$prefix}Ledger Bills");
         }
