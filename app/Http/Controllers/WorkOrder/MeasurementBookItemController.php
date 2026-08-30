@@ -27,10 +27,10 @@ class MeasurementBookItemController extends Controller
 
         $rate = $data['rate'] ?? 0;
 
-        $measurementBook->items()->create($data + [
+        $measurementBook->items()->create(array_merge($data, [
             'rate' => $rate,
             'amount' => $data['quantity'] * $rate,
-        ]);
+        ]));
 
         return back()->with('success', 'Work done entry added.');
     }
@@ -54,10 +54,10 @@ class MeasurementBookItemController extends Controller
 
         $rate = $data['rate'] ?? 0;
 
-        $item->update($data + [
+        $item->update(array_merge($data, [
             'rate' => $rate,
             'amount' => $data['quantity'] * $rate,
-        ]);
+        ]));
 
         return back()->with('success', 'Work done entry updated.');
     }
