@@ -7,11 +7,16 @@ use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\WorkOrderZipExporter;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class TicketController extends Controller
 {
@@ -61,7 +66,7 @@ class TicketController extends Controller
             return back()->withErrors(['files' => $error]);
         }
 
-        $ticket->workOrder->transitionTo('ticket_raised', 'Ticket raised: '.$ticket->title);
+        $ticket->workOrder->syncStatusFromTickets();
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket raised successfully.');
     }
@@ -104,7 +109,11 @@ class TicketController extends Controller
 
     public function destroy(Ticket $ticket): RedirectResponse
     {
+        $workOrder = $ticket->workOrder;
+
         $ticket->delete();
+
+        $workOrder?->syncStatusFromTickets();
 
         return redirect()->route('tickets.index')->with('success', 'Ticket removed.');
     }
@@ -147,10 +156,36 @@ class TicketController extends Controller
             'closed_at' => $data['status'] === 'closed' ? now() : $ticket->closed_at,
         ]);
 
-        if (in_array($data['status'], ['resolved', 'closed']) && $ticket->workOrder->status === 'ticket_raised') {
-            $ticket->workOrder->transitionTo('rework_in_progress', 'Ticket resolved — resuming work.');
-        }
+        $ticket->workOrder->syncStatusFromTickets();
 
         return back()->with('success', 'Ticket status updated.');
+    }
+
+    public function pdf(Ticket $ticket)
+    {
+        $this->authorize('view', $ticket);
+
+        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'comments.user', 'media']);
+
+        $pdf = Pdf::loadView('tickets.pdf', compact('ticket'));
+
+        return $pdf->download("{$ticket->ticket_no}.pdf");
+    }
+
+    public function zip(Ticket $ticket, WorkOrderZipExporter $exporter): BinaryFileResponse
+    {
+        $this->authorize('view', $ticket);
+
+        $zipPath = sys_get_temp_dir().'/ticket-zip-'.Str::random(20).'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $exporter->addTicket($zip, $ticket);
+        $zip->close();
+
+        return response()->download($zipPath, "{$ticket->ticket_no}-attachments.zip", [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ])->deleteFileAfterSend();
     }
 }

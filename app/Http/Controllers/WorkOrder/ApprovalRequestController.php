@@ -5,10 +5,14 @@ namespace App\Http\Controllers\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
 use App\Models\WorkOrder;
+use App\Services\WorkOrderZipExporter;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class ApprovalRequestController extends Controller
 {
@@ -99,11 +103,28 @@ class ApprovalRequestController extends Controller
     {
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
-        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy']);
+        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy', 'media']);
 
         $pdf = Pdf::loadView('work-orders.approval-requests.pdf', compact('approvalRequest'));
 
         return $pdf->download("{$approvalRequest->approval_no}.pdf");
+    }
+
+    public function zip(WorkOrder $workOrder, ApprovalRequest $approvalRequest, WorkOrderZipExporter $exporter): BinaryFileResponse
+    {
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $zipPath = sys_get_temp_dir().'/approval-zip-'.Str::random(20).'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $exporter->addApprovalRequest($zip, $approvalRequest);
+        $zip->close();
+
+        return response()->download($zipPath, "{$approvalRequest->approval_no}-attachments.zip", [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ])->deleteFileAfterSend();
     }
 
     public function approvedPdf(WorkOrder $workOrder)

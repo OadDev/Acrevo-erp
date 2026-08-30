@@ -25,6 +25,9 @@
                         <x-badge :status="$approval->status" />
                         @canany(['work_orders.edit', 'approval_requests.manage'])
                             <a href="{{ route('work-orders.approval-requests.pdf', [$workOrder, $approval]) }}" class="text-xs font-medium text-indigo-600 hover:underline">PDF</a>
+                            @if ($approval->getMedia('attachment')->isNotEmpty())
+                                <a href="{{ route('work-orders.approval-requests.zip', [$workOrder, $approval]) }}" class="text-xs font-medium text-indigo-600 hover:underline">ZIP</a>
+                            @endif
                         @endcanany
                         @if (auth()->user()->hasRole('Admin'))
                             <button type="button" @click="editApproval === '{{ $approval->id }}' ? editApproval = null : editApproval = '{{ $approval->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>

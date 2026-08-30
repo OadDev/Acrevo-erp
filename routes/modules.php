@@ -223,6 +223,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
         Route::get('approval-requests/approved-pdf', [ApprovalRequestController::class, 'approvedPdf'])->name('approval-requests.approved-pdf');
         Route::get('approval-requests/{approvalRequest}/pdf', [ApprovalRequestController::class, 'pdf'])->name('approval-requests.pdf');
+        Route::get('approval-requests/{approvalRequest}/zip', [ApprovalRequestController::class, 'zip'])->name('approval-requests.zip');
     });
     // Editing/removing an existing approval request record stays Admin-only
     // (data-integrity action, not part of the raise/respond entry workflow).
@@ -323,6 +324,8 @@ Route::middleware('permission:tickets.view')->group(function () {
     Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
     Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
     Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
+    Route::get('tickets/{ticket}/pdf', [TicketController::class, 'pdf'])->name('tickets.pdf');
+    Route::get('tickets/{ticket}/zip', [TicketController::class, 'zip'])->name('tickets.zip');
 });
 Route::middleware('permission:tickets.manage')->group(function () {
     Route::delete('tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
@@ -497,7 +500,9 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::post('work-orders/{workOrder}/approval-requests/{approvalRequest}/respond', [PortalApprovalRequestController::class, 'respond'])->name('work-orders.approval-requests.respond');
     Route::get('work-orders/{workOrder}/approval-requests/approved-pdf', [PortalApprovalRequestController::class, 'approvedPdf'])->name('work-orders.approval-requests.approved-pdf');
     Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/pdf', [PortalApprovalRequestController::class, 'pdf'])->name('work-orders.approval-requests.pdf');
+    Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/zip', [PortalApprovalRequestController::class, 'zip'])->name('work-orders.approval-requests.zip');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
+    Route::get('tickets/{ticket}', [PortalTicketController::class, 'show'])->name('tickets.show');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
 });

@@ -6,6 +6,10 @@
                 @if ($ticket->locked_at)
                     <x-badge status="closed" color="rose">Uneditable</x-badge>
                 @endif
+                <x-link-button :href="route('tickets.pdf', $ticket)" variant="secondary">PDF</x-link-button>
+                @if ($ticket->media->isNotEmpty())
+                    <x-link-button :href="route('tickets.zip', $ticket)" variant="secondary">ZIP</x-link-button>
+                @endif
                 @can('update', $ticket)
                     <x-link-button :href="route('tickets.edit', $ticket)" variant="secondary">Edit</x-link-button>
                 @endcan

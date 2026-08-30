@@ -32,6 +32,14 @@ class TicketPolicy
 
     public function update(User $user, Ticket $ticket): bool
     {
+        // Admin can always correct a ticket's details - including one that's
+        // locked or was raised by someone else - so incorrect/incomplete
+        // information entered when a ticket was raised doesn't stay wrong
+        // in front of the client.
+        if ($user->hasRole('Admin')) {
+            return true;
+        }
+
         if ($ticket->locked_at) {
             return false;
         }

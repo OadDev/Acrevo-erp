@@ -11,13 +11,15 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($tickets as $ticket)
-                            <tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                                 <td class="px-4 py-3">
-                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $ticket->title }}</p>
-                                    <p class="text-xs text-gray-400">{{ $ticket->workOrder->work_order_no }}</p>
-                                    @if ($ticket->media->isNotEmpty())
-                                        <p class="mt-1 text-xs text-indigo-500">{{ $ticket->media->count() }} file(s) attached</p>
-                                    @endif
+                                    <a href="{{ route('portal.tickets.show', $ticket) }}" class="block">
+                                        <p class="font-medium text-gray-800 hover:text-indigo-600 dark:text-gray-200">{{ $ticket->title }}</p>
+                                        <p class="text-xs text-gray-400">{{ $ticket->workOrder->work_order_no }}</p>
+                                        @if ($ticket->media->isNotEmpty())
+                                            <p class="mt-1 text-xs text-indigo-500">{{ $ticket->media->count() }} file(s) attached</p>
+                                        @endif
+                                    </a>
                                 </td>
                                 <td class="px-4 py-3"><x-badge :status="$ticket->status" /></td>
                             </tr>

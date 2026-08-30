@@ -60,8 +60,17 @@ class PortalTicketController extends Controller
             return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
         }
 
-        $workOrder->transitionTo('ticket_raised', 'Client raised a ticket: '.$ticket->title);
+        $workOrder->syncStatusFromTickets();
 
         return redirect()->route('portal.tickets.index')->with('success', 'Ticket submitted. Our team will get back to you shortly.');
+    }
+
+    public function show(Ticket $ticket): View
+    {
+        $this->authorize('view', $ticket);
+
+        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'media']);
+
+        return view('portal.tickets.show', compact('ticket'));
     }
 }

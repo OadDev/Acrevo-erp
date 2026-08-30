@@ -272,7 +272,38 @@ class WorkOrder extends Model implements HasMedia
             'ledger' => $this->ledgers->contains(fn (Ledger $entry) => $entry->getMedia('bill')->isNotEmpty()),
             'company-ledger' => $this->companyLedgers->contains(fn (CompanyLedger $entry) => $entry->getMedia('bill')->isNotEmpty()),
             'approvals' => $this->approvalRequests->contains(fn (ApprovalRequest $approval) => $approval->getMedia('attachment')->isNotEmpty()),
+            'tickets' => $this->tickets->contains(fn (Ticket $ticket) => $ticket->getMedia('attachments')->isNotEmpty()),
             default => false,
         };
+    }
+
+    /**
+     * Keeps this work order's status in step with its tickets: any open or
+     * in-progress ticket keeps it in a ticket-driven state (ticket_raised,
+     * or rework_in_progress once someone starts working the ticket), and
+     * once none remain it returns to in_progress - but only if a ticket is
+     * what put it into that state in the first place, so this never
+     * overrides an unrelated status like qc_pending or client_review.
+     */
+    public function syncStatusFromTickets(): void
+    {
+        $activeStatuses = $this->tickets()->whereIn('status', ['open', 'in_progress'])->pluck('status');
+
+        if ($activeStatuses->isEmpty()) {
+            if (in_array($this->status, ['ticket_raised', 'rework_in_progress'], true)) {
+                $this->transitionTo('in_progress', 'All tickets resolved — resuming normal work.');
+            }
+
+            return;
+        }
+
+        $desired = $activeStatuses->contains('in_progress') ? 'rework_in_progress' : 'ticket_raised';
+
+        if ($this->status !== $desired) {
+            $remarks = $desired === 'rework_in_progress'
+                ? 'A ticket is being worked on — rework in progress.'
+                : 'A ticket is open on this work order.';
+            $this->transitionTo($desired, $remarks);
+        }
     }
 }

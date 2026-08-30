@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
 use App\Models\WorkOrder;
+use App\Services\WorkOrderZipExporter;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class PortalApprovalRequestController extends Controller
 {
@@ -73,11 +77,31 @@ class PortalApprovalRequestController extends Controller
         abort_unless($client && $workOrder->client_id === $client->id, 403);
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
-        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy']);
+        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy', 'media']);
 
         $pdf = Pdf::loadView('work-orders.approval-requests.pdf', compact('approvalRequest'));
 
         return $pdf->download("{$approvalRequest->approval_no}.pdf");
+    }
+
+    public function zip(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest, WorkOrderZipExporter $exporter): BinaryFileResponse
+    {
+        $client = $request->user()->client();
+
+        abort_unless($client && $workOrder->client_id === $client->id, 403);
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $zipPath = sys_get_temp_dir().'/approval-zip-'.Str::random(20).'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $exporter->addApprovalRequest($zip, $approvalRequest);
+        $zip->close();
+
+        return response()->download($zipPath, "{$approvalRequest->approval_no}-attachments.zip", [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ])->deleteFileAfterSend();
     }
 
     public function approvedPdf(Request $request, WorkOrder $workOrder)

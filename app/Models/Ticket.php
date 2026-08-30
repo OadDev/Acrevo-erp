@@ -77,4 +77,16 @@ class Ticket extends Model implements HasMedia
     {
         return $this->hasMany(TicketComment::class)->orderBy('created_at');
     }
+
+    public function raisedByName(): string
+    {
+        return $this->raised_by_type === 'client'
+            ? ($this->raisedByClient?->name ?? 'Client')
+            : ($this->raisedBy?->name ?? 'Staff');
+    }
+
+    public function raisedAtIst(): string
+    {
+        return $this->created_at->timezone('Asia/Kolkata')->format('d-M-Y, h:i A').' IST';
+    }
 }

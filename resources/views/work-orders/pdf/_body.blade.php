@@ -475,6 +475,19 @@
                 @endforeach
             </tbody>
         </table>
+        @foreach ($workOrder->approvalRequests as $approval)
+            @if ($approval->description || $approval->response_note)
+                <p style="margin-top:4px;">
+                    <strong>{{ $approval->approval_no }}</strong>
+                    @if ($approval->description)
+                        — {{ $approval->description }}
+                    @endif
+                    @if ($approval->response_note)
+                        <br><span class="muted">Response ({{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }}): {{ $approval->response_note }}</span>
+                    @endif
+                </p>
+            @endif
+        @endforeach
         @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getMedia('attachment')->isNotEmpty()); @endphp
         @if ($approvalAttachments->isNotEmpty())
             <p style="margin-top:8px;"><strong>Attachments</strong></p>
@@ -493,7 +506,7 @@
     <h2 class="section-title">{{ $sectionLabels['tickets'] }}</h2>
     @if ($workOrder->tickets->isNotEmpty())
         <table>
-            <thead><tr><th>Ticket No</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th></tr></thead>
+            <thead><tr><th>Ticket No</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Raised By</th><th>Date</th></tr></thead>
             <tbody>
                 @foreach ($workOrder->tickets as $ticket)
                     <tr>
@@ -502,10 +515,26 @@
                         <td>{{ Str::title($ticket->type) }}</td>
                         <td>{{ Str::title($ticket->priority) }}</td>
                         <td>{{ Str::title($ticket->status) }}</td>
+                        <td>{{ $ticket->raisedByName() }}</td>
+                        <td>{{ $ticket->raisedAtIst() }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+        @foreach ($workOrder->tickets as $ticket)
+            @if ($ticket->description)
+                <p style="margin-top:4px;"><strong>{{ $ticket->ticket_no }}</strong> — {{ $ticket->description }}</p>
+            @endif
+        @endforeach
+        @php $ticketAttachments = $workOrder->tickets->filter(fn ($t) => $t->getMedia('attachments')->isNotEmpty()); @endphp
+        @if ($ticketAttachments->isNotEmpty())
+            <p style="margin-top:8px;"><strong>Attachments</strong></p>
+            @foreach ($ticketAttachments as $ticket)
+                @foreach ($ticket->getMedia('attachments') as $attachment)
+                    @include('work-orders.pdf._media', ['media' => $attachment, 'label' => 'Tickets — '.$ticket->ticket_no.' — '.$ticket->title])
+                @endforeach
+            @endforeach
+        @endif
     @else
         <p class="empty">No tickets raised.</p>
     @endif

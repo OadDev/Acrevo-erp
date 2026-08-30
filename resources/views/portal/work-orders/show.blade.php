@@ -449,6 +449,11 @@
                         <a href="{{ route('portal.work-orders.approval-requests.pdf', [$workOrder, $approval]) }}" class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
                             <x-icon name="download" class="h-3.5 w-3.5" /> Download PDF
                         </a>
+                        @if ($approval->getMedia('attachment')->isNotEmpty())
+                            <a href="{{ route('portal.work-orders.approval-requests.zip', [$workOrder, $approval]) }}" class="mt-2 ml-3 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
+                                <x-icon name="download" class="h-3.5 w-3.5" /> Download Attachments (ZIP)
+                            </a>
+                        @endif
                     </div>
                 @empty
                     <p class="text-sm text-gray-400">No approval requests yet.</p>

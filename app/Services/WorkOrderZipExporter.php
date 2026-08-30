@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ApprovalRequest;
+use App\Models\Ticket;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
 use App\Support\WorkOrderPdfSections;
@@ -77,7 +79,31 @@ class WorkOrderZipExporter
                     $this->addCollection($zip, $approval->getMedia('attachment'), "{$prefix}Approval Attachments");
                 }
                 break;
+
+            case 'tickets':
+                foreach ($workOrder->tickets as $ticket) {
+                    $this->addCollection($zip, $ticket->getMedia('attachments'), "{$prefix}Ticket Attachments");
+                }
+                break;
         }
+    }
+
+    /**
+     * Adds just one approval request's own attachments, for the
+     * per-request "ZIP Download" button.
+     */
+    public function addApprovalRequest(ZipArchive $zip, ApprovalRequest $approvalRequest): void
+    {
+        $this->addCollection($zip, $approvalRequest->getMedia('attachment'), 'Attachments');
+    }
+
+    /**
+     * Adds just one ticket's own attachments, for the per-ticket
+     * "ZIP Download" button.
+     */
+    public function addTicket(ZipArchive $zip, Ticket $ticket): void
+    {
+        $this->addCollection($zip, $ticket->getMedia('attachments'), 'Attachments');
     }
 
     public function safeName(string $name): string
