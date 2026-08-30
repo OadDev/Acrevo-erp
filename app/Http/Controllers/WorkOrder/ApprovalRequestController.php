@@ -12,12 +12,26 @@ use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 
 class ApprovalRequestController extends Controller
 {
+    private function attachFiles(ApprovalRequest $approvalRequest, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $approvalRequest->addMedia($file)->toMediaCollection('attachment');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 20MB).';
+        }
+
+        return null;
+    }
+
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
         ]);
 
         $approvalRequest = $workOrder->approvalRequests()->create([
@@ -28,12 +42,8 @@ class ApprovalRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        if ($request->hasFile('file')) {
-            try {
-                $approvalRequest->addMediaFromRequest('file')->toMediaCollection('attachment');
-            } catch (FileIsTooBig $e) {
-                return back()->withErrors(['file' => 'That file is too large (max 20MB).']);
-            }
+        if ($error = $this->attachFiles($approvalRequest, $request)) {
+            return back()->withErrors(['files' => $error]);
         }
 
         return back()->with('success', 'Approval request sent to the client.');

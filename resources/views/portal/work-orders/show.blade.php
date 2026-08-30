@@ -418,10 +418,14 @@
                         @if ($approval->description)
                             <p class="mt-1 text-gray-500">{{ $approval->description }}</p>
                         @endif
-                        @if ($approval->getFirstMedia('attachment'))
-                            <a href="{{ $approval->getFirstMediaUrl('attachment') }}" target="_blank" class="mt-1 inline-flex items-center gap-1 text-indigo-600 hover:underline">
-                                <x-icon name="paperclip" class="h-3.5 w-3.5" /> {{ $approval->getFirstMedia('attachment')->file_name }}
-                            </a>
+                        @if ($approval->getMedia('attachment')->isNotEmpty())
+                            <div class="mt-1 flex flex-wrap gap-2">
+                                @foreach ($approval->getMedia('attachment') as $attachment)
+                                    <a href="{{ $attachment->getUrl() }}" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 hover:underline">
+                                        <x-icon name="paperclip" class="h-3.5 w-3.5" /> {{ $attachment->file_name }}
+                                    </a>
+                                @endforeach
+                            </div>
                         @endif
 
                         @if ($approval->status !== 'pending')
@@ -455,7 +459,7 @@
                     <x-input-label value="Request Our Approval" />
                     <x-text-input name="title" placeholder="Title" class="w-full" required />
                     <x-textarea-input name="description" rows="2" class="w-full" placeholder="Description (optional)"></x-textarea-input>
-                    <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="w-full text-sm">
+                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="w-full text-sm">
                     <x-primary-button class="w-full justify-center">Send Request</x-primary-button>
                 </form>
             </x-card>

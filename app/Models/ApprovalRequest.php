@@ -43,7 +43,7 @@ class ApprovalRequest extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('attachment')->singleFile();
+        $this->addMediaCollection('attachment');
     }
 
     public function workOrder(): BelongsTo

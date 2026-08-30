@@ -475,11 +475,13 @@
                 @endforeach
             </tbody>
         </table>
-        @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getFirstMedia('attachment')); @endphp
+        @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getMedia('attachment')->isNotEmpty()); @endphp
         @if ($approvalAttachments->isNotEmpty())
             <p style="margin-top:8px;"><strong>Attachments</strong></p>
             @foreach ($approvalAttachments as $approval)
-                @include('work-orders.pdf._media', ['media' => $approval->getFirstMedia('attachment'), 'label' => 'Approval Requests — '.$approval->approval_no.' — '.$approval->title])
+                @foreach ($approval->getMedia('attachment') as $attachment)
+                    @include('work-orders.pdf._media', ['media' => $attachment, 'label' => 'Approval Requests — '.$approval->approval_no.' — '.$approval->title])
+                @endforeach
             @endforeach
         @endif
     @else

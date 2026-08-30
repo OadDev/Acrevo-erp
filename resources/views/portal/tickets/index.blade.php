@@ -45,7 +45,7 @@
                 <x-textarea-input name="description" rows="3" class="w-full" placeholder="Describe the issue"></x-textarea-input>
                 <div>
                     <x-input-label value="Attachments (optional)" class="text-xs" />
-                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="mt-1 block w-full text-xs">
+                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="mt-1 block w-full text-xs">
                     @error('files')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
                 <x-primary-button class="w-full justify-center">Submit Ticket</x-primary-button>

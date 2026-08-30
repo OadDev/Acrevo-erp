@@ -148,7 +148,7 @@ class ClientPortalWorkflowTest extends TestCase
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/approval-requests", [
             'title' => 'Approve tile layout',
             'description' => 'Please confirm before we proceed.',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $approval = ApprovalRequest::where('work_order_id', $workOrder->id)->firstOrFail();

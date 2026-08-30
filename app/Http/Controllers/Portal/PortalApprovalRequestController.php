@@ -21,7 +21,8 @@ class PortalApprovalRequestController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
         ]);
 
         $approvalRequest = $workOrder->approvalRequests()->create([
@@ -32,12 +33,12 @@ class PortalApprovalRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        if ($request->hasFile('file')) {
-            try {
-                $approvalRequest->addMediaFromRequest('file')->toMediaCollection('attachment');
-            } catch (FileIsTooBig $e) {
-                return back()->withErrors(['file' => 'That file is too large (max 20MB).']);
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $approvalRequest->addMedia($file)->toMediaCollection('attachment');
             }
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
         }
 
         return back()->with('success', 'Approval request sent to our team.');
