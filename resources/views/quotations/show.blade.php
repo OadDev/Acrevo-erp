@@ -111,6 +111,44 @@
         </x-card>
     @endif
 
+    <x-card class="mb-6">
+        <h3 class="mb-3 text-sm font-semibold text-gray-500">Attachments</h3>
+        <p class="mb-3 text-xs text-gray-400">BOQ, drawings, specifications, terms &amp; conditions, or other supporting documents for this quotation.</p>
+
+        @if ($quotation->media->isNotEmpty())
+            <div class="mb-3 flex flex-wrap gap-2">
+                @foreach ($quotation->media as $attachment)
+                    <div class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm dark:border-gray-700">
+                        <a href="{{ $attachment->getUrl() }}" target="_blank" class="inline-flex items-center gap-1.5 text-indigo-600 hover:underline">
+                            <x-icon name="paperclip" class="h-4 w-4" /> {{ $attachment->file_name }}
+                        </a>
+                        @if (auth()->user()->hasRole('Admin'))
+                            <form method="POST" action="{{ route('quotations.media.destroy', [$quotation, $attachment]) }}" onsubmit="return confirm('Remove this attachment?')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="ml-1 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                            </form>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <p class="mb-3 text-sm text-gray-400">No attachments yet.</p>
+        @endif
+
+        @can('quotations.edit')
+            <form method="POST" action="{{ route('quotations.media.store', $quotation) }}" enctype="multipart/form-data" class="flex flex-wrap items-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+                @csrf
+                <div class="flex-1">
+                    <x-input-label value="Upload files (images, PDF, Word, Excel - multiple allowed)" class="text-xs" />
+                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" class="mt-1 w-full text-sm">
+                    @error('files')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                </div>
+                <x-primary-button>Upload</x-primary-button>
+            </form>
+        @endcan
+    </x-card>
+
     <x-discussion-card :conversation="$discussion" />
 
     @push('scripts')

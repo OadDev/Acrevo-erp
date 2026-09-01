@@ -32,6 +32,7 @@ use App\Http\Controllers\Portal\PortalTicketController;
 use App\Http\Controllers\Portal\PortalWorkOrderController;
 use App\Http\Controllers\QcInspectionController;
 use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\QuotationMediaController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDocumentController;
@@ -79,6 +80,8 @@ Route::middleware('permission:quotations.view')->group(function () {
     Route::post('quotations/{quotation}/reject', [QuotationController::class, 'reject'])->name('quotations.reject');
     Route::get('quotations/{quotation}/pdf', [QuotationController::class, 'pdf'])->name('quotations.pdf');
     Route::post('quotations/{quotation}/revise', [QuotationController::class, 'revise'])->name('quotations.revise');
+    Route::post('quotations/{quotation}/media', [QuotationMediaController::class, 'store'])->name('quotations.media.store');
+    Route::delete('quotations/{quotation}/media/{media}', [QuotationMediaController::class, 'destroy'])->name('quotations.media.destroy');
 });
 
 Route::middleware('permission:enquiries.view')->group(function () {
@@ -491,6 +494,7 @@ Route::middleware('permission:system_settings.manage')->group(function () {
 Route::middleware('permission:client_portal.access')->prefix('portal')->name('portal.')->group(function () {
     Route::get('quotations', [PortalQuotationController::class, 'index'])->name('quotations.index');
     Route::get('quotations/{quotation}', [PortalQuotationController::class, 'show'])->name('quotations.show');
+    Route::get('quotations/{quotation}/pdf', [PortalQuotationController::class, 'pdf'])->name('quotations.pdf');
     Route::post('quotations/{quotation}/approve', [PortalQuotationController::class, 'approve'])->name('quotations.approve');
     Route::post('quotations/{quotation}/reject', [PortalQuotationController::class, 'reject'])->name('quotations.reject');
     Route::get('work-orders', [PortalWorkOrderController::class, 'index'])->name('work-orders.index');

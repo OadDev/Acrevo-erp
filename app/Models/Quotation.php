@@ -12,10 +12,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Quotation extends Model
+class Quotation extends Model implements HasMedia
 {
-    use HasFactory, HasSequenceNumber, HasUuids, LogsActivity, SoftDeletes;
+    use HasFactory, HasSequenceNumber, HasUuids, InteractsWithMedia, LogsActivity, SoftDeletes;
 
     protected $sequencePrefix = 'QT';
 
@@ -43,6 +45,11 @@ class Quotation extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logOnlyDirty()->dontSubmitEmptyLogs();
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('attachments');
     }
 
     public function enquiry(): BelongsTo

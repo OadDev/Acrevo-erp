@@ -3,6 +3,7 @@
         <x-page-header :title="$quotation->quotation_no" subtitle="Please review the quotation below.">
             <x-slot name="actions">
                 <x-badge :status="$quotation->status" class="text-sm" />
+                <x-link-button :href="route('portal.quotations.pdf', $quotation)" variant="secondary"><x-icon name="download" class="h-4 w-4" /> Download PDF</x-link-button>
             </x-slot>
         </x-page-header>
     </x-slot>
@@ -48,6 +49,19 @@
         <x-card class="mb-6">
             <h3 class="mb-2 text-sm font-semibold text-gray-500">Terms &amp; Conditions</h3>
             <p class="whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">{{ $quotation->terms }}</p>
+        </x-card>
+    @endif
+
+    @if ($quotation->media->isNotEmpty())
+        <x-card class="mb-6">
+            <h3 class="mb-3 text-sm font-semibold text-gray-500">Attachments</h3>
+            <div class="flex flex-wrap gap-3">
+                @foreach ($quotation->media as $attachment)
+                    <a href="{{ $attachment->getUrl() }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-indigo-600 hover:underline dark:border-gray-700">
+                        <x-icon name="paperclip" class="h-4 w-4" /> {{ $attachment->file_name }}
+                    </a>
+                @endforeach
+            </div>
         </x-card>
     @endif
 

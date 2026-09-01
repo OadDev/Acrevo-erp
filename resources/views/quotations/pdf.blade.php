@@ -66,5 +66,12 @@
     @if ($quotation->terms)
         <p style="margin-top: 24px;"><strong>Terms &amp; Conditions</strong><br>{{ $quotation->terms }}</p>
     @endif
+
+    @if ($quotation->media->isNotEmpty())
+        <p style="margin-top: 16px;"><strong>Attachments</strong></p>
+        @foreach ($quotation->media as $attachment)
+            @include('work-orders.pdf._media', ['media' => $attachment, 'label' => 'Supporting Document'])
+        @endforeach
+    @endif
 </body>
 </html>
