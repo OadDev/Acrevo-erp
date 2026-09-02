@@ -69,8 +69,19 @@ class PortalTicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'media']);
+        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'media', 'comments.user']);
 
         return view('portal.tickets.show', compact('ticket'));
+    }
+
+    public function addComment(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+
+        $data = $request->validate(['comment' => ['required', 'string']]);
+
+        $ticket->comments()->create($data + ['user_id' => $request->user()->id]);
+
+        return back()->with('success', 'Comment added.');
     }
 }

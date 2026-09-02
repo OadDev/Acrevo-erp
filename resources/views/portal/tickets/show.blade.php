@@ -33,6 +33,25 @@
                     </div>
                 @endif
             </x-card>
+
+            <x-card>
+                <h3 class="mb-4 text-sm font-semibold text-gray-500">Comments</h3>
+                <form method="POST" action="{{ route('portal.tickets.comments.store', $ticket) }}" class="mb-4 flex gap-2">
+                    @csrf
+                    <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
+                    <x-primary-button>Post</x-primary-button>
+                </form>
+                <div class="space-y-3">
+                    @forelse ($ticket->comments->where('is_internal', false) as $comment)
+                        <div class="border-l-2 border-indigo-200 pl-3 text-sm dark:border-indigo-500/30">
+                            <p class="text-gray-700 dark:text-gray-300">{{ $comment->comment }}</p>
+                            <p class="text-xs text-gray-400">{{ $comment->user?->name ?? 'Team' }} · {{ $comment->created_at->diffForHumans() }}</p>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400">No comments yet.</p>
+                    @endforelse
+                </div>
+            </x-card>
         </div>
 
         <x-card>

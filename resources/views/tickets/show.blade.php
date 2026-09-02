@@ -84,7 +84,13 @@
                     @forelse ($ticket->comments as $comment)
                         <div class="border-l-2 border-indigo-200 pl-3 text-sm dark:border-indigo-500/30">
                             <p class="text-gray-700 dark:text-gray-300">{{ $comment->comment }}</p>
-                            <p class="text-xs text-gray-400">{{ $comment->user?->name ?? 'Client' }} · {{ $comment->created_at->diffForHumans() }}</p>
+                            <p class="text-xs text-gray-400">
+                                {{ $comment->user?->name ?? 'Client' }}
+                                @if ($comment->user?->hasRole('Client'))
+                                    <span class="text-indigo-500">(Client)</span>
+                                @endif
+                                · {{ $comment->created_at->diffForHumans() }}
+                            </p>
                         </div>
                     @empty
                         <p class="text-sm text-gray-400">No comments yet.</p>

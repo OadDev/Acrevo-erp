@@ -515,5 +515,6 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
     Route::get('tickets/{ticket}', [PortalTicketController::class, 'show'])->name('tickets.show');
+    Route::post('tickets/{ticket}/comments', [PortalTicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
 });
