@@ -341,7 +341,14 @@ Route::middleware('permission:tickets.manage')->group(function () {
 */
 Route::middleware('permission:finance.view')->group(function () {
     Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('finance/invoices/pdf', [FinanceController::class, 'invoicesPdf'])->name('finance.invoices.pdf');
+    Route::get('finance/invoices/csv', [FinanceController::class, 'invoicesCsv'])->name('finance.invoices.csv');
+    Route::get('finance/payments/pdf', [FinanceController::class, 'paymentsPdf'])->name('finance.payments.pdf');
+    Route::get('finance/payments/csv', [FinanceController::class, 'paymentsCsv'])->name('finance.payments.csv');
+    Route::get('finance/vendor-payments/pdf', [FinanceController::class, 'vendorPaymentsPdf'])->name('finance.vendor-payments.pdf');
+    Route::get('finance/vendor-payments/csv', [FinanceController::class, 'vendorPaymentsCsv'])->name('finance.vendor-payments.csv');
     Route::get('finance/expenses/pdf', [FinanceController::class, 'expensesPdf'])->name('finance.expenses.pdf');
+    Route::get('finance/expenses/csv', [FinanceController::class, 'expensesCsv'])->name('finance.expenses.csv');
 });
 Route::middleware('permission:subcontractor_finance.view')->group(function () {
     Route::get('finance/my-payments', [FinanceController::class, 'myPayments'])->name('finance.my-payments');

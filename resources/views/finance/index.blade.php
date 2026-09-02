@@ -23,6 +23,17 @@
         <div x-show="tab === 'invoices'" x-data="{ editInvoice: null }">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <x-card :padded="false" class="lg:col-span-2">
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4">
+                        <h3 class="text-sm font-semibold text-gray-500">Invoices</h3>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('finance.invoices.pdf') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                <x-icon name="download" class="h-4 w-4" /> Download PDF
+                            </a>
+                            <a href="{{ route('finance.invoices.csv') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                <x-icon name="download" class="h-4 w-4" /> Download CSV
+                            </a>
+                        </div>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                             <thead class="bg-gray-50 dark:bg-gray-800/50">
@@ -116,8 +127,16 @@
         <div x-show="tab === 'payments'" x-cloak x-data="{ editPayment: null }">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <x-card :padded="false" class="lg:col-span-2">
-                    <div class="flex items-center justify-between p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4">
                         <h3 class="text-sm font-semibold text-gray-500">Client Payments</h3>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('finance.payments.pdf', request()->only(['payment_client_id', 'payment_from', 'payment_to'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                <x-icon name="download" class="h-4 w-4" /> Download PDF
+                            </a>
+                            <a href="{{ route('finance.payments.csv', request()->only(['payment_client_id', 'payment_from', 'payment_to'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                <x-icon name="download" class="h-4 w-4" /> Download CSV
+                            </a>
+                        </div>
                     </div>
                     <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
                         <input type="hidden" name="tab" value="payments">
@@ -234,14 +253,26 @@
         <div x-show="tab === 'vendor'" x-cloak x-data="{ editVendor: null }">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <x-card :padded="false" class="lg:col-span-2">
-                    <div class="flex items-center justify-between p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4">
                         <h3 class="text-sm font-semibold text-gray-500">Sub Contractor Payments</h3>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('finance.vendor-payments.pdf', request()->only(['vendor_user_id', 'vendor_work_order_id', 'vendor_from', 'vendor_to'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                <x-icon name="download" class="h-4 w-4" /> Download PDF
+                            </a>
+                            <a href="{{ route('finance.vendor-payments.csv', request()->only(['vendor_user_id', 'vendor_work_order_id', 'vendor_from', 'vendor_to'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                <x-icon name="download" class="h-4 w-4" /> Download CSV
+                            </a>
+                        </div>
                     </div>
-                    <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
+                    <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-5">
                         <input type="hidden" name="tab" value="vendor">
                         <x-select-input name="vendor_user_id" class="text-sm">
                             <option value="">All Sub Contractors</option>
                             @foreach ($subContractors as $sc)<option value="{{ $sc->id }}" @selected((string) request('vendor_user_id') === (string) $sc->id)>{{ $sc->name }}</option>@endforeach
+                        </x-select-input>
+                        <x-select-input name="vendor_work_order_id" class="text-sm">
+                            <option value="">All Work Orders</option>
+                            @foreach ($workOrders as $wo)<option value="{{ $wo->id }}" @selected((string) request('vendor_work_order_id') === (string) $wo->id)>{{ $wo->work_order_no }}</option>@endforeach
                         </x-select-input>
                         <x-text-input type="date" name="vendor_from" value="{{ request('vendor_from') }}" class="text-sm" />
                         <x-text-input type="date" name="vendor_to" value="{{ request('vendor_to') }}" class="text-sm" />
@@ -353,17 +384,22 @@
             <x-card class="mb-6">
                 <h3 class="text-sm font-semibold text-gray-500">Current Balance</h3>
                 <p class="text-2xl font-semibold text-gray-900 dark:text-white">₹{{ number_format($currentExpenseBalance, 2) }}</p>
-                <p class="mt-1 text-xs text-gray-400">General company expenses not tied to a work order — salaries, GST filing, office costs, and other overheads.</p>
+                <p class="mt-1 text-xs text-gray-400">General company expenses — optionally tied to a work order — salaries, GST filing, office costs, and other overheads.</p>
             </x-card>
 
             <x-card :padded="false">
                 <div class="flex flex-wrap items-center justify-between gap-3 p-4">
                     <h3 class="text-sm font-semibold text-gray-500">Expenses</h3>
-                    <a href="{{ route('finance.expenses.pdf', request()->only(['expense_from', 'expense_to', 'expense_category', 'expense_type'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                        <x-icon name="download" class="h-4 w-4" /> Download PDF
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('finance.expenses.pdf', request()->only(['expense_from', 'expense_to', 'expense_category', 'expense_type', 'expense_work_order_id'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            <x-icon name="download" class="h-4 w-4" /> Download PDF
+                        </a>
+                        <a href="{{ route('finance.expenses.csv', request()->only(['expense_from', 'expense_to', 'expense_category', 'expense_type', 'expense_work_order_id'])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            <x-icon name="download" class="h-4 w-4" /> Download CSV
+                        </a>
+                    </div>
                 </div>
-                <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-5">
+                <form method="GET" action="{{ route('finance.index') }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-6">
                     <input type="hidden" name="tab" value="expenses">
                     <x-text-input type="date" name="expense_from" value="{{ request('expense_from') }}" class="text-sm" />
                     <x-text-input type="date" name="expense_to" value="{{ request('expense_to') }}" class="text-sm" />
@@ -380,6 +416,10 @@
                         <option value="borrow" @selected(request('expense_type') === 'borrow')>Borrow</option>
                         <option value="lended" @selected(request('expense_type') === 'lended')>Lended</option>
                     </x-select-input>
+                    <x-select-input name="expense_work_order_id" class="text-sm">
+                        <option value="">All Work Orders</option>
+                        @foreach ($workOrders as $wo)<option value="{{ $wo->id }}" @selected((string) request('expense_work_order_id') === (string) $wo->id)>{{ $wo->work_order_no }}</option>@endforeach
+                    </x-select-input>
                     <x-primary-button class="justify-center">Filter</x-primary-button>
                 </form>
                 <div class="overflow-x-auto">
@@ -389,6 +429,7 @@
                                 <th class="px-4 py-2">Date</th>
                                 <th class="px-4 py-2">Category</th>
                                 <th class="px-4 py-2">Description</th>
+                                <th class="px-4 py-2">Work Order</th>
                                 <th class="px-4 py-2 text-right">Borrow</th>
                                 <th class="px-4 py-2 text-right">Credit</th>
                                 <th class="px-4 py-2 text-right">Debit</th>
@@ -405,6 +446,7 @@
                                     <td class="px-4 py-2 text-gray-500">{{ $expense->expense_date->format('d M Y') }}</td>
                                     <td class="px-4 py-2 text-gray-500">{{ $expense->category }}</td>
                                     <td class="px-4 py-2">{{ $expense->description }}</td>
+                                    <td class="px-4 py-2 text-gray-500">{{ $expense->workOrder?->work_order_no ?? '—' }}</td>
                                     <td class="px-4 py-2 text-right text-blue-600">{{ $expense->type === 'borrow' ? '₹'.number_format($expense->amount, 2) : '—' }}</td>
                                     <td class="px-4 py-2 text-right text-emerald-600">{{ $expense->type === 'credit' ? '₹'.number_format($expense->amount, 2) : '—' }}</td>
                                     <td class="px-4 py-2 text-right text-rose-600">{{ $expense->type === 'debit' ? '₹'.number_format($expense->amount, 2) : '—' }}</td>
@@ -428,7 +470,7 @@
                                     </td>
                                 </tr>
                                 <tr x-show="editExpense === {{ $expense->id }}" x-cloak>
-                                    <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
+                                    <td colspan="12" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                         <form method="POST" action="{{ route('finance.expenses.update', $expense) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                             @csrf
                                             @method('PUT')
@@ -445,6 +487,10 @@
                                                     <option value="{{ $ledgerCategory->name }}" @selected($expense->category === $ledgerCategory->name)>{{ $ledgerCategory->name }}</option>
                                                 @endforeach
                                             </x-select-input>
+                                            <x-select-input name="work_order_id" class="text-xs">
+                                                <option value="">No work order</option>
+                                                @foreach ($workOrders as $wo)<option value="{{ $wo->id }}" @selected($expense->work_order_id === $wo->id)>{{ $wo->work_order_no }}</option>@endforeach
+                                            </x-select-input>
                                             <x-text-input name="description" value="{{ $expense->description }}" class="col-span-2 text-xs" />
                                             <x-text-input name="remark" value="{{ $expense->remark }}" class="col-span-2 text-xs" />
                                             <div class="col-span-2 sm:col-span-4">
@@ -456,7 +502,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="11" class="px-4 py-6 text-center text-gray-400">No expenses match this filter.</td></tr>
+                                <tr><td colspan="12" class="px-4 py-6 text-center text-gray-400">No expenses match this filter.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -479,6 +525,10 @@
                             @foreach ($ledgerCategories as $ledgerCategory)
                                 <option value="{{ $ledgerCategory->name }}">{{ $ledgerCategory->name }}</option>
                             @endforeach
+                        </x-select-input>
+                        <x-select-input name="work_order_id" class="text-sm">
+                            <option value="">Work Order (optional)</option>
+                            @foreach ($workOrders as $wo)<option value="{{ $wo->id }}">{{ $wo->work_order_no }}</option>@endforeach
                         </x-select-input>
                         <x-text-input name="description" placeholder="Description" class="col-span-2 text-sm" />
                         <x-text-input name="remark" placeholder="Remark (optional)" class="col-span-2 text-sm" />
