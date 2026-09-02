@@ -14,7 +14,7 @@
 
     <div x-data="{ tab: '{{ request('tab', 'invoices') }}' }">
         <div class="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
-            @foreach (['invoices' => 'Invoices', 'payments' => 'Client Payments', 'vendor' => 'Sub Contractor Payments', 'expenses' => 'Expenses'] as $key => $label)
+            @foreach (['invoices' => 'Invoices', 'payments' => 'Client Payments', 'vendor' => 'Sub Contractor Payments', 'expenses' => 'Expenses', 'categories' => 'Category List'] as $key => $label)
                 <button @click="tab = '{{ $key }}'" :class="tab === '{{ $key }}' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'" class="whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium">{{ $label }}</button>
             @endforeach
         </div>
@@ -292,7 +292,12 @@
                                                 </x-select-input>
                                                 <x-text-input type="number" step="0.01" name="amount" value="{{ $vp->amount }}" class="text-xs" required />
                                                 <x-text-input type="date" name="payment_date" value="{{ $vp->payment_date->format('Y-m-d') }}" class="text-xs" required />
-                                                <x-text-input name="category" value="{{ $vp->category }}" placeholder="Category" class="text-xs" />
+                                                <x-select-input name="category" class="text-xs">
+                                                    <option value="">No category</option>
+                                                    @foreach ($ledgerCategories as $ledgerCategory)
+                                                        <option value="{{ $ledgerCategory->name }}" @selected($vp->category === $ledgerCategory->name)>{{ $ledgerCategory->name }}</option>
+                                                    @endforeach
+                                                </x-select-input>
                                                 <x-select-input name="mode" class="text-xs">
                                                     @foreach ($modes as $mode)<option value="{{ $mode }}" @selected($vp->mode === $mode)>{{ Str::title(str_replace('_',' ',$mode)) }}</option>@endforeach
                                                 </x-select-input>
@@ -326,7 +331,12 @@
                             </x-select-input>
                             <x-text-input type="number" step="0.01" name="amount" placeholder="Amount" class="w-full text-sm" required />
                             <x-text-input type="date" name="payment_date" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
-                            <x-text-input name="category" placeholder="Category" class="w-full text-sm" />
+                            <x-select-input name="category" class="w-full text-sm">
+                                <option value="">No category</option>
+                                @foreach ($ledgerCategories as $ledgerCategory)
+                                    <option value="{{ $ledgerCategory->name }}">{{ $ledgerCategory->name }}</option>
+                                @endforeach
+                            </x-select-input>
                             <x-select-input name="mode" class="w-full text-sm">
                                 @foreach ($modes as $mode)<option value="{{ $mode }}">{{ Str::title(str_replace('_',' ',$mode)) }}</option>@endforeach
                             </x-select-input>
@@ -430,7 +440,11 @@
                                                 <option value="lended" @selected($expense->type === 'lended')>Lended</option>
                                             </x-select-input>
                                             <x-text-input type="number" step="0.01" name="amount" value="{{ $expense->amount }}" class="text-xs" required />
-                                            <x-text-input name="category" value="{{ $expense->category }}" class="text-xs" required />
+                                            <x-select-input name="category" class="text-xs" required>
+                                                @foreach ($ledgerCategories as $ledgerCategory)
+                                                    <option value="{{ $ledgerCategory->name }}" @selected($expense->category === $ledgerCategory->name)>{{ $ledgerCategory->name }}</option>
+                                                @endforeach
+                                            </x-select-input>
                                             <x-text-input name="description" value="{{ $expense->description }}" class="col-span-2 text-xs" />
                                             <x-text-input name="remark" value="{{ $expense->remark }}" class="col-span-2 text-xs" />
                                             <div class="col-span-2 sm:col-span-4">
@@ -448,25 +462,66 @@
                     </table>
                 </div>
                 <div class="px-4">{{ $recentExpenses->appends(request()->query())->links() }}</div>
-                <form method="POST" action="{{ route('finance.expenses.store') }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
-                    @csrf
-                    <x-text-input type="date" name="expense_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />
-                    <x-select-input name="type" class="text-sm">
-                        <option value="debit">Debit</option>
-                        <option value="credit">Credit</option>
-                        <option value="borrow">Borrow</option>
-                        <option value="lended">Lended</option>
-                    </x-select-input>
-                    <x-text-input type="number" step="0.01" name="amount" placeholder="Amount" class="text-sm" required />
-                    <x-text-input name="category" placeholder="Category (e.g. Salary, GST Filing, Office)" class="text-sm" required />
-                    <x-text-input name="description" placeholder="Description" class="col-span-2 text-sm" />
-                    <x-text-input name="remark" placeholder="Remark (optional)" class="col-span-2 text-sm" />
-                    <div class="col-span-2 sm:col-span-4">
-                        <x-input-label value="Bill (image or PDF, optional)" />
-                        <input type="file" name="bill" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 w-full text-sm">
-                    </div>
-                    <x-primary-button class="col-span-2 justify-center sm:col-span-4">Add Expense</x-primary-button>
-                </form>
+                @if ($ledgerCategories->isEmpty())
+                    <p class="border-t border-gray-100 p-4 text-sm text-gray-400 dark:border-gray-800">No categories yet - add one in the Category List tab first.</p>
+                @else
+                    <form method="POST" action="{{ route('finance.expenses.store') }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
+                        @csrf
+                        <x-text-input type="date" name="expense_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />
+                        <x-select-input name="type" class="text-sm">
+                            <option value="debit">Debit</option>
+                            <option value="credit">Credit</option>
+                            <option value="borrow">Borrow</option>
+                            <option value="lended">Lended</option>
+                        </x-select-input>
+                        <x-text-input type="number" step="0.01" name="amount" placeholder="Amount" class="text-sm" required />
+                        <x-select-input name="category" class="text-sm" required>
+                            @foreach ($ledgerCategories as $ledgerCategory)
+                                <option value="{{ $ledgerCategory->name }}">{{ $ledgerCategory->name }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <x-text-input name="description" placeholder="Description" class="col-span-2 text-sm" />
+                        <x-text-input name="remark" placeholder="Remark (optional)" class="col-span-2 text-sm" />
+                        <div class="col-span-2 sm:col-span-4">
+                            <x-input-label value="Bill (image or PDF, optional)" />
+                            <input type="file" name="bill" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 w-full text-sm">
+                        </div>
+                        <x-primary-button class="col-span-2 justify-center sm:col-span-4">Add Expense</x-primary-button>
+                    </form>
+                @endif
+            </x-card>
+        </div>
+
+        {{-- ==================== CATEGORY LIST ==================== --}}
+        <div x-show="tab === 'categories'" x-cloak>
+            <x-card :padded="false">
+                <div class="p-4">
+                    <h3 class="text-sm font-semibold text-gray-500">Category List</h3>
+                    <p class="mt-1 text-xs text-gray-400">Manage the predefined categories selectable when entering Company Ledger and Finance entries (Expenses, Sub Contractor Payments).</p>
+                </div>
+                <div class="flex flex-wrap gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
+                    @forelse ($ledgerCategories as $ledgerCategory)
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            {{ $ledgerCategory->name }}
+                            @if (auth()->user()->hasRole('Admin'))
+                                <form method="POST" action="{{ route('admin.ledger-categories.destroy', $ledgerCategory) }}" onsubmit="return confirm('Remove the category &quot;{{ $ledgerCategory->name }}&quot;? Existing entries keep their category text.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="text-gray-400 hover:text-rose-500" title="Remove category">&times;</button>
+                                </form>
+                            @endif
+                        </span>
+                    @empty
+                        <p class="text-xs text-gray-400">No categories yet - add one below.</p>
+                    @endforelse
+                </div>
+                @if (auth()->user()->hasRole('Admin'))
+                    <form method="POST" action="{{ route('admin.ledger-categories.store') }}" class="flex gap-2 border-t border-gray-100 p-4 dark:border-gray-800">
+                        @csrf
+                        <x-text-input name="name" placeholder="New category name" class="text-sm" required />
+                        <x-primary-button class="whitespace-nowrap">Add Category</x-primary-button>
+                    </form>
+                @endif
             </x-card>
         </div>
     </div>

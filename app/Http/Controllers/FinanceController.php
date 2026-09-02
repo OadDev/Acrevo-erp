@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Expense;
 use App\Models\Invoice;
+use App\Models\LedgerCategory;
 use App\Models\Payment;
 use App\Models\Site;
 use App\Models\User;
@@ -57,12 +58,13 @@ class FinanceController extends Controller
         $sites = Site::orderBy('site_no')->get();
         $subContractors = User::role('Sub Contractor')->where('is_active', true)->orderBy('name')->get();
         $expenseCategories = Expense::query()->pluck('category')->filter()->unique()->sort()->values();
-        $currentExpenseBalance = Expense::latest('id')->value('balance') ?? 0;
+        $currentExpenseBalance = Expense::orderByDesc('expense_date')->orderByDesc('id')->value('balance') ?? 0;
+        $ledgerCategories = LedgerCategory::orderBy('name')->get();
 
         return view('finance.index', compact(
             'income', 'expenses', 'vendorPayments', 'invoices', 'payments', 'vendorPaymentEntries',
             'recentExpenses', 'clientUsers', 'clients', 'workOrders', 'sites', 'subContractors',
-            'expenseCategories', 'currentExpenseBalance', 'month', 'year'
+            'expenseCategories', 'currentExpenseBalance', 'ledgerCategories', 'month', 'year'
         ));
     }
 
@@ -248,10 +250,6 @@ class FinanceController extends Controller
             'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
-        $previousBalance = (float) (Expense::latest('id')->value('balance') ?? 0);
-        $increasesBalance = in_array($data['type'], ['credit', 'borrow'], true);
-        $balance = $increasesBalance ? $previousBalance + $data['amount'] : $previousBalance - $data['amount'];
-
         $expense = Expense::create([
             'work_order_id' => $data['work_order_id'] ?? null,
             'type' => $data['type'],
@@ -259,7 +257,7 @@ class FinanceController extends Controller
             'description' => $data['description'] ?? null,
             'remark' => $data['remark'] ?? null,
             'amount' => $data['amount'],
-            'balance' => $balance,
+            'balance' => 0,
             'expense_date' => $data['expense_date'],
             'paid_by' => $request->user()->id,
         ]);
@@ -271,6 +269,11 @@ class FinanceController extends Controller
                 return back()->withErrors(['bill' => 'That file is too large (max 20MB).']);
             }
         }
+
+        // A backdated entry shifts every running balance after it, not just
+        // its own row, so recalculate the whole chain in date order rather
+        // than assuming this entry is always the latest one.
+        $this->recalculateExpenseBalances();
 
         return back()->with('success', 'Expense recorded.');
     }
