@@ -151,7 +151,7 @@ class PayrollAttendanceEnhancementsTest extends TestCase
         $this->assertDatabaseHas('payrolls', ['id' => $payroll->id]);
     }
 
-    public function test_generating_payroll_from_attendance_accepts_manual_allowance_overtime_incentive_and_other_payments(): void
+    public function test_generating_payroll_from_attendance_accepts_manual_allowance_overtime_incentive_deductions_and_other_payments(): void
     {
         $admin = $this->admin();
         $hr = $this->staffUser($admin, 'HR');
@@ -163,7 +163,7 @@ class PayrollAttendanceEnhancementsTest extends TestCase
 
         $this->actingAs($admin)->post('/payroll/generate-from-attendance', [
             'employee_id' => $hr->employee->id, 'month' => now()->month, 'year' => now()->year,
-            'allowances' => 200, 'overtime_amount' => 150, 'incentive' => 300, 'other_payments' => 100,
+            'allowances' => 200, 'overtime_amount' => 150, 'incentive' => 300, 'other_payments' => 100, 'deductions' => 75,
         ])->assertRedirect();
 
         $payroll = Payroll::where('employee_id', $hr->employee->id)
@@ -174,8 +174,47 @@ class PayrollAttendanceEnhancementsTest extends TestCase
         $this->assertEquals(150, $payroll->overtime_amount);
         $this->assertEquals(300, $payroll->incentive);
         $this->assertEquals(100, $payroll->other_payments);
-        // 1000 + 200 + 150 + 300 + 100 - 50 (advance)
-        $this->assertEquals(1700, $payroll->net_salary);
+        $this->assertEquals(75, $payroll->deductions);
+        // 1000 + 200 + 150 + 300 + 100 - 75 (deductions) - 50 (advance)
+        $this->assertEquals(1625, $payroll->net_salary);
+
+        $pdfResponse = $this->actingAs($admin)->get("/payroll/{$payroll->id}/pdf");
+        $pdfResponse->assertOk();
+        $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
+    }
+
+    /**
+     * The "Process Payroll" card (PayrollController::store(), route
+     * payroll.store) 500'd with "NOT NULL constraint failed: payrolls
+     * .allowances" whenever a real user left an optional field (allowances,
+     * deductions, advance_deducted, overtime, incentive, other payments)
+     * blank: Laravel's ConvertEmptyStringsToNull middleware turns a blank
+     * input into null, 'nullable' validation accepts it, but the payrolls
+     * table columns are default(0) and NOT nullable, so the null insert
+     * violated the constraint. store() now coerces every optional field to
+     * 0 before the write, matching generateFromAttendance()'s style.
+     */
+    public function test_process_payroll_store_accepts_blank_optional_fields_and_applies_deductions(): void
+    {
+        $admin = $this->admin();
+        $hr = $this->staffUser($admin, 'HR');
+
+        $response = $this->actingAs($admin)->post('/payroll', [
+            'employee_id' => $hr->employee->id, 'month' => now()->month, 'year' => now()->year,
+            'basic_salary' => '20000',
+            'allowances' => '', 'overtime_amount' => '', 'incentive' => '', 'other_payments' => '',
+            'deductions' => '1500', 'advance_deducted' => '',
+        ]);
+        $response->assertRedirect();
+
+        $payroll = Payroll::where('employee_id', $hr->employee->id)
+            ->where('month', now()->month)->where('year', now()->year)->firstOrFail();
+
+        $this->assertEquals(20000, $payroll->basic_salary);
+        $this->assertEquals(0, $payroll->allowances);
+        $this->assertEquals(1500, $payroll->deductions);
+        // 20000 - 1500 (deductions), every other optional field blank -> 0
+        $this->assertEquals(18500, $payroll->net_salary);
 
         $pdfResponse = $this->actingAs($admin)->get("/payroll/{$payroll->id}/pdf");
         $pdfResponse->assertOk();

@@ -109,6 +109,7 @@
                                             <input type="number" step="0.01" min="0" name="overtime_amount" placeholder="Overtime" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
                                             <input type="number" step="0.01" min="0" name="incentive" placeholder="Incentive" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
                                             <input type="number" step="0.01" min="0" name="other_payments" placeholder="Other Payments" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
+                                            <input type="number" step="0.01" min="0" name="deductions" placeholder="Deductions" class="w-32 rounded-md border-gray-300 text-xs dark:border-gray-700 dark:bg-gray-900">
                                             <button class="mt-1 w-32 rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-500">Generate</button>
                                         </form>
                                     </details>

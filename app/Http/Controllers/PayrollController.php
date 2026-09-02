@@ -75,13 +75,18 @@ class PayrollController extends Controller
             'other_payments' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $net = $data['basic_salary']
-            + ($data['allowances'] ?? 0)
-            + ($data['overtime_amount'] ?? 0)
-            + ($data['incentive'] ?? 0)
-            + ($data['other_payments'] ?? 0)
-            - ($data['deductions'] ?? 0)
-            - ($data['advance_deducted'] ?? 0);
+        // Blank optional fields arrive here as null (ConvertEmptyStringsToNull
+        // + the 'nullable' rule above), but the payrolls table columns are
+        // default(0) and NOT nullable - inserting $data as-is 500s the first
+        // time a real user leaves one of these blank. Coerce to 0 instead.
+        $allowances = (float) ($data['allowances'] ?? 0);
+        $overtime = (float) ($data['overtime_amount'] ?? 0);
+        $incentive = (float) ($data['incentive'] ?? 0);
+        $otherPayments = (float) ($data['other_payments'] ?? 0);
+        $deductions = (float) ($data['deductions'] ?? 0);
+        $advanceDeducted = (float) ($data['advance_deducted'] ?? 0);
+
+        $net = $data['basic_salary'] + $allowances + $overtime + $incentive + $otherPayments - $deductions - $advanceDeducted;
 
         $paidAmount = (float) (Payroll::where('employee_id', $data['employee_id'])
             ->where('month', $data['month'])->where('year', $data['year'])
@@ -89,7 +94,18 @@ class PayrollController extends Controller
 
         Payroll::updateOrCreate(
             ['employee_id' => $data['employee_id'], 'month' => $data['month'], 'year' => $data['year']],
-            $data + ['net_salary' => $net, 'status' => $this->statusFor($net, $paidAmount), 'processed_by' => $request->user()->id]
+            [
+                'basic_salary' => $data['basic_salary'],
+                'allowances' => $allowances,
+                'deductions' => $deductions,
+                'advance_deducted' => $advanceDeducted,
+                'overtime_amount' => $overtime,
+                'incentive' => $incentive,
+                'other_payments' => $otherPayments,
+                'net_salary' => $net,
+                'status' => $this->statusFor($net, $paidAmount),
+                'processed_by' => $request->user()->id,
+            ]
         );
 
         return back()->with('success', 'Payroll entry saved.');
@@ -158,6 +174,7 @@ class PayrollController extends Controller
             'overtime_amount' => ['nullable', 'numeric', 'min:0'],
             'incentive' => ['nullable', 'numeric', 'min:0'],
             'other_payments' => ['nullable', 'numeric', 'min:0'],
+            'deductions' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $attendance = Attendance::where('employee_id', $data['employee_id'])
@@ -171,7 +188,8 @@ class PayrollController extends Controller
         $overtime = (float) ($data['overtime_amount'] ?? 0);
         $incentive = (float) ($data['incentive'] ?? 0);
         $otherPayments = (float) ($data['other_payments'] ?? 0);
-        $net = $basicSalary + $allowances + $overtime + $incentive + $otherPayments - $advanceDeducted;
+        $deductions = (float) ($data['deductions'] ?? 0);
+        $net = $basicSalary + $allowances + $overtime + $incentive + $otherPayments - $deductions - $advanceDeducted;
 
         $paidAmount = (float) (Payroll::where('employee_id', $data['employee_id'])
             ->where('month', $data['month'])->where('year', $data['year'])
@@ -182,7 +200,7 @@ class PayrollController extends Controller
             [
                 'basic_salary' => $basicSalary,
                 'allowances' => $allowances,
-                'deductions' => 0,
+                'deductions' => $deductions,
                 'advance_deducted' => $advanceDeducted,
                 'overtime_amount' => $overtime,
                 'incentive' => $incentive,
