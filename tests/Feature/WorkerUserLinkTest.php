@@ -83,16 +83,16 @@ class WorkerUserLinkTest extends TestCase
      * HR > Attendance is for Sales/HR/Finance/Executive Team Leader/QC
      * Officer staff (Worker attendance goes through a work order's M.Book
      * instead), so those five roles get a linked Employee record too, the
-     * same as Worker. Marketing and Management also get one - but only so
-     * Leave Request has an Employee to link to; unlike the other five,
-     * they're deliberately kept out of Employee::STAFF_ROLES itself, so
-     * they must NOT show up in the HR-Attendance-scoped staff list.
+     * same as Worker. Marketing, Management, and Auditor also get one - but
+     * only so Leave Request has an Employee to link to; unlike the other
+     * five, they're deliberately kept out of Employee::STAFF_ROLES itself,
+     * so they must NOT show up in the HR-Attendance-scoped staff list.
      */
     public function test_creating_a_user_with_a_staff_role_also_creates_a_linked_employee(): void
     {
         $admin = $this->admin();
 
-        foreach (['Sales', 'HR', 'Finance', 'Executive Team Leader', 'QC Officer', 'Marketing', 'Management'] as $role) {
+        foreach (['Sales', 'HR', 'Finance', 'Executive Team Leader', 'QC Officer', 'Marketing', 'Management', 'Auditor'] as $role) {
             $this->actingAs($admin)->post('/admin/users', [
                 'name' => "{$role} Person",
                 'email' => strtolower(str_replace(' ', '', $role)).'+'.uniqid().'@example.com',
@@ -104,10 +104,10 @@ class WorkerUserLinkTest extends TestCase
         }
 
         $staffIds = Employee::staff()->pluck('id');
-        $marketingEmployeeId = User::where('name', 'Marketing Person')->firstOrFail()->employee->id;
-        $managementEmployeeId = User::where('name', 'Management Person')->firstOrFail()->employee->id;
-        $this->assertFalse($staffIds->contains($marketingEmployeeId), 'Marketing must not be pulled into the HR-Attendance staff scope.');
-        $this->assertFalse($staffIds->contains($managementEmployeeId), 'Management must not be pulled into the HR-Attendance staff scope.');
+        foreach (['Marketing', 'Management', 'Auditor'] as $role) {
+            $employeeId = User::where('name', "{$role} Person")->firstOrFail()->employee->id;
+            $this->assertFalse($staffIds->contains($employeeId), "{$role} must not be pulled into the HR-Attendance staff scope.");
+        }
     }
 
     public function test_editing_a_worker_user_keeps_the_linked_employee_in_sync(): void

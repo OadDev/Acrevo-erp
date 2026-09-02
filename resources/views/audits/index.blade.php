@@ -64,6 +64,8 @@
                             <td class="px-4 py-3 text-right">
                                 @can('audit.manage')
                                     <a href="{{ route('audits.edit', $audit) }}" class="text-sm text-indigo-600 hover:underline">Edit</a>
+                                @endcan
+                                @can('audit.delete')
                                     <form method="POST" action="{{ route('audits.destroy', $audit) }}" class="inline" onsubmit="return confirm('Remove this audit and its files?')">
                                         @csrf
                                         @method('DELETE')

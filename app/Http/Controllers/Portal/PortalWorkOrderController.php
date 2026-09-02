@@ -33,12 +33,12 @@ class PortalWorkOrderController extends Controller
         $this->authorize('view', $workOrder);
 
         $workOrder->load([
-            'dailyProgressReports' => fn ($q) => $q->latest(), 'dailyProgressReports.media', 'media', 'tickets', 'clientReviews', 'completionCertificates',
+            'dailyProgressReports', 'dailyProgressReports.media', 'media', 'tickets', 'clientReviews', 'completionCertificates',
             'statusLogs' => fn ($q) => $q->orderBy('changed_at'),
-            'dailyChecklists' => fn ($q) => $q->latest(),
+            'dailyChecklists',
             'dailyChecklists.checklistItems.media',
             'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',
-            'summaries' => fn ($q) => $q->orderBy('entry_date'),
+            'summaries',
             'ledgers' => fn ($q) => $q->orderBy('entry_date'),
             'measurementBooks' => fn ($q) => $q->where('type', 'actual')->orderBy('date'),
             'measurementBooks.items',
@@ -46,7 +46,7 @@ class PortalWorkOrderController extends Controller
             'materialUsageEntries',
             'labourEntries' => fn ($q) => $q->orderBy('entry_date'),
             'companyLedgers' => fn ($q) => $q->orderBy('entry_date'),
-            'qcInspections' => fn ($q) => $q->orderBy('inspection_date'),
+            'qcInspections',
             'qcInspections.inspectedBy',
         ]);
 

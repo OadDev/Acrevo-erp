@@ -165,12 +165,14 @@ class WorkOrder extends Model implements HasMedia
 
     public function dailyChecklists(): HasMany
     {
-        return $this->hasMany(DailyChecklist::class);
+        // Ordered by entry date (not insertion order), so a backdated entry
+        // added later still lands in the right chronological place.
+        return $this->hasMany(DailyChecklist::class)->orderBy('date')->orderBy('id');
     }
 
     public function dailyProgressReports(): HasMany
     {
-        return $this->hasMany(DailyProgressReport::class);
+        return $this->hasMany(DailyProgressReport::class)->orderBy('date')->orderBy('id');
     }
 
     public function materialEntries(): HasMany
@@ -222,12 +224,12 @@ class WorkOrder extends Model implements HasMedia
 
     public function summaries(): HasMany
     {
-        return $this->hasMany(WorkOrderSummary::class);
+        return $this->hasMany(WorkOrderSummary::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function qcInspections(): HasMany
     {
-        return $this->hasMany(QcInspection::class);
+        return $this->hasMany(QcInspection::class)->orderBy('inspection_date')->orderBy('id');
     }
 
     public function tickets(): HasMany

@@ -5,6 +5,8 @@
                 <x-badge :status="$audit->status" class="text-sm" />
                 @can('audit.manage')
                     <x-link-button :href="route('audits.edit', $audit)" variant="secondary">Edit</x-link-button>
+                @endcan
+                @can('audit.delete')
                     <form method="POST" action="{{ route('audits.destroy', $audit) }}" onsubmit="return confirm('Remove this audit and its files? This cannot be undone.')">
                         @csrf
                         @method('DELETE')

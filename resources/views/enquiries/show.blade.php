@@ -70,7 +70,7 @@
                         @if ($enquiry->client->clientLogin)
                             <p class="text-sm text-emerald-600 dark:text-emerald-400">Portal access active — {{ $enquiry->client->clientLogin->user->email }}</p>
                         @else
-                            @can('enquiries.create')
+                            @can('clients.manage')
                                 <form method="POST" action="{{ route('clients.portal-access', $enquiry->client) }}" onsubmit="return confirm('Create portal login for {{ $enquiry->client->email }}?')">
                                     @csrf
                                     <x-primary-button type="submit">Generate Portal Access</x-primary-button>

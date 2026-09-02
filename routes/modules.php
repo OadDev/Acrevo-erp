@@ -85,7 +85,14 @@ Route::middleware('permission:quotations.view')->group(function () {
 });
 
 Route::middleware('permission:enquiries.view')->group(function () {
-    Route::resource('clients', ClientController::class);
+    Route::resource('clients', ClientController::class)->only(['index', 'create', 'store', 'show']);
+});
+// Edit/remove and portal access/permissions are split out from the plain
+// enquiries.view gate above - Sales and Marketing both need enquiries.view
+// for the Enquiry module and were incidentally getting full Client
+// management through it. clients.manage is Admin-only.
+Route::middleware('permission:clients.manage')->group(function () {
+    Route::resource('clients', ClientController::class)->only(['edit', 'update', 'destroy']);
     Route::post('clients/{client}/portal-access', [ClientController::class, 'generatePortalAccess'])->name('clients.portal-access');
     Route::put('clients/{client}/portal-permissions', [ClientController::class, 'updatePortalPermissions'])->name('clients.portal-permissions');
 });
@@ -388,8 +395,14 @@ Route::middleware('permission:legal.manage')->group(function () {
 // show route below, or GET /audits/create matches show with "create" as the
 // {audit} id and 404s on binding instead of running the create action.
 Route::middleware('permission:audit.manage')->group(function () {
-    Route::resource('audits', AuditController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+    Route::resource('audits', AuditController::class)->only(['create', 'store', 'edit', 'update']);
     Route::delete('audits/{audit}/media/{media}', [AuditController::class, 'destroyMedia'])->name('audits.media.destroy');
+});
+// Split out from audit.manage so Auditor (who keeps audit.manage for create
+// and edit) does not get delete for free - old audit records must stay
+// protected from removal, Admin-only.
+Route::middleware('permission:audit.delete')->group(function () {
+    Route::resource('audits', AuditController::class)->only(['destroy']);
 });
 Route::middleware('permission:audit.view')->group(function () {
     Route::resource('audits', AuditController::class)->only(['index', 'show']);

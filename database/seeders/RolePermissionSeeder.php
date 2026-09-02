@@ -63,11 +63,14 @@ class RolePermissionSeeder extends Seeder
             'legal.view', 'legal.manage',
         ],
         'audit' => [
-            'audit.view', 'audit.manage',
+            'audit.view', 'audit.manage', 'audit.delete',
         ],
         'management' => [
             'company_records.view', 'company_records.manage',
             'client_records.view',
+        ],
+        'clients' => [
+            'clients.manage',
         ],
         'reports' => [
             'reports.view', 'reports.export',
@@ -164,7 +167,11 @@ class RolePermissionSeeder extends Seeder
             'chat' => ['chat.access'],
         ],
         'Auditor' => [
-            'audit' => '*',
+            // Explicit list, not '*' - Auditor gets to create and edit
+            // audits, but audit.delete (the whole group's '*' would include
+            // it) is deliberately withheld, so old audit records can't be
+            // removed by anyone but Admin.
+            'audit' => ['audit.view', 'audit.manage'],
             'finance' => ['finance.view'],
             'reports' => ['reports.view'],
             'sales' => ['work_orders.view'],

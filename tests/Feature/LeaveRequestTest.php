@@ -234,4 +234,37 @@ class LeaveRequestTest extends TestCase
         $this->assertFalse($staffIds->contains($marketing->employee->id));
         $this->assertFalse($staffIds->contains($management->employee->id));
     }
+
+    /**
+     * Auditor had the same gap as Marketing/Management: 'audit' => '*' gave
+     * it full Audit access, but Employee::STAFF_ROLES never included it, so
+     * $user->employee was null and LeaveRequestController::store() aborted.
+     */
+    public function test_an_auditor_can_submit_a_leave_request_and_see_it_reviewed_by_hr(): void
+    {
+        $admin = $this->admin();
+        $auditor = $this->staffUser($admin, 'Auditor');
+        $hrReviewer = $this->staffUser($admin, 'HR');
+
+        $this->assertNotNull($auditor->fresh()->employee, 'Auditor must get a linked Employee record on creation.');
+
+        $this->actingAs($auditor)->post('/leave-requests', [
+            'type' => 'casual', 'from_date' => now()->addDay()->toDateString(),
+            'to_date' => now()->addDays(2)->toDateString(), 'reason' => 'Personal work',
+        ])->assertRedirect();
+
+        $leaveRequest = LeaveRequest::where('employee_id', $auditor->employee->id)->firstOrFail();
+
+        $this->actingAs($hrReviewer)->get('/leave-requests')->assertOk()->assertSee('Personal work');
+        $this->actingAs($hrReviewer)->post("/leave-requests/{$leaveRequest->id}/review", [
+            'status' => 'approved', 'review_remarks' => 'Approved.',
+        ])->assertRedirect();
+
+        $this->actingAs($auditor)->get('/leave-requests')
+            ->assertOk()
+            ->assertSee('Personal work')
+            ->assertSee('Approved.');
+
+        $this->assertFalse(\App\Models\Employee::staff()->pluck('id')->contains($auditor->employee->id), 'Auditor must not be pulled into the HR-Attendance staff scope.');
+    }
 }

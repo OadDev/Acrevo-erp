@@ -100,14 +100,15 @@ class UserController extends Controller
      * Team Leader/QC Officer, since that's who staff attendance is for
      * (Worker attendance is entered separately, via a work order's M.Book).
      *
-     * Marketing and Management are added on top of Employee::STAFF_ROLES
-     * deliberately, not by widening STAFF_ROLES itself: they need an
-     * Employee record so Leave Request (LeaveRequestController::store())
-     * has something to link to, but STAFF_ROLES also drives HR Attendance
-     * and the staff Payroll scope - pulling Marketing/Management into
-     * those was never asked for and would change their workflow.
+     * Marketing, Management, and Auditor are added on top of
+     * Employee::STAFF_ROLES deliberately, not by widening STAFF_ROLES
+     * itself: they need an Employee record so Leave Request
+     * (LeaveRequestController::store()) has something to link to, but
+     * STAFF_ROLES also drives HR Attendance and the staff Payroll scope -
+     * pulling those three roles into either was never asked for and would
+     * change their workflow.
      */
-    private const EMPLOYEE_LINKED_ROLES = ['Worker', 'Marketing', 'Management', ...Employee::STAFF_ROLES];
+    private const EMPLOYEE_LINKED_ROLES = ['Worker', 'Marketing', 'Management', 'Auditor', ...Employee::STAFF_ROLES];
 
     /**
      * Keeps the linked Employee's basic details in sync on every save, for
