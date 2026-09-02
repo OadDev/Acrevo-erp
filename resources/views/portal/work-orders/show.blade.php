@@ -10,6 +10,20 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
+            @if ($workOrder->client->canViewSection('overview'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">Overview</h3>
+                    <p class="whitespace-pre-line text-sm text-gray-700 dark:text-gray-300">{{ $workOrder->scope ?: 'No scope defined.' }}</p>
+
+                    <dl class="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 text-sm dark:border-gray-800 sm:grid-cols-4">
+                        <div><dt class="text-gray-400">Priority</dt><dd><x-badge :status="$workOrder->priority" /></dd></div>
+                        <div><dt class="text-gray-400">Deadline</dt><dd class="text-gray-800 dark:text-gray-200">{{ optional($workOrder->deadline)->format('d M Y') ?? '—' }}</dd></div>
+                        <div><dt class="text-gray-400">Budget</dt><dd class="text-gray-800 dark:text-gray-200">₹{{ number_format($workOrder->budget_amount ?? 0, 2) }}</dd></div>
+                        <div><dt class="text-gray-400">Execution Method</dt><dd class="text-gray-800 dark:text-gray-200">{{ \App\Models\WorkOrder::EXECUTION_WAYS[$workOrder->execution_way] ?? '—' }}</dd></div>
+                    </dl>
+                </x-card>
+            @endif
+
             @if ($workOrder->client->canViewSection('media'))
                 <x-card>
                     <h3 class="mb-4 text-sm font-semibold text-gray-500">Progress Photos &amp; Videos</h3>
@@ -363,6 +377,20 @@
         </div>
 
         <div class="space-y-6">
+            @if ($workOrder->client->canViewSection('overview'))
+                <x-card>
+                    <h3 class="mb-4 text-sm font-semibold text-gray-500">Status Timeline</h3>
+                    <ol class="space-y-4 border-l border-gray-200 pl-4 dark:border-gray-800">
+                        @foreach ($workOrder->statusLogs as $log)
+                            <li>
+                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ Str::title(str_replace('_',' ',$log->to_status)) }}</p>
+                                <p class="text-xs text-gray-400">{{ $log->changed_at->diffForHumans() }}</p>
+                            </li>
+                        @endforeach
+                    </ol>
+                </x-card>
+            @endif
+
             @if ($workOrder->status === 'client_review')
                 <x-card>
                     <h3 class="mb-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">QC Passed — Your Review Needed</h3>
