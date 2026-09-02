@@ -40,6 +40,13 @@ class PdfDocument
 
     public function download(string $filename = 'document.pdf'): Response
     {
+        // Filenames built from a person's name (payslips, attendance PDFs)
+        // can legitimately contain "/" - Indian formal names commonly
+        // include "S/o", "D/o", "W/o" - but Symfony's Content-Disposition
+        // builder rejects "/" and "\" outright with an uncaught
+        // InvalidArgumentException, 500ing the whole download.
+        $filename = str_replace(['/', '\\'], '-', $filename);
+
         $output = $this->output();
 
         return new Response($output, 200, [
