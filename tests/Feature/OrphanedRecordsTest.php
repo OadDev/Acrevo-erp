@@ -57,8 +57,38 @@ class OrphanedRecordsTest extends TestCase
 
         $workOrder->delete();
 
-        $this->actingAs($admin)->get('/qc')->assertOk()->assertSee('Deleted work order');
+        // Before this fix, the index row's onclick navigation only fired
+        // when a work order existed, so an orphaned QC record (its work
+        // order deleted) had no way to reach the show page - and with it,
+        // no way to reach the Remove button - from the QC menu at all.
+        $indexResponse = $this->actingAs($admin)->get('/qc');
+        $indexResponse->assertOk()->assertSee('Deleted work order');
+        $indexResponse->assertSee(route('qc.show', $inspection), false);
+
         $this->actingAs($admin)->get("/qc/{$inspection->id}")->assertOk()->assertSee('Deleted work order');
+
+        $this->actingAs($admin)->delete("/qc/{$inspection->id}")->assertRedirect(route('qc.index'));
+        $this->assertNull(QcInspection::find($inspection->id));
+    }
+
+    public function test_non_admin_cannot_remove_a_qc_inspection_from_the_index(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        $inspector = User::factory()->create();
+        $inspector->syncRoles(['QC Officer']);
+
+        $inspection = QcInspection::create([
+            'work_order_id' => $workOrder->id, 'inspection_type' => 'daily',
+            'inspected_by' => $inspector->id, 'inspection_date' => now(), 'status' => 'passed',
+        ]);
+
+        $indexResponse = $this->actingAs($inspector)->get('/qc');
+        $indexResponse->assertOk()->assertDontSee('Remove');
+
+        $this->actingAs($inspector)->delete("/qc/{$inspection->id}")->assertForbidden();
+        $this->assertNotNull(QcInspection::find($inspection->id));
     }
 
     public function test_tickets_index_show_and_edit_survive_a_deleted_work_order(): void
