@@ -160,4 +160,78 @@ class LeaveRequestTest extends TestCase
 
         $this->actingAs($client)->get('/leave-requests')->assertForbidden();
     }
+
+    /**
+     * Marketing and Management previously had no Employee record at all
+     * (Employee::STAFF_ROLES never included them), so LeaveRequestController
+     * ::store() aborted with "No worker/employee profile is linked to your
+     * account" and the portal showed the "ask an Admin" message instead of
+     * a form - the Leave Request menu link itself was already visible to
+     * them (gated by tasks.view, which both roles hold), just unusable.
+     */
+    public function test_a_marketing_user_can_submit_and_see_their_own_leave_request(): void
+    {
+        $admin = $this->admin();
+        $marketing = $this->staffUser($admin, 'Marketing');
+
+        $this->assertNotNull($marketing->fresh()->employee, 'Marketing must get a linked Employee record on creation.');
+
+        $this->actingAs($marketing)->get('/leave-requests')
+            ->assertOk()
+            ->assertDontSee('No worker/employee profile is linked');
+
+        $response = $this->actingAs($marketing)->post('/leave-requests', [
+            'type' => 'casual', 'from_date' => now()->addDay()->toDateString(),
+            'to_date' => now()->addDays(2)->toDateString(), 'reason' => 'Marketing offsite',
+        ]);
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('leave_requests', ['employee_id' => $marketing->employee->id, 'status' => 'pending']);
+        $this->actingAs($marketing)->get('/leave-requests')->assertOk()->assertSee('Marketing offsite');
+    }
+
+    public function test_a_management_user_can_submit_a_leave_request_and_see_it_reviewed_by_hr(): void
+    {
+        $admin = $this->admin();
+        $management = $this->staffUser($admin, 'Management');
+        $hrReviewer = $this->staffUser($admin, 'HR');
+
+        $this->assertNotNull($management->fresh()->employee, 'Management must get a linked Employee record on creation.');
+
+        $this->actingAs($management)->post('/leave-requests', [
+            'type' => 'earned', 'from_date' => now()->addDay()->toDateString(),
+            'to_date' => now()->addDays(3)->toDateString(), 'reason' => 'Conference travel',
+        ])->assertRedirect();
+
+        $leaveRequest = LeaveRequest::where('employee_id', $management->employee->id)->firstOrFail();
+
+        // Visible to HR/Admin, who can act on it.
+        $this->actingAs($hrReviewer)->get('/leave-requests')->assertOk()->assertSee('Conference travel');
+        $this->actingAs($hrReviewer)->post("/leave-requests/{$leaveRequest->id}/review", [
+            'status' => 'approved', 'review_remarks' => 'Approved for the conference.',
+        ])->assertRedirect();
+
+        // The Management user sees the outcome on their own list.
+        $this->actingAs($management)->get('/leave-requests')
+            ->assertOk()
+            ->assertSee('Conference travel')
+            ->assertSee('Approved for the conference.');
+    }
+
+    public function test_marketing_and_management_are_not_pulled_into_hr_staff_attendance_or_payroll_scope(): void
+    {
+        $admin = $this->admin();
+        $marketing = $this->staffUser($admin, 'Marketing');
+        $management = $this->staffUser($admin, 'Management');
+        $sales = $this->staffUser($admin, 'Sales');
+
+        // Employee::STAFF_ROLES (which HR Attendance / staff Payroll query
+        // against) is deliberately untouched by this change - only the
+        // separate EMPLOYEE_LINKED_ROLES list in UserController grew.
+        $staffIds = \App\Models\Employee::staff()->pluck('id');
+
+        $this->assertTrue($staffIds->contains($sales->employee->id));
+        $this->assertFalse($staffIds->contains($marketing->employee->id));
+        $this->assertFalse($staffIds->contains($management->employee->id));
+    }
 }
