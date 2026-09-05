@@ -9,6 +9,9 @@
                 @can('movements.download_pdf')
                     <x-link-button :href="route('assets.movements.pdf', $asset)" variant="secondary">Movement History PDF</x-link-button>
                 @endcan
+                @can('repairs.download_pdf')
+                    <x-link-button :href="route('assets.repairs.pdf', $asset)" variant="secondary">Repair History PDF</x-link-button>
+                @endcan
                 @can('assets.edit')
                     <x-link-button :href="route('assets.edit', $asset)" variant="secondary">Edit</x-link-button>
                 @endcan
@@ -165,6 +168,62 @@
                 </x-card>
             @endcan
 
+            @can('repairs.view')
+                <x-card :padded="false">
+                    <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Repair History</h3></div>
+                    @if ($asset->repairs->isEmpty())
+                        <p class="px-4 pb-4 text-sm text-gray-400">No repairs recorded yet.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                        <th class="px-4 py-2">Reported</th>
+                                        <th class="px-4 py-2">Type</th>
+                                        <th class="px-4 py-2">Issue</th>
+                                        <th class="px-4 py-2">Technician / Vendor</th>
+                                        <th class="px-4 py-2">Warranty</th>
+                                        <th class="px-4 py-2 text-right">Cost</th>
+                                        <th class="px-4 py-2">Status</th>
+                                        <th class="px-4 py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach ($asset->repairs as $repair)
+                                        @php $canUpdateThisRepair = $ledWorkOrderIds === null || $ledWorkOrderIds->contains($repair->work_order_id); @endphp
+                                        <tr>
+                                            <td class="px-4 py-2 text-gray-500">{{ $repair->reported_date->format('d M Y') }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ ucwords($repair->repair_type) }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $repair->issue_description }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $repair->technician_vendor ?: '—' }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>
+                                            <td class="px-4 py-2"><x-badge :status="$repair->status" /></td>
+                                            <td class="px-4 py-2 text-right whitespace-nowrap">
+                                                @can('repairs.update_status')
+                                                    @if ($canUpdateThisRepair && ! in_array($repair->status, ['completed', 'cancelled']))
+                                                        <form method="POST" action="{{ route('asset-repairs.status.update', $repair) }}" class="inline-flex items-center gap-1">
+                                                            @csrf
+                                                            <select name="status" class="rounded-lg border-gray-200 text-xs dark:border-gray-700 dark:bg-gray-800" onchange="this.form.submit()">
+                                                                <option value="">Update status…</option>
+                                                                @foreach (\App\Models\AssetRepair::STATUSES as $status)
+                                                                    @continue($status === $repair->status)
+                                                                    <option value="{{ $status }}">{{ ucwords(str_replace('_', ' ', $status)) }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </form>
+                                                    @endif
+                                                @endcan
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </x-card>
+            @endcan
+
             @can('assets.view_history')
                 <x-card :padded="false">
                     <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Status History</h3></div>
@@ -286,6 +345,34 @@
                         <x-text-input type="date" name="moved_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
                         <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
                         <x-primary-button class="w-full justify-center">Record Movement</x-primary-button>
+                    </form>
+                </x-card>
+            @endif
+
+            @if ($canCreateRepair)
+                <x-card>
+                    <h3 class="mb-3 text-sm font-semibold text-gray-500">Report a Repair</h3>
+                    <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3">
+                        @csrf
+                        <x-select-input name="repair_type" class="w-full text-sm" required>
+                            @foreach (\App\Models\AssetRepair::TYPES as $type)
+                                <option value="{{ $type }}">{{ ucwords($type) }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <x-textarea-input name="issue_description" rows="2" class="w-full text-sm" placeholder="Issue description" required></x-textarea-input>
+                        <x-text-input name="technician_vendor" class="w-full text-sm" placeholder="Technician / Vendor" />
+                        <label class="flex items-center gap-2 text-xs text-gray-500">
+                            <input type="checkbox" name="is_warranty_repair" value="1" class="rounded border-gray-300">
+                            Warranty repair
+                        </label>
+                        <x-text-input type="number" step="0.01" name="cost" class="w-full text-sm" placeholder="Cost (if known)" />
+                        <x-text-input type="date" name="reported_date" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
+                        <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
+                        <div>
+                            <label class="text-xs text-gray-400">Attachments (optional)</label>
+                            <input type="file" name="attachments[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="mt-1 block w-full text-sm">
+                        </div>
+                        <x-primary-button class="w-full justify-center">Report Repair</x-primary-button>
                     </form>
                 </x-card>
             @endif

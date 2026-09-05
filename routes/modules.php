@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetChangeRequestController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetMovementController;
+use App\Http\Controllers\AssetRepairController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
@@ -475,6 +476,22 @@ Route::middleware('permission:movements.edit')->group(function () {
 Route::middleware('permission:movements.approve')->group(function () {
     Route::post('asset-movements/{movement}/confirm', [AssetMovementController::class, 'confirm'])->name('asset-movements.confirm');
     Route::post('asset-movements/{movement}/cancel', [AssetMovementController::class, 'cancel'])->name('asset-movements.cancel');
+});
+
+Route::middleware('permission:repairs.view')->group(function () {
+    Route::get('asset-repairs', [AssetRepairController::class, 'index'])->name('asset-repairs.index');
+});
+Route::middleware('permission:repairs.download_pdf')->group(function () {
+    Route::get('assets/{asset}/repairs/pdf', [AssetRepairController::class, 'pdf'])->name('assets.repairs.pdf');
+});
+Route::middleware('permission:repairs.create')->group(function () {
+    Route::post('assets/{asset}/repairs', [AssetRepairController::class, 'store'])->name('assets.repairs.store');
+});
+Route::middleware('permission:repairs.edit')->group(function () {
+    Route::put('asset-repairs/{repair}', [AssetRepairController::class, 'update'])->name('asset-repairs.update');
+});
+Route::middleware('permission:repairs.update_status')->group(function () {
+    Route::post('asset-repairs/{repair}/status', [AssetRepairController::class, 'updateStatus'])->name('asset-repairs.status.update');
 });
 
 /*

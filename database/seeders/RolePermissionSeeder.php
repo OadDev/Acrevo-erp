@@ -72,8 +72,8 @@ class RolePermissionSeeder extends Seeder
         'clients' => [
             'clients.manage',
         ],
-        // Repair/Verification/Equipment-Request permissions are added as
-        // those features are built, not pre-declared here - a permission
+        // Verification/Equipment-Request permissions are added as those
+        // features are built, not pre-declared here - a permission
         // checkbox with nothing behind it yet would just confuse whoever
         // configures Roles & Permissions.
         'assets' => [
@@ -84,6 +84,10 @@ class RolePermissionSeeder extends Seeder
         'movements' => [
             'movements.view', 'movements.create', 'movements.approve',
             'movements.edit', 'movements.download_pdf',
+        ],
+        'repairs' => [
+            'repairs.view', 'repairs.create', 'repairs.edit',
+            'repairs.update_status', 'repairs.download_pdf',
         ],
         'reports' => [
             'reports.view', 'reports.export',
@@ -147,6 +151,9 @@ class RolePermissionSeeder extends Seeder
             // this Team Leader's own site - dispatching what's at their
             // site, and confirming receipt of what arrives there.
             'movements' => ['movements.view', 'movements.create', 'movements.approve', 'movements.download_pdf'],
+            // Report a repair and track it through to completion - both
+            // scoped in the controller to assets at this Team Leader's site.
+            'repairs' => ['repairs.view', 'repairs.create', 'repairs.update_status', 'repairs.download_pdf'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
@@ -187,6 +194,10 @@ class RolePermissionSeeder extends Seeder
             // movement but confirming receipt is a site-level action (an
             // Executive Team Leader) or Admin's to make.
             'movements' => ['movements.view', 'movements.create', 'movements.edit', 'movements.download_pdf'],
+            // No repairs.update_status - Management can log/edit a repair
+            // entry but tracking it through to completion is a site-level
+            // action (an Executive Team Leader) or Admin's to make.
+            'repairs' => ['repairs.view', 'repairs.create', 'repairs.edit', 'repairs.download_pdf'],
         ],
         'Legal' => [
             'legal' => '*',

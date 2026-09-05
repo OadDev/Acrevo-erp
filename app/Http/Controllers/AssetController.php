@@ -123,6 +123,7 @@ class AssetController extends Controller
             'media', 'statusLogs.updatedBy', 'statusLogs.workOrder',
             'changeRequests.requestedBy', 'changeRequests.reviewedBy',
             'movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy', 'movements.confirmedBy',
+            'repairs.workOrder', 'repairs.createdBy', 'repairs.media',
             'currentWorkOrder.site', 'createdBy',
         ]);
 
@@ -142,7 +143,11 @@ class AssetController extends Controller
             $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
         );
 
-        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement'));
+        $canCreateRepair = $user->can('repairs.create') && (
+            $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
+        );
+
+        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair'));
     }
 
     public function edit(Asset $asset): View
@@ -301,6 +306,7 @@ class AssetController extends Controller
         $asset->load([
             'statusLogs.updatedBy', 'statusLogs.workOrder',
             'movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy',
+            'repairs.workOrder', 'repairs.createdBy',
             'currentWorkOrder.site', 'createdBy',
         ]);
 

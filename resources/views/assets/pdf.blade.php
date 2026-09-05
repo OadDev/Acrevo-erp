@@ -91,6 +91,31 @@
         </table>
     @endif
 
+    <h2>Repair History</h2>
+    @if ($asset->repairs->isEmpty())
+        <p class="muted">No repairs recorded yet.</p>
+    @else
+        <table>
+            <thead>
+                <tr><th>Reported</th><th>Completed</th><th>Type</th><th>Issue</th><th>Technician / Vendor</th><th>Warranty</th><th class="text-right">Cost</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($asset->repairs as $repair)
+                    <tr>
+                        <td>{{ $repair->reported_date->format('d M Y') }}</td>
+                        <td>{{ optional($repair->completed_date)->format('d M Y') ?? '—' }}</td>
+                        <td>{{ ucwords($repair->repair_type) }}</td>
+                        <td>{{ $repair->issue_description }}</td>
+                        <td>{{ $repair->technician_vendor ?: '—' }}</td>
+                        <td>{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
+                        <td class="text-right">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>
+                        <td>{{ ucwords(str_replace('_', ' ', $repair->status)) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <h2>Status History</h2>
     @if ($asset->statusLogs->isEmpty())
         <p class="muted">No status changes recorded yet.</p>

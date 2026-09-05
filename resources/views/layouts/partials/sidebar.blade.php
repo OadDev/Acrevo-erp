@@ -139,6 +139,9 @@
                     @can('movements.view')
                         <x-nav-link :href="route('asset-movements.index')" :active="request()->routeIs('asset-movements.*')" icon="history">Movement History</x-nav-link>
                     @endcan
+                    @can('repairs.view')
+                        <x-nav-link :href="route('asset-repairs.index')" :active="request()->routeIs('asset-repairs.*')" icon="wrench">Repair History</x-nav-link>
+                    @endcan
                     @can('assets.approve')
                         <x-nav-link :href="route('asset-change-requests.index')" :active="request()->routeIs('asset-change-requests.*')" icon="clipboard-check">Pending Approvals</x-nav-link>
                     @endcan

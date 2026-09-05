@@ -79,6 +79,11 @@ class Asset extends Model implements HasMedia
         return $this->hasMany(AssetMovement::class)->orderBy('moved_at')->orderBy('id');
     }
 
+    public function repairs(): HasMany
+    {
+        return $this->hasMany(AssetRepair::class)->orderBy('reported_date')->orderBy('id');
+    }
+
     public function warrantyStatus(): ?string
     {
         if (! $this->warranty_end) {
