@@ -8,6 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A previous deploy attempt hit this exact CREATE TABLE, but the
+        // inline foreign key on current_work_order_id then failed (it was
+        // originally declared as a bigint against work_orders' UUID id) -
+        // MySQL had already created the table by that point, so it was
+        // left behind with no matching row in the migrations table. Drop
+        // it first so this migration is safe to run from that state; no
+        // application code ever wrote to it, so there's nothing to lose.
+        Schema::dropIfExists('assets');
+
         Schema::create('assets', function (Blueprint $table) {
             $table->id();
             $table->string('asset_code')->unique();
