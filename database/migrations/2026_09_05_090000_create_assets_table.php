@@ -24,7 +24,12 @@ return new class extends Migration
             // so "Location" filters (Company Store / a specific WO / In
             // Transit / Other) don't depend on free-text matching.
             $table->string('current_location')->default('company_store');
-            $table->foreignId('current_work_order_id')->nullable()->constrained('work_orders')->nullOnDelete();
+            // work_orders.id is a UUID (WorkOrder uses HasUuids), not an
+            // auto-increment bigint - foreignId() here would create a
+            // mismatched-type FK that MySQL rejects at CREATE TABLE time
+            // (errno 150), even though SQLite (used by the test suite)
+            // lets it slide.
+            $table->foreignUuid('current_work_order_id')->nullable()->constrained('work_orders')->nullOnDelete();
 
             $table->date('purchase_date')->nullable();
             $table->decimal('purchase_cost', 12, 2)->nullable();

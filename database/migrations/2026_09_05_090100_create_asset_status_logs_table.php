@@ -17,7 +17,9 @@ return new class extends Migration
             $table->string('new_status');
             $table->foreignId('updated_by')->constrained('users');
             $table->string('role')->nullable();
-            $table->foreignId('work_order_id')->nullable()->constrained('work_orders')->nullOnDelete();
+            // work_orders.id is a UUID (WorkOrder uses HasUuids) - see the
+            // matching note in the assets table migration.
+            $table->foreignUuid('work_order_id')->nullable()->constrained('work_orders')->nullOnDelete();
             $table->text('reason')->nullable();
             $table->timestamps();
         });
