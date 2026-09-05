@@ -158,4 +158,21 @@ class WorkOrderEquipmentTest extends TestCase
 
         $this->actingAs($auditor)->get("/work-orders/{$workOrder->id}/equipment")->assertForbidden();
     }
+
+    public function test_equipment_history_still_loads_after_a_referenced_asset_is_removed(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        $this->actingAs($admin)->post('/assets', [
+            'name' => 'Doomed Excavator', 'current_location' => 'work_order', 'current_work_order_id' => $workOrder->id,
+        ])->assertRedirect();
+        $asset = Asset::where('name', 'Doomed Excavator')->firstOrFail();
+
+        $this->actingAs($admin)->delete("/assets/{$asset->id}")->assertRedirect();
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment/history")
+            ->assertOk()
+            ->assertSee('Doomed Excavator');
+    }
 }

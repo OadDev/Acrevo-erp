@@ -225,4 +225,20 @@ class AssetMovementTest extends TestCase
 
         $this->actingAs($management)->post("/asset-movements/{$movement->id}/confirm")->assertForbidden();
     }
+
+    public function test_movement_history_still_loads_after_the_referenced_asset_is_removed(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/assets', ['name' => 'Doomed Asset'])->assertRedirect();
+        $asset = Asset::where('name', 'Doomed Asset')->firstOrFail();
+
+        // Removing an asset soft-deletes it, but its movement history (the
+        // auto-recorded purchase entry, at least) stays in the global list.
+        $this->actingAs($admin)->delete("/assets/{$asset->id}")->assertRedirect();
+
+        $this->actingAs($admin)->get('/asset-movements')
+            ->assertOk()
+            ->assertSee('Doomed Asset');
+    }
 }

@@ -18,7 +18,10 @@ class AssetMovementController extends Controller
     public function index(Request $request): View
     {
         $movements = AssetMovement::query()
-            ->with(['asset', 'fromWorkOrder', 'toWorkOrder', 'createdBy'])
+            // withTrashed() - a movement stays in the history even after the
+            // asset it refers to has been removed, so the relation must
+            // still resolve or route('assets.show', ...) below throws.
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'fromWorkOrder', 'toWorkOrder', 'createdBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
                 ->orWhereHas('asset', fn ($q3) => $q3->where('asset_code', 'like', "%{$search}%")
                     ->orWhere('name', 'like', "%{$search}%")

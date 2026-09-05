@@ -72,11 +72,11 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($movements as $movement)
-                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $movement->asset) }}'">
+                            <tr @if ($movement->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $movement->asset) }}'" @endif>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
                                 <td class="px-4 py-3">
-                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $movement->asset->name }}</p>
-                                    <p class="text-xs text-gray-400">{{ $movement->asset->asset_code }}</p>
+                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $movement->asset->name ?? 'Removed Asset' }}</p>
+                                    <p class="text-xs text-gray-400">{{ $movement->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>

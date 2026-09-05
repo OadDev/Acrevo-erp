@@ -52,11 +52,11 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($verifications as $verification)
-                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $verification->asset) }}'">
+                            <tr @if ($verification->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $verification->asset) }}'" @endif>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->verified_at->format('d M Y') }}</td>
                                 <td class="px-4 py-3">
-                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $verification->asset->name }}</p>
-                                    <p class="text-xs text-gray-400">{{ $verification->asset->asset_code }}</p>
+                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $verification->asset->name ?? 'Removed Asset' }}</p>
+                                    <p class="text-xs text-gray-400">{{ $verification->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->workOrder?->work_order_no ?? '—' }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$verification->result" /></td>

@@ -20,7 +20,7 @@ class AssetVerificationController extends Controller
     public function index(Request $request): View
     {
         $verifications = AssetVerification::query()
-            ->with(['asset', 'workOrder', 'verifiedBy'])
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'verifiedBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")

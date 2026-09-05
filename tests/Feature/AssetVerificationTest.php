@@ -200,4 +200,22 @@ class AssetVerificationTest extends TestCase
             ->assertSee('My Site Missing Tool')
             ->assertDontSee('Other Site Missing Tool');
     }
+
+    public function test_verification_history_still_loads_after_the_referenced_asset_is_removed(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/assets', ['name' => 'Doomed Grinder'])->assertRedirect();
+        $asset = Asset::where('name', 'Doomed Grinder')->firstOrFail();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/verifications", [
+            'result' => 'verified_ok', 'verified_at' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->delete("/assets/{$asset->id}")->assertRedirect();
+
+        $this->actingAs($admin)->get('/asset-verifications')
+            ->assertOk()
+            ->assertSee('Doomed Grinder');
+    }
 }

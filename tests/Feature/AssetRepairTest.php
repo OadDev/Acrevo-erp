@@ -241,4 +241,22 @@ class AssetRepairTest extends TestCase
         $repair = AssetRepair::where('asset_id', $asset->id)->firstOrFail();
         $this->assertCount(1, $repair->getMedia('attachments'));
     }
+
+    public function test_repair_history_still_loads_after_the_referenced_asset_is_removed(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/assets', ['name' => 'Doomed Drill'])->assertRedirect();
+        $asset = Asset::where('name', 'Doomed Drill')->firstOrFail();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/repairs", [
+            'repair_type' => 'mechanical', 'issue_description' => 'Overheating', 'reported_date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->delete("/assets/{$asset->id}")->assertRedirect();
+
+        $this->actingAs($admin)->get('/asset-repairs')
+            ->assertOk()
+            ->assertSee('Doomed Drill');
+    }
 }

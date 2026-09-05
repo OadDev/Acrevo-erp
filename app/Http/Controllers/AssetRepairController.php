@@ -20,7 +20,7 @@ class AssetRepairController extends Controller
     public function index(Request $request): View
     {
         $repairs = AssetRepair::query()
-            ->with(['asset', 'workOrder', 'createdBy'])
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'createdBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")

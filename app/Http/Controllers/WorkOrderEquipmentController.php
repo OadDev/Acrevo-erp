@@ -85,7 +85,7 @@ class WorkOrderEquipmentController extends Controller
     {
         return AssetMovement::query()
             ->where(fn ($q) => $q->where('from_work_order_id', $workOrder->id)->orWhere('to_work_order_id', $workOrder->id))
-            ->with(['asset', 'fromWorkOrder', 'toWorkOrder', 'createdBy', 'confirmedBy'])
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'fromWorkOrder', 'toWorkOrder', 'createdBy', 'confirmedBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")))
             ->when($request->get('from'), fn ($q, $v) => $q->whereDate('moved_at', '>=', $v))
@@ -98,7 +98,7 @@ class WorkOrderEquipmentController extends Controller
     {
         return AssetRepair::query()
             ->where('work_order_id', $workOrder->id)
-            ->with(['asset', 'createdBy'])
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'createdBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")))
             ->when($request->get('from'), fn ($q, $v) => $q->whereDate('reported_date', '>=', $v))
@@ -112,7 +112,7 @@ class WorkOrderEquipmentController extends Controller
         return AssetStatusLog::query()
             ->where('work_order_id', $workOrder->id)
             ->where('new_status', 'missing')
-            ->with(['asset', 'updatedBy'])
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'updatedBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")))
             ->when($request->get('from'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))

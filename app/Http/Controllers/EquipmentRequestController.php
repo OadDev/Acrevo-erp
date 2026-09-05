@@ -17,7 +17,7 @@ class EquipmentRequestController extends Controller
     public function index(Request $request): View
     {
         $equipmentRequests = $this->filtered($request)
-            ->with(['workOrder', 'requestedBy', 'approvedBy', 'asset'])
+            ->with(['workOrder', 'requestedBy', 'approvedBy', 'asset' => fn ($q) => $q->withTrashed()])
             ->orderBy($request->get('sort', 'created_at'), $request->get('direction', 'desc') === 'asc' ? 'asc' : 'desc')
             ->paginate(20)
             ->withQueryString();
@@ -30,7 +30,7 @@ class EquipmentRequestController extends Controller
     public function pdf(Request $request)
     {
         $equipmentRequests = $this->filtered($request)
-            ->with(['workOrder', 'requestedBy', 'approvedBy', 'asset'])
+            ->with(['workOrder', 'requestedBy', 'approvedBy', 'asset' => fn ($q) => $q->withTrashed()])
             ->orderByDesc('created_at')
             ->get();
 
