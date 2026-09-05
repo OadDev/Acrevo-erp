@@ -158,6 +158,14 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(WorkOrderExecutiveTeam::class);
     }
 
+    // Every Asset currently assigned to this site - the "current equipment"
+    // list. Historical equipment (transferred out, returned, etc.) lives in
+    // AssetMovement rows referencing this work order, not here.
+    public function assets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'current_work_order_id');
+    }
+
     public function subContractors(): HasMany
     {
         return $this->hasMany(WorkOrderSubContractor::class);

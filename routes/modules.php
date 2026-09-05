@@ -62,6 +62,7 @@ use App\Http\Controllers\WorkOrder\WorkOrderPdfController;
 use App\Http\Controllers\WorkOrder\WorkOrderZipController;
 use App\Http\Controllers\WorkOrder\WorkOrderSummaryController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\WorkOrderEquipmentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -246,6 +247,20 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:work_orders.edit')->group(function () {
         Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
         Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
+    });
+
+    // Work Order-wise Equipment (Phase 6): current equipment at this site,
+    // plus the broader Movement/Repair/Missing history that touched it -
+    // read-only, so it shares the WorkOrderPolicy 'view' check the WO show
+    // page itself uses (authorized inside the controller) on top of these
+    // Asset-module permissions.
+    Route::middleware('permission:assets.view')->group(function () {
+        Route::get('equipment', [WorkOrderEquipmentController::class, 'index'])->name('equipment.index');
+        Route::get('equipment/pdf', [WorkOrderEquipmentController::class, 'pdf'])->name('equipment.pdf');
+    });
+    Route::middleware('permission:assets.view_history')->group(function () {
+        Route::get('equipment/history', [WorkOrderEquipmentController::class, 'history'])->name('equipment.history');
+        Route::get('equipment/history/pdf', [WorkOrderEquipmentController::class, 'historyPdf'])->name('equipment.history.pdf');
     });
 });
 

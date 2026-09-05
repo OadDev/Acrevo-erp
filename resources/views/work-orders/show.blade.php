@@ -11,6 +11,9 @@
         <x-page-header :title="($workOrder->site?->site_no ? $workOrder->site->site_no.' — ' : '').$workOrder->work_order_no" :subtitle="$workOrder->title">
             <x-slot name="actions">
                 <x-badge :status="$workOrder->status" class="text-sm" />
+                @can('assets.view')
+                    <x-link-button :href="route('work-orders.equipment.index', $workOrder)" variant="secondary">Equipment</x-link-button>
+                @endcan
                 @can('work_orders.cancel')
                     @if (! in_array($workOrder->status, ['completed', 'cancelled']))
                         <form method="POST" action="{{ route('work-orders.cancel', $workOrder) }}" onsubmit="return confirm('Cancel this work order?')">
