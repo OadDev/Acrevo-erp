@@ -4,9 +4,9 @@
     $palette = match (true) {
         $color !== null => $color,
         in_array($status, ['completed', 'passed', 'qc_passed', 'paid', 'approved', 'resolved', 'closed', 'active', 'present', 'verified', 'verified_ok', 'available', 'repaired', 'returned', 'confirmed']) => 'emerald',
-        in_array($status, ['pending_hr_assignment', 'draft', 'new', 'pending', 'open', 'scheduled', 'sent', 'retired']) => 'gray',
-        in_array($status, ['team_assigned', 'in_progress', 'contacted', 'site_visit_scheduled', 'quoted', 'partial', 'half_day', 'in_use', 'ready_for_return', 'expiring_soon']) => 'blue',
-        in_array($status, ['qc_pending', 'client_review', 'final_qc', 'in_progress', 'submitted', 'under_repair']) => 'amber',
+        in_array($status, ['pending_hr_assignment', 'draft', 'new', 'pending', 'open', 'scheduled', 'sent', 'retired', 'requested']) => 'gray',
+        in_array($status, ['team_assigned', 'in_progress', 'contacted', 'site_visit_scheduled', 'quoted', 'partial', 'half_day', 'in_use', 'ready_for_return', 'expiring_soon', 'dispatched', 'received']) => 'blue',
+        in_array($status, ['qc_pending', 'client_review', 'final_qc', 'in_progress', 'submitted', 'under_repair', 'purchase_required']) => 'amber',
         in_array($status, ['qc_failed', 'ticket_raised', 'rework_in_progress', 'failed', 'rejected', 'cancelled', 'overdue', 'lost', 'absent', 'critical', 'high', 'urgent', 'damaged', 'missing', 'not_found', 'expired']) => 'rose',
         default => 'gray',
     };

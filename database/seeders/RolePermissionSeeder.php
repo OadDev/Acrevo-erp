@@ -92,6 +92,10 @@ class RolePermissionSeeder extends Seeder
         'verifications' => [
             'verifications.view', 'verifications.create', 'verifications.download_pdf',
         ],
+        'equipment_requests' => [
+            'equipment_requests.view', 'equipment_requests.create', 'equipment_requests.approve',
+            'equipment_requests.receive', 'equipment_requests.download_pdf',
+        ],
         'reports' => [
             'reports.view', 'reports.export',
         ],
@@ -160,6 +164,10 @@ class RolePermissionSeeder extends Seeder
             // Physically verify assets at this Team Leader's own site -
             // scoped in the controller the same way as repairs/movements.
             'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],
+            // Request equipment for their own site and confirm/complete
+            // receipt of it - no approve, deciding a request (and any
+            // purchase it needs) is Admin's call.
+            'equipment_requests' => ['equipment_requests.view', 'equipment_requests.create', 'equipment_requests.receive', 'equipment_requests.download_pdf'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
@@ -207,6 +215,11 @@ class RolePermissionSeeder extends Seeder
             // Management can also record a verification anywhere (not
             // site-scoped, unlike a Team Leader) as a spot-check.
             'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],
+            // Management can request equipment for any site and confirm
+            // receipt/completion, but not decide (approve/reject) a
+            // request - same reasoning as withholding movements.approve
+            // and repairs.update_status above.
+            'equipment_requests' => ['equipment_requests.view', 'equipment_requests.create', 'equipment_requests.receive', 'equipment_requests.download_pdf'],
         ],
         'Legal' => [
             'legal' => '*',

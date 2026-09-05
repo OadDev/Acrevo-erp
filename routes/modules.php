@@ -12,6 +12,7 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetMovementController;
 use App\Http\Controllers\AssetRepairController;
 use App\Http\Controllers\AssetVerificationController;
+use App\Http\Controllers\EquipmentRequestController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
@@ -509,6 +510,26 @@ Route::middleware('permission:verifications.download_pdf')->group(function () {
 });
 Route::middleware('permission:verifications.create')->group(function () {
     Route::post('assets/{asset}/verifications', [AssetVerificationController::class, 'store'])->name('assets.verifications.store');
+});
+
+Route::middleware('permission:equipment_requests.view')->group(function () {
+    Route::get('equipment-requests', [EquipmentRequestController::class, 'index'])->name('equipment-requests.index');
+});
+Route::middleware('permission:equipment_requests.download_pdf')->group(function () {
+    Route::get('equipment-requests/pdf', [EquipmentRequestController::class, 'pdf'])->name('equipment-requests.pdf');
+});
+Route::middleware('permission:equipment_requests.create')->group(function () {
+    Route::post('equipment-requests', [EquipmentRequestController::class, 'store'])->name('equipment-requests.store');
+    Route::post('equipment-requests/{equipmentRequest}/cancel', [EquipmentRequestController::class, 'cancel'])->name('equipment-requests.cancel');
+});
+Route::middleware('permission:equipment_requests.approve')->group(function () {
+    Route::post('equipment-requests/{equipmentRequest}/approve', [EquipmentRequestController::class, 'approve'])->name('equipment-requests.approve');
+    Route::post('equipment-requests/{equipmentRequest}/mark-available', [EquipmentRequestController::class, 'markAvailable'])->name('equipment-requests.mark-available');
+    Route::post('equipment-requests/{equipmentRequest}/dispatch', [EquipmentRequestController::class, 'dispatch'])->name('equipment-requests.dispatch');
+});
+Route::middleware('permission:equipment_requests.receive')->group(function () {
+    Route::post('equipment-requests/{equipmentRequest}/receive', [EquipmentRequestController::class, 'receive'])->name('equipment-requests.receive');
+    Route::post('equipment-requests/{equipmentRequest}/complete', [EquipmentRequestController::class, 'complete'])->name('equipment-requests.complete');
 });
 
 /*
