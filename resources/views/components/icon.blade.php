@@ -255,6 +255,16 @@
             <path d="M22 2 11 13" />
             @break
 
+        @case('wrench')
+            <path d="M14.5 6.5a4 4 0 0 1-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 1 5.3-5.3l-2.6 2.6-2-2 2.6-2.6Z" />
+            @break
+
+        @case('clipboard-check')
+            <path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z" />
+            <path d="M6 6.5h12a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.5a1 1 0 0 1 1-1Z" />
+            <path d="m9 13.5 2 2 4-4.5" />
+            @break
+
         @default
             <circle cx="12" cy="12" r="8.5" />
     @endswitch

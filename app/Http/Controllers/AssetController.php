@@ -1,0 +1,281 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Asset;
+use App\Models\AssetChangeRequest;
+use App\Models\AssetStatusLog;
+use App\Models\User;
+use App\Models\WorkOrder;
+use App\Support\Pdf;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+
+class AssetController extends Controller
+{
+    private const ATTACHMENT_RULES = ['file', 'max:51200', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'];
+
+    private const MASTER_DETAIL_FIELDS = [
+        'name', 'category', 'brand', 'model', 'serial_number',
+        'purchase_date', 'purchase_cost', 'supplier', 'invoice_number',
+        'warranty_start', 'warranty_end', 'warranty_provider', 'warranty_card_details', 'remarks',
+    ];
+
+    public function index(Request $request): View
+    {
+        $showRemoved = $request->boolean('removed') && $request->user()->can('assets.restore');
+
+        $assets = Asset::query()
+            ->when($showRemoved, fn ($q) => $q->onlyTrashed())
+            ->with('currentWorkOrder.site')
+            ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
+                ->where('asset_code', 'like', "%{$search}%")
+                ->orWhere('name', 'like', "%{$search}%")
+                ->orWhere('serial_number', 'like', "%{$search}%")
+                ->orWhere('brand', 'like', "%{$search}%")
+                ->orWhere('model', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%")
+                ->orWhere('supplier', 'like', "%{$search}%")
+                ->orWhereHas('currentWorkOrder', fn ($q3) => $q3->where('work_order_no', 'like', "%{$search}%"))))
+            ->when($request->get('category'), fn ($q, $v) => $q->where('category', $v))
+            ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
+            ->when($request->get('condition'), fn ($q, $v) => $q->where('condition', $v))
+            ->when($request->get('brand'), fn ($q, $v) => $q->where('brand', $v))
+            ->when($request->get('current_location'), fn ($q, $v) => $q->where('current_location', $v))
+            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('current_work_order_id', $v))
+            ->when($request->get('warranty_status'), function ($q, $v) {
+                return match ($v) {
+                    'active' => $q->whereNotNull('warranty_end')->where('warranty_end', '>', now()->addDays(30)),
+                    'expiring_soon' => $q->whereNotNull('warranty_end')->whereBetween('warranty_end', [now(), now()->addDays(30)]),
+                    'expired' => $q->whereNotNull('warranty_end')->where('warranty_end', '<', now()),
+                    'none' => $q->whereNull('warranty_end'),
+                    default => $q,
+                };
+            })
+            ->when($request->get('purchase_from'), fn ($q, $v) => $q->whereDate('purchase_date', '>=', $v))
+            ->when($request->get('purchase_to'), fn ($q, $v) => $q->whereDate('purchase_date', '<=', $v))
+            ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc')
+            ->paginate(20)
+            ->withQueryString();
+
+        $categories = Asset::whereNotNull('category')->distinct()->orderBy('category')->pluck('category');
+        $brands = Asset::whereNotNull('brand')->distinct()->orderBy('brand')->pluck('brand');
+        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
+
+        return view('assets.index', compact('assets', 'categories', 'brands', 'workOrders', 'showRemoved'));
+    }
+
+    public function create(): View
+    {
+        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
+
+        return view('assets.create', compact('workOrders'));
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $this->validateMasterDetails($request) + $request->validate([
+            'status' => ['nullable', 'in:'.implode(',', Asset::STATUSES)],
+            'current_location' => ['nullable', 'in:'.implode(',', Asset::LOCATIONS)],
+            'current_work_order_id' => ['nullable', 'exists:work_orders,id'],
+        ]);
+
+        $asset = Asset::create($data + [
+            'status' => $data['status'] ?? 'available',
+            'current_location' => $data['current_location'] ?? 'company_store',
+            'created_by' => $request->user()->id,
+        ]);
+
+        if ($error = $this->attachFiles($asset, $request)) {
+            return back()->withErrors(['attachments' => $error]);
+        }
+
+        return redirect()->route('assets.show', $asset)->with('success', "Asset {$asset->asset_code} created.");
+    }
+
+    public function show(Request $request, Asset $asset): View
+    {
+        $asset->load(['media', 'statusLogs.updatedBy', 'statusLogs.workOrder', 'changeRequests.requestedBy', 'changeRequests.reviewedBy', 'currentWorkOrder.site', 'createdBy']);
+
+        $user = $request->user();
+        $canUpdateStatus = $user->can('assets.update_status') && ($user->hasRole('Admin') || $this->isSiteTeamLeaderFor($asset, $user));
+
+        return view('assets.show', compact('asset', 'canUpdateStatus'));
+    }
+
+    /**
+     * "Assigned to their site" for an Executive Team Leader means: they lead
+     * the executive team currently (not previously) assigned to the work
+     * order this asset is sitting at right now.
+     */
+    private function isSiteTeamLeaderFor(Asset $asset, User $user): bool
+    {
+        return $asset->current_work_order_id && WorkOrder::where('id', $asset->current_work_order_id)
+            ->whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
+                ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
+            ->exists();
+    }
+
+    public function edit(Asset $asset): View
+    {
+        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
+
+        return view('assets.edit', compact('asset', 'workOrders'));
+    }
+
+    /**
+     * Admin edits an asset's master details directly. Every other role that
+     * holds assets.edit (Management, or anyone else an Admin grants it to)
+     * goes through requestUpdate() instead - the asset's own values never
+     * change until an Admin approves that request.
+     */
+    public function update(Request $request, Asset $asset): RedirectResponse
+    {
+        abort_unless($request->user()->hasRole('Admin'), 403, 'Only an Admin can apply asset changes directly. Submit this as a change request instead.');
+
+        $data = $this->validateMasterDetails($request);
+
+        $asset->update($data);
+
+        if ($error = $this->attachFiles($asset, $request)) {
+            return back()->withErrors(['attachments' => $error]);
+        }
+
+        return redirect()->route('assets.show', $asset)->with('success', 'Asset updated.');
+    }
+
+    public function requestUpdate(Request $request, Asset $asset): RedirectResponse
+    {
+        $data = $this->validateMasterDetails($request);
+
+        $oldValues = collect($data)->keys()->mapWithKeys(fn ($key) => [$key => $asset->{$key}])->all();
+
+        AssetChangeRequest::create([
+            'asset_id' => $asset->id,
+            'requested_by' => $request->user()->id,
+            'old_values' => $oldValues,
+            'new_values' => $data,
+            'status' => 'pending',
+        ]);
+
+        // Attachments/reports aren't "master details" under approval - they're
+        // additive documentation, so anyone with assets.edit can add them
+        // immediately regardless of whether their detail changes are pending.
+        if ($error = $this->attachFiles($asset, $request)) {
+            return back()->withErrors(['attachments' => $error]);
+        }
+
+        return redirect()->route('assets.show', $asset)->with('success', 'Change request submitted for Admin approval. The asset\'s current details remain active until then.');
+    }
+
+    private function validateMasterDetails(Request $request): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:150'],
+            'brand' => ['nullable', 'string', 'max:150'],
+            'model' => ['nullable', 'string', 'max:150'],
+            'serial_number' => ['nullable', 'string', 'max:150'],
+            'purchase_date' => ['nullable', 'date'],
+            'purchase_cost' => ['nullable', 'numeric', 'min:0'],
+            'supplier' => ['nullable', 'string', 'max:255'],
+            'invoice_number' => ['nullable', 'string', 'max:150'],
+            'warranty_start' => ['nullable', 'date'],
+            'warranty_end' => ['nullable', 'date'],
+            'warranty_provider' => ['nullable', 'string', 'max:255'],
+            'warranty_card_details' => ['nullable', 'string'],
+            'remarks' => ['nullable', 'string'],
+        ]);
+    }
+
+    private function attachFiles(Asset $asset, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('attachments', []) as $file) {
+                $asset->addMedia($file)->toMediaCollection('attachments');
+            }
+            foreach ($request->file('reports', []) as $file) {
+                $asset->addMedia($file)->toMediaCollection('reports');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 50MB).';
+        }
+
+        return null;
+    }
+
+    public function destroyMedia(Asset $asset, Media $media): RedirectResponse
+    {
+        abort_unless((string) $media->model_id === (string) $asset->id, 404);
+
+        $media->delete();
+
+        return back()->with('success', 'File removed.');
+    }
+
+    public function updateStatus(Request $request, Asset $asset): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->hasRole('Admin')) {
+            abort_unless($this->isSiteTeamLeaderFor($asset, $user), 403, 'You can only update the status of assets assigned to a site you lead.');
+        }
+
+        $data = $request->validate([
+            'status' => ['required', 'in:'.implode(',', Asset::STATUSES)],
+            'reason' => ['nullable', 'string'],
+            'proof' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
+        ]);
+
+        $previousStatus = $asset->status;
+
+        $log = AssetStatusLog::create([
+            'asset_id' => $asset->id,
+            'previous_status' => $previousStatus,
+            'new_status' => $data['status'],
+            'updated_by' => $user->id,
+            'role' => $user->roles->pluck('name')->join(', ') ?: null,
+            'work_order_id' => $asset->current_work_order_id,
+            'reason' => $data['reason'] ?? null,
+        ]);
+
+        if ($request->hasFile('proof')) {
+            try {
+                $log->addMedia($request->file('proof'))->toMediaCollection('proof');
+            } catch (FileIsTooBig $e) {
+                return back()->withErrors(['proof' => 'That file is too large (max 20MB).']);
+            }
+        }
+
+        $asset->update(['status' => $data['status']]);
+
+        return back()->with('success', "Status updated to \"{$data['status']}\".");
+    }
+
+    public function destroy(Asset $asset): RedirectResponse
+    {
+        $asset->delete();
+
+        return redirect()->route('assets.index')->with('success', 'Asset removed.');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $asset = Asset::onlyTrashed()->findOrFail($id);
+        $asset->restore();
+
+        return redirect()->route('assets.show', $asset)->with('success', 'Asset restored.');
+    }
+
+    public function pdf(Asset $asset)
+    {
+        $asset->load(['statusLogs.updatedBy', 'statusLogs.workOrder', 'currentWorkOrder.site', 'createdBy']);
+
+        $pdf = Pdf::loadView('assets.pdf', compact('asset'));
+
+        return $pdf->download("{$asset->asset_code}.pdf");
+    }
+}

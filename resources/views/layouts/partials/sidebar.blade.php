@@ -133,6 +133,15 @@
                 </x-nav-group>
             @endcanany
 
+            @can('assets.view')
+                <x-nav-group label="Equipment &amp; Assets">
+                    <x-nav-link :href="route('assets.index')" :active="request()->routeIs('assets.*') && ! request()->routeIs('asset-change-requests.*')" icon="wrench">Assets</x-nav-link>
+                    @can('assets.approve')
+                        <x-nav-link :href="route('asset-change-requests.index')" :active="request()->routeIs('asset-change-requests.*')" icon="clipboard-check">Pending Approvals</x-nav-link>
+                    @endcan
+                </x-nav-group>
+            @endcan
+
             @can('reports.view')
                 <x-nav-group label="Insights">
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')" icon="bar-chart">Reports</x-nav-link>

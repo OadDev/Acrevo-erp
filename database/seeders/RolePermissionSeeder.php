@@ -72,6 +72,15 @@ class RolePermissionSeeder extends Seeder
         'clients' => [
             'clients.manage',
         ],
+        // Movement/Repair/Verification/Equipment-Request permissions are
+        // added as those features are built, not pre-declared here - a
+        // permission checkbox with nothing behind it yet would just confuse
+        // whoever configures Roles & Permissions.
+        'assets' => [
+            'assets.view', 'assets.create', 'assets.edit', 'assets.approve',
+            'assets.delete', 'assets.restore', 'assets.update_status',
+            'assets.view_history', 'assets.download_pdf',
+        ],
         'reports' => [
             'reports.view', 'reports.export',
         ],
@@ -126,6 +135,10 @@ class RolePermissionSeeder extends Seeder
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // View + update status only, scoped in the controller to assets
+            // currently at a work order this Team Leader leads - no create,
+            // edit, approve, delete, or restore.
+            'assets' => ['assets.view', 'assets.update_status', 'assets.view_history', 'assets.download_pdf'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
@@ -158,6 +171,10 @@ class RolePermissionSeeder extends Seeder
             'reports' => '*',
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // Create + edit, but no assets.approve - edits go through the
+            // AssetChangeRequest queue instead of applying immediately.
+            // No delete/restore/update_status either.
+            'assets' => ['assets.view', 'assets.create', 'assets.edit', 'assets.view_history', 'assets.download_pdf'],
         ],
         'Legal' => [
             'legal' => '*',

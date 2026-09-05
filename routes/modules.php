@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\LedgerCategoryController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AssetChangeRequestController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
@@ -411,6 +413,49 @@ Route::middleware('permission:audit.view')->group(function () {
 Route::middleware('permission:company_records.view')->group(function () {
     Route::resource('company-records', CompanyRecordController::class)->except('show');
     Route::delete('company-records/{companyRecord}/media/{media}', [CompanyRecordController::class, 'destroyMedia'])->name('company-records.media.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Equipment & Asset Management
+|--------------------------------------------------------------------------
+*/
+// The 'create' route must be registered before the wildcard 'assets/{asset}'
+// show route below, or GET /assets/create matches show with "create" as the
+// {asset} id and 404s on binding instead of running the create action.
+Route::middleware('permission:assets.create')->group(function () {
+    Route::get('assets/create', [AssetController::class, 'create'])->name('assets.create');
+    Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+});
+Route::middleware('permission:assets.view')->group(function () {
+    Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
+    Route::get('assets/{asset}', [AssetController::class, 'show'])->name('assets.show');
+});
+Route::middleware('permission:assets.download_pdf')->group(function () {
+    Route::get('assets/{asset}/pdf', [AssetController::class, 'pdf'])->name('assets.pdf');
+});
+Route::middleware('permission:assets.edit')->group(function () {
+    Route::get('assets/{asset}/edit', [AssetController::class, 'edit'])->name('assets.edit');
+    // update() checks hasRole('Admin') itself and 403s a non-Admin who
+    // somehow posts here directly; requestUpdate() is the route the edit
+    // form actually submits to for anyone else holding assets.edit.
+    Route::put('assets/{asset}', [AssetController::class, 'update'])->name('assets.update');
+    Route::put('assets/{asset}/request-update', [AssetController::class, 'requestUpdate'])->name('assets.request-update');
+    Route::delete('assets/{asset}/media/{media}', [AssetController::class, 'destroyMedia'])->name('assets.media.destroy');
+});
+Route::middleware('permission:assets.update_status')->group(function () {
+    Route::post('assets/{asset}/status', [AssetController::class, 'updateStatus'])->name('assets.status.update');
+});
+Route::middleware('permission:assets.delete')->group(function () {
+    Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
+});
+Route::middleware('permission:assets.restore')->group(function () {
+    Route::post('assets/{id}/restore', [AssetController::class, 'restore'])->name('assets.restore');
+});
+Route::middleware('permission:assets.approve')->group(function () {
+    Route::get('asset-change-requests', [AssetChangeRequestController::class, 'index'])->name('asset-change-requests.index');
+    Route::post('asset-change-requests/{changeRequest}/approve', [AssetChangeRequestController::class, 'approve'])->name('asset-change-requests.approve');
+    Route::post('asset-change-requests/{changeRequest}/reject', [AssetChangeRequestController::class, 'reject'])->name('asset-change-requests.reject');
 });
 
 /*
