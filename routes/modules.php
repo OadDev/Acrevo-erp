@@ -11,6 +11,7 @@ use App\Http\Controllers\AssetChangeRequestController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetMovementController;
 use App\Http\Controllers\AssetRepairController;
+use App\Http\Controllers\AssetVerificationController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
@@ -459,6 +460,12 @@ Route::middleware('permission:assets.approve')->group(function () {
     Route::post('asset-change-requests/{changeRequest}/approve', [AssetChangeRequestController::class, 'approve'])->name('asset-change-requests.approve');
     Route::post('asset-change-requests/{changeRequest}/reject', [AssetChangeRequestController::class, 'reject'])->name('asset-change-requests.reject');
 });
+// Registered as a top-level "missing-equipment" path rather than nested
+// under assets/ so it can't collide with the assets/{asset} wildcard route.
+Route::middleware('permission:assets.view_missing')->group(function () {
+    Route::get('missing-equipment', [AssetController::class, 'missing'])->name('assets.missing');
+    Route::get('missing-equipment/pdf', [AssetController::class, 'missingPdf'])->name('assets.missing.pdf');
+});
 
 Route::middleware('permission:movements.view')->group(function () {
     Route::get('asset-movements', [AssetMovementController::class, 'index'])->name('asset-movements.index');
@@ -492,6 +499,16 @@ Route::middleware('permission:repairs.edit')->group(function () {
 });
 Route::middleware('permission:repairs.update_status')->group(function () {
     Route::post('asset-repairs/{repair}/status', [AssetRepairController::class, 'updateStatus'])->name('asset-repairs.status.update');
+});
+
+Route::middleware('permission:verifications.view')->group(function () {
+    Route::get('asset-verifications', [AssetVerificationController::class, 'index'])->name('asset-verifications.index');
+});
+Route::middleware('permission:verifications.download_pdf')->group(function () {
+    Route::get('assets/{asset}/verifications/pdf', [AssetVerificationController::class, 'pdf'])->name('assets.verifications.pdf');
+});
+Route::middleware('permission:verifications.create')->group(function () {
+    Route::post('assets/{asset}/verifications', [AssetVerificationController::class, 'store'])->name('assets.verifications.store');
 });
 
 /*

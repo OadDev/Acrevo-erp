@@ -116,6 +116,29 @@
         </table>
     @endif
 
+    <h2>Verification History</h2>
+    @if ($asset->verifications->isEmpty())
+        <p class="muted">No verifications recorded yet.</p>
+    @else
+        <table>
+            <thead>
+                <tr><th>Verified On</th><th>Work Order</th><th>Result</th><th>Condition</th><th>Verified By</th><th>Remarks</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($asset->verifications as $verification)
+                    <tr>
+                        <td>{{ $verification->verified_at->format('d M Y') }}</td>
+                        <td>{{ $verification->workOrder?->work_order_no ?? '—' }}</td>
+                        <td>{{ ucwords(str_replace('_', ' ', $verification->result)) }}</td>
+                        <td>{{ $verification->condition ?: '—' }}</td>
+                        <td>{{ $verification->verifiedBy?->name }}</td>
+                        <td>{{ $verification->remarks ?: '—' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <h2>Status History</h2>
     @if ($asset->statusLogs->isEmpty())
         <p class="muted">No status changes recorded yet.</p>

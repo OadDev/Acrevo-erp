@@ -142,6 +142,12 @@
                     @can('repairs.view')
                         <x-nav-link :href="route('asset-repairs.index')" :active="request()->routeIs('asset-repairs.*')" icon="wrench">Repair History</x-nav-link>
                     @endcan
+                    @can('verifications.view')
+                        <x-nav-link :href="route('asset-verifications.index')" :active="request()->routeIs('asset-verifications.*')" icon="clipboard-check">Verification History</x-nav-link>
+                    @endcan
+                    @can('assets.view_missing')
+                        <x-nav-link :href="route('assets.missing')" :active="request()->routeIs('assets.missing')" icon="search">Missing Equipment</x-nav-link>
+                    @endcan
                     @can('assets.approve')
                         <x-nav-link :href="route('asset-change-requests.index')" :active="request()->routeIs('asset-change-requests.*')" icon="clipboard-check">Pending Approvals</x-nav-link>
                     @endcan

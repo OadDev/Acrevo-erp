@@ -12,6 +12,9 @@
                 @can('repairs.download_pdf')
                     <x-link-button :href="route('assets.repairs.pdf', $asset)" variant="secondary">Repair History PDF</x-link-button>
                 @endcan
+                @can('verifications.download_pdf')
+                    <x-link-button :href="route('assets.verifications.pdf', $asset)" variant="secondary">Verification History PDF</x-link-button>
+                @endcan
                 @can('assets.edit')
                     <x-link-button :href="route('assets.edit', $asset)" variant="secondary">Edit</x-link-button>
                 @endcan
@@ -224,6 +227,46 @@
                 </x-card>
             @endcan
 
+            @can('verifications.view')
+                <x-card :padded="false">
+                    <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Verification History</h3></div>
+                    @if ($asset->verifications->isEmpty())
+                        <p class="px-4 pb-4 text-sm text-gray-400">No verifications recorded yet.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                        <th class="px-4 py-2">Verified On</th>
+                                        <th class="px-4 py-2">Result</th>
+                                        <th class="px-4 py-2">Condition</th>
+                                        <th class="px-4 py-2">Verified By</th>
+                                        <th class="px-4 py-2">Remarks</th>
+                                        <th class="px-4 py-2">Proof</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach ($asset->verifications as $verification)
+                                        <tr>
+                                            <td class="px-4 py-2 text-gray-500">{{ $verification->verified_at->format('d M Y') }}</td>
+                                            <td class="px-4 py-2"><x-badge :status="$verification->result" /></td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $verification->condition ?: '—' }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $verification->verifiedBy?->name }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $verification->remarks ?: '—' }}</td>
+                                            <td class="px-4 py-2">
+                                                @foreach ($verification->getMedia('proof') as $proof)
+                                                    <a href="{{ $proof->getUrl() }}" target="_blank" class="text-xs text-indigo-600 hover:underline">View</a>
+                                                @endforeach
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </x-card>
+            @endcan
+
             @can('assets.view_history')
                 <x-card :padded="false">
                     <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Status History</h3></div>
@@ -345,6 +388,28 @@
                         <x-text-input type="date" name="moved_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
                         <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
                         <x-primary-button class="w-full justify-center">Record Movement</x-primary-button>
+                    </form>
+                </x-card>
+            @endif
+
+            @if ($canCreateVerification)
+                <x-card>
+                    <h3 class="mb-3 text-sm font-semibold text-gray-500">Verify Asset</h3>
+                    <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3">
+                        @csrf
+                        <x-select-input name="result" class="w-full text-sm" required>
+                            @foreach (\App\Models\AssetVerification::RESULTS as $result)
+                                <option value="{{ $result }}">{{ ucwords(str_replace('_', ' ', $result)) }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <x-text-input name="condition" class="w-full text-sm" placeholder="Condition observed" />
+                        <x-text-input type="date" name="verified_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
+                        <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
+                        <div>
+                            <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
+                            <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
+                        </div>
+                        <x-primary-button class="w-full justify-center">Record Verification</x-primary-button>
                     </form>
                 </x-card>
             @endif

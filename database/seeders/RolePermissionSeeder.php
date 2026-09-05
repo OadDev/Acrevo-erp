@@ -79,7 +79,7 @@ class RolePermissionSeeder extends Seeder
         'assets' => [
             'assets.view', 'assets.create', 'assets.edit', 'assets.approve',
             'assets.delete', 'assets.restore', 'assets.update_status',
-            'assets.view_history', 'assets.download_pdf',
+            'assets.view_history', 'assets.download_pdf', 'assets.view_missing',
         ],
         'movements' => [
             'movements.view', 'movements.create', 'movements.approve',
@@ -88,6 +88,9 @@ class RolePermissionSeeder extends Seeder
         'repairs' => [
             'repairs.view', 'repairs.create', 'repairs.edit',
             'repairs.update_status', 'repairs.download_pdf',
+        ],
+        'verifications' => [
+            'verifications.view', 'verifications.create', 'verifications.download_pdf',
         ],
         'reports' => [
             'reports.view', 'reports.export',
@@ -146,7 +149,7 @@ class RolePermissionSeeder extends Seeder
             // View + update status only, scoped in the controller to assets
             // currently at a work order this Team Leader leads - no create,
             // edit, approve, delete, or restore.
-            'assets' => ['assets.view', 'assets.update_status', 'assets.view_history', 'assets.download_pdf'],
+            'assets' => ['assets.view', 'assets.update_status', 'assets.view_history', 'assets.download_pdf', 'assets.view_missing'],
             // Create/confirm movements, both scoped in the controller to
             // this Team Leader's own site - dispatching what's at their
             // site, and confirming receipt of what arrives there.
@@ -154,6 +157,9 @@ class RolePermissionSeeder extends Seeder
             // Report a repair and track it through to completion - both
             // scoped in the controller to assets at this Team Leader's site.
             'repairs' => ['repairs.view', 'repairs.create', 'repairs.update_status', 'repairs.download_pdf'],
+            // Physically verify assets at this Team Leader's own site -
+            // scoped in the controller the same way as repairs/movements.
+            'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
@@ -189,7 +195,7 @@ class RolePermissionSeeder extends Seeder
             // Create + edit, but no assets.approve - edits go through the
             // AssetChangeRequest queue instead of applying immediately.
             // No delete/restore/update_status either.
-            'assets' => ['assets.view', 'assets.create', 'assets.edit', 'assets.view_history', 'assets.download_pdf'],
+            'assets' => ['assets.view', 'assets.create', 'assets.edit', 'assets.view_history', 'assets.download_pdf', 'assets.view_missing'],
             // No movements.approve - Management can dispatch/edit a
             // movement but confirming receipt is a site-level action (an
             // Executive Team Leader) or Admin's to make.
@@ -198,6 +204,9 @@ class RolePermissionSeeder extends Seeder
             // entry but tracking it through to completion is a site-level
             // action (an Executive Team Leader) or Admin's to make.
             'repairs' => ['repairs.view', 'repairs.create', 'repairs.edit', 'repairs.download_pdf'],
+            // Management can also record a verification anywhere (not
+            // site-scoped, unlike a Team Leader) as a spot-check.
+            'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],
         ],
         'Legal' => [
             'legal' => '*',

@@ -124,6 +124,7 @@ class AssetController extends Controller
             'changeRequests.requestedBy', 'changeRequests.reviewedBy',
             'movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy', 'movements.confirmedBy',
             'repairs.workOrder', 'repairs.createdBy', 'repairs.media',
+            'verifications.workOrder', 'verifications.verifiedBy', 'verifications.media',
             'currentWorkOrder.site', 'createdBy',
         ]);
 
@@ -147,7 +148,11 @@ class AssetController extends Controller
             $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
         );
 
-        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair'));
+        $canCreateVerification = $user->can('verifications.create') && (
+            $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
+        );
+
+        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair', 'canCreateVerification'));
     }
 
     public function edit(Asset $asset): View
@@ -307,11 +312,88 @@ class AssetController extends Controller
             'statusLogs.updatedBy', 'statusLogs.workOrder',
             'movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy',
             'repairs.workOrder', 'repairs.createdBy',
+            'verifications.workOrder', 'verifications.verifiedBy',
             'currentWorkOrder.site', 'createdBy',
         ]);
 
         $pdf = Pdf::loadView('assets.pdf', compact('asset'));
 
         return $pdf->download("{$asset->asset_code}.pdf");
+    }
+
+    /**
+     * A dedicated, always-current view of every asset presently marked
+     * "missing" - "Reported By" / "Reported Date" are pulled from that
+     * asset's own Status History (the most recent entry that transitioned
+     * it to missing), so nothing new needs to be tracked separately.
+     */
+    public function missing(Request $request): View
+    {
+        $user = $request->user();
+        $ledWorkOrderIds = $user->hasRole('Admin') || $user->hasRole('Management') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
+            ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
+            ->pluck('id');
+
+        $assets = Asset::query()
+            ->where('status', 'missing')
+            ->when($ledWorkOrderIds !== null, fn ($q) => $q->whereIn('current_work_order_id', $ledWorkOrderIds))
+            ->with(['currentWorkOrder.site', 'statusLogs.updatedBy'])
+            ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
+                ->where('asset_code', 'like', "%{$search}%")
+                ->orWhere('name', 'like', "%{$search}%")
+                ->orWhere('serial_number', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%")))
+            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('current_work_order_id', $v))
+            ->when($request->get('from') || $request->get('to'), fn ($q) => $q->whereHas('statusLogs', function ($q2) use ($request) {
+                $q2->where('new_status', 'missing')
+                    ->when($request->get('from'), fn ($q3, $v) => $q3->whereDate('created_at', '>=', $v))
+                    ->when($request->get('to'), fn ($q3, $v) => $q3->whereDate('created_at', '<=', $v));
+            }))
+            ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc')
+            ->paginate(20)
+            ->withQueryString();
+
+        $assets->getCollection()->each(function (Asset $asset) {
+            $asset->missingSince = $asset->statusLogs->firstWhere('new_status', 'missing');
+        });
+
+        $workOrders = $ledWorkOrderIds === null
+            ? WorkOrder::orderByDesc('created_at')->limit(200)->get()
+            : WorkOrder::whereIn('id', $ledWorkOrderIds)->get();
+
+        return view('assets.missing', compact('assets', 'workOrders'));
+    }
+
+    public function missingPdf(Request $request)
+    {
+        $user = $request->user();
+        $ledWorkOrderIds = $user->hasRole('Admin') || $user->hasRole('Management') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
+            ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
+            ->pluck('id');
+
+        $assets = Asset::query()
+            ->where('status', 'missing')
+            ->when($ledWorkOrderIds !== null, fn ($q) => $q->whereIn('current_work_order_id', $ledWorkOrderIds))
+            ->with(['currentWorkOrder.site', 'statusLogs.updatedBy'])
+            ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
+                ->where('asset_code', 'like', "%{$search}%")
+                ->orWhere('name', 'like', "%{$search}%")
+                ->orWhere('serial_number', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%")))
+            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('current_work_order_id', $v))
+            ->when($request->get('from') || $request->get('to'), fn ($q) => $q->whereHas('statusLogs', function ($q2) use ($request) {
+                $q2->where('new_status', 'missing')
+                    ->when($request->get('from'), fn ($q3, $v) => $q3->whereDate('created_at', '>=', $v))
+                    ->when($request->get('to'), fn ($q3, $v) => $q3->whereDate('created_at', '<=', $v));
+            }))
+            ->orderBy('name')
+            ->get()
+            ->each(function (Asset $asset) {
+                $asset->missingSince = $asset->statusLogs->firstWhere('new_status', 'missing');
+            });
+
+        $pdf = Pdf::loadView('assets.missing-pdf', compact('assets'));
+
+        return $pdf->download('missing-equipment.pdf');
     }
 }

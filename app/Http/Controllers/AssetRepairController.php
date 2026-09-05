@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ChecksSiteTeamLeadership;
+use App\Http\Controllers\Concerns\LogsAssetStatusChanges;
 use App\Models\Asset;
 use App\Models\AssetRepair;
-use App\Models\AssetStatusLog;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +15,7 @@ use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
 
 class AssetRepairController extends Controller
 {
-    use ChecksSiteTeamLeadership;
+    use ChecksSiteTeamLeadership, LogsAssetStatusChanges;
 
     public function index(Request $request): View
     {
@@ -138,25 +138,6 @@ class AssetRepairController extends Controller
         };
 
         return back()->with('success', "Repair marked \"{$data['status']}\".");
-    }
-
-    private function transitionAssetStatus(Asset $asset, string $newStatus, $user, string $reason): void
-    {
-        if ($asset->status === $newStatus) {
-            return;
-        }
-
-        AssetStatusLog::create([
-            'asset_id' => $asset->id,
-            'previous_status' => $asset->status,
-            'new_status' => $newStatus,
-            'updated_by' => $user->id,
-            'role' => $user->roles->pluck('name')->join(', ') ?: null,
-            'work_order_id' => $asset->current_work_order_id,
-            'reason' => $reason,
-        ]);
-
-        $asset->update(['status' => $newStatus]);
     }
 
     public function pdf(Asset $asset)
