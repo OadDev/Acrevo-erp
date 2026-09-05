@@ -6,6 +6,9 @@
                 @can('assets.download_pdf')
                     <x-link-button :href="route('assets.pdf', $asset)" variant="secondary">Download PDF</x-link-button>
                 @endcan
+                @can('movements.download_pdf')
+                    <x-link-button :href="route('assets.movements.pdf', $asset)" variant="secondary">Movement History PDF</x-link-button>
+                @endcan
                 @can('assets.edit')
                     <x-link-button :href="route('assets.edit', $asset)" variant="secondary">Edit</x-link-button>
                 @endcan
@@ -105,6 +108,63 @@
                 @endforelse
             </x-card>
 
+            @can('movements.view')
+                <x-card :padded="false">
+                    <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Movement History</h3></div>
+                    @if ($asset->movements->isEmpty())
+                        <p class="px-4 pb-4 text-sm text-gray-400">No movements recorded yet.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                        <th class="px-4 py-2">Date</th>
+                                        <th class="px-4 py-2">From</th>
+                                        <th class="px-4 py-2">To</th>
+                                        <th class="px-4 py-2">Type</th>
+                                        <th class="px-4 py-2">Status</th>
+                                        <th class="px-4 py-2">Remarks</th>
+                                        <th class="px-4 py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach ($asset->movements as $movement)
+                                        @php $canConfirmThis = $ledWorkOrderIds === null || $ledWorkOrderIds->contains($movement->to_work_order_id); @endphp
+                                        <tr>
+                                            <td class="px-4 py-2 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                            <td class="px-4 py-2"><x-badge :status="$movement->status" /></td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $movement->remarks ?: '—' }}</td>
+                                            <td class="px-4 py-2 text-right whitespace-nowrap">
+                                                @if ($movement->status === 'pending')
+                                                    @can('movements.edit')
+                                                        <a href="{{ route('asset-movements.edit', $movement) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                                    @endcan
+                                                    @can('movements.approve')
+                                                        @if ($canConfirmThis)
+                                                            <form method="POST" action="{{ route('asset-movements.confirm', $movement) }}" class="inline">
+                                                                @csrf
+                                                                <button class="text-xs font-medium text-emerald-600 hover:underline">Confirm</button>
+                                                            </form>
+                                                            <form method="POST" action="{{ route('asset-movements.cancel', $movement) }}" class="inline" onsubmit="return confirm('Cancel this movement?')">
+                                                                @csrf
+                                                                <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Cancel</button>
+                                                            </form>
+                                                        @endif
+                                                    @endcan
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </x-card>
+            @endcan
+
             @can('assets.view_history')
                 <x-card :padded="false">
                     <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Status History</h3></div>
@@ -195,6 +255,37 @@
                             <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
                         </div>
                         <x-primary-button class="w-full justify-center">Save Status</x-primary-button>
+                    </form>
+                </x-card>
+            @endif
+
+            @if ($canCreateMovement)
+                <x-card>
+                    <h3 class="mb-3 text-sm font-semibold text-gray-500">New Movement</h3>
+                    <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3" x-data="{ toLocation: 'work_order' }">
+                        @csrf
+                        <x-select-input name="type" class="w-full text-sm" required>
+                            @foreach (\App\Models\AssetMovement::TYPES as $type)
+                                @continue($type === 'purchase')
+                                <option value="{{ $type }}">{{ ucwords(str_replace('_', ' ', $type)) }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <x-select-input name="to_location" class="w-full text-sm" x-model="toLocation" required>
+                            @foreach (\App\Models\AssetMovement::LOCATIONS as $location)
+                                <option value="{{ $location }}">{{ ucwords(str_replace('_', ' ', $location)) }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <div x-show="toLocation === 'work_order'">
+                            <x-select-input name="to_work_order_id" class="w-full text-sm">
+                                <option value="">Select Work Order</option>
+                                @foreach (\App\Models\WorkOrder::orderByDesc('created_at')->limit(200)->get() as $wo)
+                                    <option value="{{ $wo->id }}">{{ $wo->work_order_no }}</option>
+                                @endforeach
+                            </x-select-input>
+                        </div>
+                        <x-text-input type="date" name="moved_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
+                        <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
+                        <x-primary-button class="w-full justify-center">Record Movement</x-primary-button>
                     </form>
                 </x-card>
             @endif

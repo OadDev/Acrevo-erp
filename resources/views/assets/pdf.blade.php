@@ -69,6 +69,28 @@
         <tr><td>Remarks</td><td>{{ $asset->remarks ?: '—' }}</td></tr>
     </table>
 
+    <h2>Movement History</h2>
+    @if ($asset->movements->isEmpty())
+        <p class="muted">No movements recorded yet.</p>
+    @else
+        <table>
+            <thead>
+                <tr><th>Date</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach ($asset->movements as $movement)
+                    <tr>
+                        <td>{{ $movement->moved_at->format('d M Y') }}</td>
+                        <td>{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
+                        <td>{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
+                        <td>{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                        <td>{{ ucwords($movement->status) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <h2>Status History</h2>
     @if ($asset->statusLogs->isEmpty())
         <p class="muted">No status changes recorded yet.</p>

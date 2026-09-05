@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ChecksSiteTeamLeadership;
 use App\Models\Asset;
 use App\Models\AssetChangeRequest;
+use App\Models\AssetMovement;
 use App\Models\AssetStatusLog;
-use App\Models\User;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,8 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AssetController extends Controller
 {
+    use ChecksSiteTeamLeadership;
+
     private const ATTACHMENT_RULES = ['file', 'max:51200', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'];
 
     private const MASTER_DETAIL_FIELDS = [
@@ -89,6 +92,24 @@ class AssetController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        // Every asset starts its movement timeline with an auto-recorded
+        // "purchase" entry (Supplier -> wherever it landed), already
+        // confirmed - there's no separate party to confirm receipt of an
+        // asset that's only just been entered into the system.
+        AssetMovement::create([
+            'asset_id' => $asset->id,
+            'type' => 'purchase',
+            'from_location' => 'supplier',
+            'to_location' => $asset->current_location,
+            'to_work_order_id' => $asset->current_work_order_id,
+            'status' => 'confirmed',
+            'moved_at' => $asset->purchase_date ?? now()->toDateString(),
+            'remarks' => 'Initial asset record.',
+            'created_by' => $request->user()->id,
+            'confirmed_by' => $request->user()->id,
+            'confirmed_at' => now(),
+        ]);
+
         if ($error = $this->attachFiles($asset, $request)) {
             return back()->withErrors(['attachments' => $error]);
         }
@@ -98,25 +119,30 @@ class AssetController extends Controller
 
     public function show(Request $request, Asset $asset): View
     {
-        $asset->load(['media', 'statusLogs.updatedBy', 'statusLogs.workOrder', 'changeRequests.requestedBy', 'changeRequests.reviewedBy', 'currentWorkOrder.site', 'createdBy']);
+        $asset->load([
+            'media', 'statusLogs.updatedBy', 'statusLogs.workOrder',
+            'changeRequests.requestedBy', 'changeRequests.reviewedBy',
+            'movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy', 'movements.confirmedBy',
+            'currentWorkOrder.site', 'createdBy',
+        ]);
 
         $user = $request->user();
-        $canUpdateStatus = $user->can('assets.update_status') && ($user->hasRole('Admin') || $this->isSiteTeamLeaderFor($asset, $user));
+        $canUpdateStatus = $user->can('assets.update_status')
+            && ($user->hasRole('Admin') || $this->isTeamLeaderOfWorkOrder($asset->current_work_order_id, $user));
 
-        return view('assets.show', compact('asset', 'canUpdateStatus'));
-    }
+        // null = unrestricted (Admin); otherwise the exact set of work order
+        // IDs this user leads, used to decide both whether they can dispatch
+        // this asset (must lead its current site) and whether they can
+        // confirm any one pending movement (must lead its destination site).
+        $ledWorkOrderIds = $user->hasRole('Admin') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
+            ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
+            ->pluck('id');
 
-    /**
-     * "Assigned to their site" for an Executive Team Leader means: they lead
-     * the executive team currently (not previously) assigned to the work
-     * order this asset is sitting at right now.
-     */
-    private function isSiteTeamLeaderFor(Asset $asset, User $user): bool
-    {
-        return $asset->current_work_order_id && WorkOrder::where('id', $asset->current_work_order_id)
-            ->whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
-                ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
-            ->exists();
+        $canCreateMovement = $user->can('movements.create') && (
+            $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
+        );
+
+        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement'));
     }
 
     public function edit(Asset $asset): View
@@ -221,7 +247,7 @@ class AssetController extends Controller
         $user = $request->user();
 
         if (! $user->hasRole('Admin')) {
-            abort_unless($this->isSiteTeamLeaderFor($asset, $user), 403, 'You can only update the status of assets assigned to a site you lead.');
+            abort_unless($this->isTeamLeaderOfWorkOrder($asset->current_work_order_id, $user), 403, 'You can only update the status of assets assigned to a site you lead.');
         }
 
         $data = $request->validate([
@@ -272,7 +298,11 @@ class AssetController extends Controller
 
     public function pdf(Asset $asset)
     {
-        $asset->load(['statusLogs.updatedBy', 'statusLogs.workOrder', 'currentWorkOrder.site', 'createdBy']);
+        $asset->load([
+            'statusLogs.updatedBy', 'statusLogs.workOrder',
+            'movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy',
+            'currentWorkOrder.site', 'createdBy',
+        ]);
 
         $pdf = Pdf::loadView('assets.pdf', compact('asset'));
 

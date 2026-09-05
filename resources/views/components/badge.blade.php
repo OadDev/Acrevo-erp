@@ -3,7 +3,7 @@
 @php
     $palette = match (true) {
         $color !== null => $color,
-        in_array($status, ['completed', 'passed', 'qc_passed', 'paid', 'approved', 'resolved', 'closed', 'active', 'present', 'verified', 'available', 'repaired', 'returned']) => 'emerald',
+        in_array($status, ['completed', 'passed', 'qc_passed', 'paid', 'approved', 'resolved', 'closed', 'active', 'present', 'verified', 'available', 'repaired', 'returned', 'confirmed']) => 'emerald',
         in_array($status, ['pending_hr_assignment', 'draft', 'new', 'pending', 'open', 'scheduled', 'sent', 'retired']) => 'gray',
         in_array($status, ['team_assigned', 'in_progress', 'contacted', 'site_visit_scheduled', 'quoted', 'partial', 'half_day', 'in_use', 'ready_for_return', 'expiring_soon']) => 'blue',
         in_array($status, ['qc_pending', 'client_review', 'final_qc', 'in_progress', 'submitted', 'under_repair']) => 'amber',

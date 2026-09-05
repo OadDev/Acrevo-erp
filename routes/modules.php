@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LedgerCategoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetChangeRequestController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetMovementController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
@@ -456,6 +457,24 @@ Route::middleware('permission:assets.approve')->group(function () {
     Route::get('asset-change-requests', [AssetChangeRequestController::class, 'index'])->name('asset-change-requests.index');
     Route::post('asset-change-requests/{changeRequest}/approve', [AssetChangeRequestController::class, 'approve'])->name('asset-change-requests.approve');
     Route::post('asset-change-requests/{changeRequest}/reject', [AssetChangeRequestController::class, 'reject'])->name('asset-change-requests.reject');
+});
+
+Route::middleware('permission:movements.view')->group(function () {
+    Route::get('asset-movements', [AssetMovementController::class, 'index'])->name('asset-movements.index');
+});
+Route::middleware('permission:movements.download_pdf')->group(function () {
+    Route::get('assets/{asset}/movements/pdf', [AssetMovementController::class, 'pdf'])->name('assets.movements.pdf');
+});
+Route::middleware('permission:movements.create')->group(function () {
+    Route::post('assets/{asset}/movements', [AssetMovementController::class, 'store'])->name('assets.movements.store');
+});
+Route::middleware('permission:movements.edit')->group(function () {
+    Route::get('asset-movements/{movement}/edit', [AssetMovementController::class, 'edit'])->name('asset-movements.edit');
+    Route::put('asset-movements/{movement}', [AssetMovementController::class, 'update'])->name('asset-movements.update');
+});
+Route::middleware('permission:movements.approve')->group(function () {
+    Route::post('asset-movements/{movement}/confirm', [AssetMovementController::class, 'confirm'])->name('asset-movements.confirm');
+    Route::post('asset-movements/{movement}/cancel', [AssetMovementController::class, 'cancel'])->name('asset-movements.cancel');
 });
 
 /*

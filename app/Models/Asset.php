@@ -74,6 +74,11 @@ class Asset extends Model implements HasMedia
         return $this->hasMany(AssetChangeRequest::class)->latest();
     }
 
+    public function movements(): HasMany
+    {
+        return $this->hasMany(AssetMovement::class)->orderBy('moved_at')->orderBy('id');
+    }
+
     public function warrantyStatus(): ?string
     {
         if (! $this->warranty_end) {
