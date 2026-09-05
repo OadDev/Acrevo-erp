@@ -3,17 +3,20 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSequenceNumber;
+use App\Models\Concerns\LogsAssetAudit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Asset extends Model implements HasMedia
 {
-    use HasFactory, HasSequenceNumber, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasSequenceNumber, InteractsWithMedia, LogsActivity, LogsAssetAudit, SoftDeletes;
 
     protected $sequencePrefix = 'AST';
 
@@ -42,6 +45,15 @@ class Asset extends Model implements HasMedia
             'warranty_end' => 'date',
             'purchase_cost' => 'decimal:2',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('assets')
+            ->logOnly(['asset_code', 'name', 'status', 'condition', 'current_location', 'current_work_order_id', 'category', 'brand', 'model', 'serial_number'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function registerMediaCollections(): void

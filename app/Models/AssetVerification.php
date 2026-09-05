@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsAssetAudit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class AssetVerification extends Model implements HasMedia
 {
-    use InteractsWithMedia;
+    use InteractsWithMedia, LogsActivity, LogsAssetAudit;
 
     public const RESULTS = ['verified_ok', 'damaged', 'not_found'];
 
@@ -20,6 +23,15 @@ class AssetVerification extends Model implements HasMedia
     protected function casts(): array
     {
         return ['verified_at' => 'date'];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('assets')
+            ->logOnly(['asset_id', 'result', 'condition', 'remarks', 'work_order_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function registerMediaCollections(): void

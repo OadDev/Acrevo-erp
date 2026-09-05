@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsAssetAudit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class AssetMovement extends Model
 {
+    use LogsActivity, LogsAssetAudit;
+
     public const TYPES = [
         'purchase', 'company_store', 'site_allocation', 'site_to_site_transfer',
         'site_return', 'repair_movement', 'other',
@@ -30,6 +35,15 @@ class AssetMovement extends Model
             'moved_at' => 'date',
             'confirmed_at' => 'datetime',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('assets')
+            ->logOnly(['asset_id', 'type', 'from_location', 'from_work_order_id', 'to_location', 'to_work_order_id', 'status', 'remarks'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function asset(): BelongsTo

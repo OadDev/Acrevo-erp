@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsAssetAudit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class EquipmentRequest extends Model
 {
+    use LogsActivity, LogsAssetAudit;
+
     // Requested -> Approved/Rejected -> (if Approved) Purchase Required or
     // Available -> Dispatched -> Received -> Completed, with Cancelled
     // reachable from any state before Dispatched.
@@ -28,6 +33,15 @@ class EquipmentRequest extends Model
             'required_by_date' => 'date',
             'approved_at' => 'datetime',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('assets')
+            ->logOnly(['work_order_id', 'item_name', 'category', 'quantity', 'status', 'needs_purchase', 'asset_id', 'rejection_reason', 'remarks'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function workOrder(): BelongsTo

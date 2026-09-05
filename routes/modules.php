@@ -633,6 +633,7 @@ Route::middleware('permission:masters.manage')->group(function () {
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
+    Route::get('admin/activity-logs/pdf', [ActivityLogController::class, 'pdf'])->name('admin.activity-logs.pdf');
 });
 Route::middleware('permission:system_settings.manage')->group(function () {
     Route::get('admin/settings/mail', [SettingsController::class, 'editMail'])->name('admin.settings.mail.edit');

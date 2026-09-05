@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsAssetAudit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class AssetRepair extends Model implements HasMedia
 {
-    use InteractsWithMedia;
+    use InteractsWithMedia, LogsActivity, LogsAssetAudit;
 
     public const TYPES = ['mechanical', 'electrical', 'cosmetic', 'other'];
 
@@ -29,6 +32,15 @@ class AssetRepair extends Model implements HasMedia
             'reported_date' => 'date',
             'completed_date' => 'date',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('assets')
+            ->logOnly(['asset_id', 'repair_type', 'issue_description', 'technician_vendor', 'cost', 'status', 'work_order_id', 'remarks'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function registerMediaCollections(): void
