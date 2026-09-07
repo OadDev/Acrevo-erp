@@ -146,6 +146,16 @@
                                             </form>
                                         @endif
                                     @endcan
+                                    @can('equipment_requests.edit')
+                                        <a href="{{ route('equipment-requests.edit', $equipmentRequest) }}" class="ml-2 text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                    @endcan
+                                    @can('equipment_requests.delete')
+                                        <form method="POST" action="{{ route('equipment-requests.destroy', $equipmentRequest) }}" class="inline" onsubmit="return confirm('Remove this equipment request? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                        </form>
+                                    @endcan
                                 </td>
                             </tr>
                         @endforeach

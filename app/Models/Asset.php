@@ -31,7 +31,7 @@ class Asset extends Model implements HasMedia
 
     protected $fillable = [
         'asset_code', 'name', 'category', 'brand', 'model', 'serial_number', 'status', 'condition',
-        'current_location', 'current_work_order_id',
+        'current_location', 'current_work_order_id', 'quantity',
         'purchase_date', 'purchase_cost', 'supplier', 'invoice_number',
         'warranty_start', 'warranty_end', 'warranty_provider', 'warranty_card_details',
         'remarks', 'created_by',
@@ -44,6 +44,7 @@ class Asset extends Model implements HasMedia
             'warranty_start' => 'date',
             'warranty_end' => 'date',
             'purchase_cost' => 'decimal:2',
+            'quantity' => 'integer',
         ];
     }
 
@@ -99,6 +100,23 @@ class Asset extends Model implements HasMedia
     public function verifications(): HasMany
     {
         return $this->hasMany(AssetVerification::class)->latest('verified_at')->latest('id');
+    }
+
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(AssetStock::class);
+    }
+
+    /**
+     * Every bucket with quantity > 0, grouped by location/work order, each
+     * carrying its own Available/In Transit/Missing/Damaged/Under Repair
+     * breakdown - what the "Stock by Location" card on the asset page
+     * renders.
+     */
+    public function stockByLocation()
+    {
+        return $this->stocks->where('quantity', '>', 0)
+            ->groupBy(fn (AssetStock $stock) => $stock->location.'|'.$stock->work_order_id);
     }
 
     public function warrantyStatus(): ?string

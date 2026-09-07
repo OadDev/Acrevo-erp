@@ -25,7 +25,7 @@ class AssetMovement extends Model
     public const LOCATIONS = ['supplier', 'company_store', 'work_order', 'in_transit', 'repair', 'other'];
 
     protected $fillable = [
-        'asset_id', 'type', 'from_location', 'from_work_order_id', 'to_location', 'to_work_order_id',
+        'asset_id', 'type', 'quantity', 'from_location', 'from_work_order_id', 'to_location', 'to_work_order_id',
         'status', 'moved_at', 'confirmed_at', 'remarks', 'created_by', 'confirmed_by',
     ];
 
@@ -34,6 +34,7 @@ class AssetMovement extends Model
         return [
             'moved_at' => 'date',
             'confirmed_at' => 'datetime',
+            'quantity' => 'integer',
         ];
     }
 

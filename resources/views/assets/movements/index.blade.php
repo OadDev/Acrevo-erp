@@ -66,23 +66,44 @@
                             <th class="px-4 py-3">From</th>
                             <th class="px-4 py-3">To</th>
                             <th class="px-4 py-3">Type</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Created By</th>
+                            @canany(['movements.edit', 'movements.delete'])
+                                <th class="px-4 py-3"></th>
+                            @endcanany
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($movements as $movement)
-                            <tr @if ($movement->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $movement->asset) }}'" @endif>
-                                <td class="px-4 py-3 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
-                                <td class="px-4 py-3">
+                            <tr>
+                                <td class="px-4 py-3 text-gray-500 @if ($movement->asset) cursor-pointer @endif" @if ($movement->asset) onclick="window.location='{{ route('assets.show', $movement->asset) }}'" @endif>{{ $movement->moved_at->format('d M Y') }}</td>
+                                <td class="px-4 py-3 @if ($movement->asset) cursor-pointer @endif" @if ($movement->asset) onclick="window.location='{{ route('assets.show', $movement->asset) }}'" @endif>
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $movement->asset->name ?? 'Removed Asset' }}</p>
                                     <p class="text-xs text-gray-400">{{ $movement->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $movement->quantity }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$movement->status" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->createdBy?->name }}</td>
+                                @canany(['movements.edit', 'movements.delete'])
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        @can('movements.edit')
+                                            @if ($movement->status === 'pending')
+                                                <a href="{{ route('asset-movements.edit', $movement) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                            @endif
+                                        @endcan
+                                        @can('movements.delete')
+                                            <form method="POST" action="{{ route('asset-movements.destroy', $movement) }}" class="inline" onsubmit="return confirm('Remove this movement entry? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                            </form>
+                                        @endcan
+                                    </td>
+                                @endcanany
                             </tr>
                         @endforeach
                     </tbody>

@@ -87,6 +87,36 @@ class EquipmentRequestController extends Controller
         return back()->with('success', 'Equipment request submitted.');
     }
 
+    public function edit(EquipmentRequest $equipmentRequest): View
+    {
+        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
+
+        return view('assets.equipment-requests.edit', compact('equipmentRequest', 'workOrders'));
+    }
+
+    public function update(Request $request, EquipmentRequest $equipmentRequest): RedirectResponse
+    {
+        $data = $request->validate([
+            'work_order_id' => ['nullable', 'exists:work_orders,id'],
+            'item_name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:150'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'reason' => ['nullable', 'string'],
+            'required_by_date' => ['nullable', 'date'],
+        ]);
+
+        $equipmentRequest->update($data);
+
+        return redirect()->route('equipment-requests.index')->with('success', 'Equipment request updated.');
+    }
+
+    public function destroy(EquipmentRequest $equipmentRequest): RedirectResponse
+    {
+        $equipmentRequest->delete();
+
+        return back()->with('success', 'Equipment request removed.');
+    }
+
     public function approve(Request $request, EquipmentRequest $equipmentRequest): RedirectResponse
     {
         abort_unless($equipmentRequest->status === 'requested', 422, 'This request has already been decided.');

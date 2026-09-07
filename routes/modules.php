@@ -500,6 +500,9 @@ Route::middleware('permission:movements.approve')->group(function () {
     Route::post('asset-movements/{movement}/confirm', [AssetMovementController::class, 'confirm'])->name('asset-movements.confirm');
     Route::post('asset-movements/{movement}/cancel', [AssetMovementController::class, 'cancel'])->name('asset-movements.cancel');
 });
+Route::middleware('permission:movements.delete')->group(function () {
+    Route::delete('asset-movements/{movement}', [AssetMovementController::class, 'destroy'])->name('asset-movements.destroy');
+});
 
 Route::middleware('permission:repairs.view')->group(function () {
     Route::get('asset-repairs', [AssetRepairController::class, 'index'])->name('asset-repairs.index');
@@ -511,10 +514,14 @@ Route::middleware('permission:repairs.create')->group(function () {
     Route::post('assets/{asset}/repairs', [AssetRepairController::class, 'store'])->name('assets.repairs.store');
 });
 Route::middleware('permission:repairs.edit')->group(function () {
+    Route::get('asset-repairs/{repair}/edit', [AssetRepairController::class, 'edit'])->name('asset-repairs.edit');
     Route::put('asset-repairs/{repair}', [AssetRepairController::class, 'update'])->name('asset-repairs.update');
 });
 Route::middleware('permission:repairs.update_status')->group(function () {
     Route::post('asset-repairs/{repair}/status', [AssetRepairController::class, 'updateStatus'])->name('asset-repairs.status.update');
+});
+Route::middleware('permission:repairs.delete')->group(function () {
+    Route::delete('asset-repairs/{repair}', [AssetRepairController::class, 'destroy'])->name('asset-repairs.destroy');
 });
 
 Route::middleware('permission:verifications.view')->group(function () {
@@ -525,6 +532,13 @@ Route::middleware('permission:verifications.download_pdf')->group(function () {
 });
 Route::middleware('permission:verifications.create')->group(function () {
     Route::post('assets/{asset}/verifications', [AssetVerificationController::class, 'store'])->name('assets.verifications.store');
+});
+Route::middleware('permission:verifications.edit')->group(function () {
+    Route::get('asset-verifications/{verification}/edit', [AssetVerificationController::class, 'edit'])->name('asset-verifications.edit');
+    Route::put('asset-verifications/{verification}', [AssetVerificationController::class, 'update'])->name('asset-verifications.update');
+});
+Route::middleware('permission:verifications.delete')->group(function () {
+    Route::delete('asset-verifications/{verification}', [AssetVerificationController::class, 'destroy'])->name('asset-verifications.destroy');
 });
 
 Route::middleware('permission:equipment_requests.view')->group(function () {
@@ -545,6 +559,13 @@ Route::middleware('permission:equipment_requests.approve')->group(function () {
 Route::middleware('permission:equipment_requests.receive')->group(function () {
     Route::post('equipment-requests/{equipmentRequest}/receive', [EquipmentRequestController::class, 'receive'])->name('equipment-requests.receive');
     Route::post('equipment-requests/{equipmentRequest}/complete', [EquipmentRequestController::class, 'complete'])->name('equipment-requests.complete');
+});
+Route::middleware('permission:equipment_requests.edit')->group(function () {
+    Route::get('equipment-requests/{equipmentRequest}/edit', [EquipmentRequestController::class, 'edit'])->name('equipment-requests.edit');
+    Route::put('equipment-requests/{equipmentRequest}', [EquipmentRequestController::class, 'update'])->name('equipment-requests.update');
+});
+Route::middleware('permission:equipment_requests.delete')->group(function () {
+    Route::delete('equipment-requests/{equipmentRequest}', [EquipmentRequestController::class, 'destroy'])->name('equipment-requests.destroy');
 });
 
 /*

@@ -83,17 +83,19 @@ class RolePermissionSeeder extends Seeder
         ],
         'movements' => [
             'movements.view', 'movements.create', 'movements.approve',
-            'movements.edit', 'movements.download_pdf',
+            'movements.edit', 'movements.delete', 'movements.download_pdf',
         ],
         'repairs' => [
-            'repairs.view', 'repairs.create', 'repairs.edit',
+            'repairs.view', 'repairs.create', 'repairs.edit', 'repairs.delete',
             'repairs.update_status', 'repairs.download_pdf',
         ],
         'verifications' => [
-            'verifications.view', 'verifications.create', 'verifications.download_pdf',
+            'verifications.view', 'verifications.create', 'verifications.edit',
+            'verifications.delete', 'verifications.download_pdf',
         ],
         'equipment_requests' => [
-            'equipment_requests.view', 'equipment_requests.create', 'equipment_requests.approve',
+            'equipment_requests.view', 'equipment_requests.create', 'equipment_requests.edit',
+            'equipment_requests.delete', 'equipment_requests.approve',
             'equipment_requests.receive', 'equipment_requests.download_pdf',
         ],
         'reports' => [
@@ -204,14 +206,17 @@ class RolePermissionSeeder extends Seeder
             // AssetChangeRequest queue instead of applying immediately.
             // No delete/restore/update_status either.
             'assets' => ['assets.view', 'assets.create', 'assets.edit', 'assets.view_history', 'assets.download_pdf', 'assets.view_missing'],
-            // No movements.approve - Management can dispatch/edit a
-            // movement but confirming receipt is a site-level action (an
-            // Executive Team Leader) or Admin's to make.
-            'movements' => ['movements.view', 'movements.create', 'movements.edit', 'movements.download_pdf'],
-            // No repairs.update_status - Management can log/edit a repair
-            // entry but tracking it through to completion is a site-level
-            // action (an Executive Team Leader) or Admin's to make.
-            'repairs' => ['repairs.view', 'repairs.create', 'repairs.edit', 'repairs.download_pdf'],
+            // No movements.approve - Management can dispatch a movement but
+            // confirming receipt is a site-level action (an Executive Team
+            // Leader) or Admin's to make. No movements.edit/delete either -
+            // editing or removing a movement entry is Admin-only.
+            'movements' => ['movements.view', 'movements.create', 'movements.download_pdf'],
+            // No repairs.update_status - Management can log a repair entry
+            // but tracking it through to completion is a site-level action
+            // (an Executive Team Leader) or Admin's to make. No
+            // repairs.edit/delete either - editing or removing a repair
+            // entry is Admin-only.
+            'repairs' => ['repairs.view', 'repairs.create', 'repairs.download_pdf'],
             // Management can also record a verification anywhere (not
             // site-scoped, unlike a Team Leader) as a spot-check.
             'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],

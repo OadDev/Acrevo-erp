@@ -61,25 +61,44 @@
                             <th class="px-4 py-3">Reported</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Type</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Technician / Vendor</th>
                             <th class="px-4 py-3">Warranty</th>
                             <th class="px-4 py-3 text-right">Cost</th>
                             <th class="px-4 py-3">Status</th>
+                            @canany(['repairs.edit', 'repairs.delete'])
+                                <th class="px-4 py-3"></th>
+                            @endcanany
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($repairs as $repair)
-                            <tr @if ($repair->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $repair->asset) }}'" @endif>
-                                <td class="px-4 py-3 text-gray-500">{{ $repair->reported_date->format('d M Y') }}</td>
-                                <td class="px-4 py-3">
+                            <tr>
+                                <td class="px-4 py-3 text-gray-500 @if ($repair->asset) cursor-pointer @endif" @if ($repair->asset) onclick="window.location='{{ route('assets.show', $repair->asset) }}'" @endif>{{ $repair->reported_date->format('d M Y') }}</td>
+                                <td class="px-4 py-3 @if ($repair->asset) cursor-pointer @endif" @if ($repair->asset) onclick="window.location='{{ route('assets.show', $repair->asset) }}'" @endif>
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $repair->asset->name ?? 'Removed Asset' }}</p>
                                     <p class="text-xs text-gray-400">{{ $repair->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ ucwords($repair->repair_type) }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $repair->quantity }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $repair->technician_vendor ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
                                 <td class="px-4 py-3 text-right text-gray-500">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$repair->status" /></td>
+                                @canany(['repairs.edit', 'repairs.delete'])
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        @can('repairs.edit')
+                                            <a href="{{ route('asset-repairs.edit', $repair) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                        @endcan
+                                        @can('repairs.delete')
+                                            <form method="POST" action="{{ route('asset-repairs.destroy', $repair) }}" class="inline" onsubmit="return confirm('Remove this repair entry? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                            </form>
+                                        @endcan
+                                    </td>
+                                @endcanany
                             </tr>
                         @endforeach
                     </tbody>

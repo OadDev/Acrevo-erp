@@ -44,25 +44,44 @@
                             <th class="px-4 py-3">Verified On</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Work Order</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Result</th>
                             <th class="px-4 py-3">Condition</th>
                             <th class="px-4 py-3">Verified By</th>
                             <th class="px-4 py-3">Remarks</th>
+                            @canany(['verifications.edit', 'verifications.delete'])
+                                <th class="px-4 py-3"></th>
+                            @endcanany
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($verifications as $verification)
-                            <tr @if ($verification->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $verification->asset) }}'" @endif>
-                                <td class="px-4 py-3 text-gray-500">{{ $verification->verified_at->format('d M Y') }}</td>
-                                <td class="px-4 py-3">
+                            <tr>
+                                <td class="px-4 py-3 text-gray-500 @if ($verification->asset) cursor-pointer @endif" @if ($verification->asset) onclick="window.location='{{ route('assets.show', $verification->asset) }}'" @endif>{{ $verification->verified_at->format('d M Y') }}</td>
+                                <td class="px-4 py-3 @if ($verification->asset) cursor-pointer @endif" @if ($verification->asset) onclick="window.location='{{ route('assets.show', $verification->asset) }}'" @endif>
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $verification->asset->name ?? 'Removed Asset' }}</p>
                                     <p class="text-xs text-gray-400">{{ $verification->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->workOrder?->work_order_no ?? '—' }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $verification->quantity }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$verification->result" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->condition ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->verifiedBy?->name }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->remarks ?: '—' }}</td>
+                                @canany(['verifications.edit', 'verifications.delete'])
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        @can('verifications.edit')
+                                            <a href="{{ route('asset-verifications.edit', $verification) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                        @endcan
+                                        @can('verifications.delete')
+                                            <form method="POST" action="{{ route('asset-verifications.destroy', $verification) }}" class="inline" onsubmit="return confirm('Remove this verification entry? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                            </form>
+                                        @endcan
+                                    </td>
+                                @endcanany
                             </tr>
                         @endforeach
                     </tbody>

@@ -19,7 +19,7 @@ class AssetRepair extends Model implements HasMedia
     public const STATUSES = ['reported', 'in_progress', 'completed', 'cancelled'];
 
     protected $fillable = [
-        'asset_id', 'repair_type', 'issue_description', 'technician_vendor', 'is_warranty_repair',
+        'asset_id', 'repair_type', 'quantity', 'location', 'issue_description', 'technician_vendor', 'is_warranty_repair',
         'cost', 'status', 'asset_status_before', 'work_order_id', 'reported_date', 'completed_date',
         'remarks', 'created_by',
     ];
@@ -31,6 +31,7 @@ class AssetRepair extends Model implements HasMedia
             'cost' => 'decimal:2',
             'reported_date' => 'date',
             'completed_date' => 'date',
+            'quantity' => 'integer',
         ];
     }
 
