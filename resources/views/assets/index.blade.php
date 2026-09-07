@@ -91,6 +91,7 @@
                             <th class="px-4 py-3">Category</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Condition</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Location</th>
                             <th class="px-4 py-3">Warranty</th>
                             @if ($showRemoved)
@@ -108,6 +109,7 @@
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->category ?: '—' }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$asset->status" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->condition ?: '—' }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $asset->quantity }}</td>
                                 <td class="px-4 py-3 text-gray-500">
                                     @if ($asset->current_location === 'work_order' && $asset->currentWorkOrder)
                                         {{ $asset->currentWorkOrder->work_order_no }}

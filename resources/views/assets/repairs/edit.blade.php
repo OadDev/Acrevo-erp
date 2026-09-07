@@ -9,6 +9,13 @@
             @method('PUT')
 
             <div>
+                <x-input-label value="Location / Quantity" />
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                    {{ $repair->location === 'work_order' && $repair->workOrder ? $repair->workOrder->work_order_no : ucwords(str_replace('_', ' ', $repair->location)) }} - {{ $repair->quantity }} unit(s)
+                </p>
+                <p class="mt-1 text-xs text-gray-400">Not editable, since it already moved stock between buckets. Remove and re-record this entry to change it.</p>
+            </div>
+            <div>
                 <x-input-label for="repair_type" value="Repair Type" />
                 <x-select-input id="repair_type" name="repair_type" class="mt-1 block w-full">
                     @foreach (\App\Models\AssetRepair::TYPES as $type)

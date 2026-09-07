@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\AssetChangeRequest;
 use App\Models\AssetMovement;
 use App\Models\AssetStatusLog;
+use App\Models\AssetStock;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -84,11 +85,15 @@ class AssetController extends Controller
             'status' => ['nullable', 'in:'.implode(',', Asset::STATUSES)],
             'current_location' => ['nullable', 'in:'.implode(',', Asset::LOCATIONS)],
             'current_work_order_id' => ['nullable', 'exists:work_orders,id'],
+            'quantity' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $quantity = $data['quantity'] ?? 1;
 
         $asset = Asset::create($data + [
             'status' => $data['status'] ?? 'available',
             'current_location' => $data['current_location'] ?? 'company_store',
+            'quantity' => $quantity,
             'created_by' => $request->user()->id,
         ]);
 
@@ -99,6 +104,7 @@ class AssetController extends Controller
         AssetMovement::create([
             'asset_id' => $asset->id,
             'type' => 'purchase',
+            'quantity' => $quantity,
             'from_location' => 'supplier',
             'to_location' => $asset->current_location,
             'to_work_order_id' => $asset->current_work_order_id,
@@ -109,6 +115,11 @@ class AssetController extends Controller
             'confirmed_by' => $request->user()->id,
             'confirmed_at' => now(),
         ]);
+
+        // Seeds the ledger with the asset's full quantity, Available, at
+        // wherever it landed - every later Movement/Repair/Verification
+        // moves quantity between buckets from here.
+        AssetStock::adjust($asset, $asset->current_location, $asset->current_work_order_id, 'available', $quantity);
 
         if ($error = $this->attachFiles($asset, $request)) {
             return back()->withErrors(['attachments' => $error]);
@@ -126,6 +137,7 @@ class AssetController extends Controller
             'repairs.workOrder', 'repairs.createdBy', 'repairs.media',
             'verifications.workOrder', 'verifications.verifiedBy', 'verifications.media',
             'currentWorkOrder.site', 'createdBy',
+            'stocks' => fn ($q) => $q->where('quantity', '>', 0)->with('workOrder'),
         ]);
 
         $user = $request->user();
@@ -140,19 +152,36 @@ class AssetController extends Controller
             ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
             ->pluck('id');
 
+        // The asset's stock can now sit at several work orders at once - a
+        // Team Leader may act on it as soon as any of them is a site they
+        // lead (company-store stock stays Admin/Management-only, same as
+        // before: work_order_id is null there, so it never matches).
+        $availableAtLedSite = $ledWorkOrderIds !== null && $asset->stocks
+            ->where('status', 'available')
+            ->pluck('work_order_id')
+            ->filter()
+            ->intersect($ledWorkOrderIds)
+            ->isNotEmpty();
+
         $canCreateMovement = $user->can('movements.create') && (
-            $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
+            $ledWorkOrderIds === null || $user->hasRole('Management') || $availableAtLedSite
         );
 
         $canCreateRepair = $user->can('repairs.create') && (
-            $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
+            $ledWorkOrderIds === null || $user->hasRole('Management') || $availableAtLedSite
         );
 
         $canCreateVerification = $user->can('verifications.create') && (
-            $ledWorkOrderIds === null || $user->hasRole('Management') || $ledWorkOrderIds->contains($asset->current_work_order_id)
+            $ledWorkOrderIds === null || $user->hasRole('Management') || $availableAtLedSite
         );
 
-        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair', 'canCreateVerification'));
+        // Where this Team Leader may pick as the "at" location for a new
+        // Repair/Verification, or as the source for a new Movement -
+        // Admin/Management get every bucket that actually holds stock.
+        $availableStocks = $asset->stocks->where('status', 'available')->where('quantity', '>', 0)
+            ->when($ledWorkOrderIds !== null && ! $user->hasRole('Management'), fn ($stocks) => $stocks->filter(fn ($stock) => $stock->work_order_id && $ledWorkOrderIds->contains($stock->work_order_id)));
+
+        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair', 'canCreateVerification', 'availableStocks'));
     }
 
     public function edit(Asset $asset): View

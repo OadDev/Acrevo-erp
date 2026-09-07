@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ChecksSiteTeamLeadership;
 use App\Http\Controllers\Concerns\LogsAssetStatusChanges;
 use App\Models\Asset;
+use App\Models\AssetStock;
 use App\Models\AssetVerification;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
@@ -50,29 +51,52 @@ class AssetVerificationController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasRole('Admin') && ! $user->hasRole('Management')) {
-            abort_unless($this->isTeamLeaderOfWorkOrder($asset->current_work_order_id, $user), 403, 'You can only verify assets at a site you lead.');
-        }
-
         $data = $request->validate([
             'result' => ['required', 'in:'.implode(',', AssetVerification::RESULTS)],
+            'location' => ['required', 'in:'.implode(',', Asset::LOCATIONS)],
+            'work_order_id' => ['nullable', 'exists:work_orders,id'],
+            'quantity' => ['required', 'integer', 'min:1'],
             'condition' => ['nullable', 'string', 'max:150'],
             'remarks' => ['nullable', 'string'],
             'verified_at' => ['required', 'date'],
             'proof' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
+        if (! $user->hasRole('Admin') && ! $user->hasRole('Management')) {
+            abort_unless($this->isTeamLeaderOfWorkOrder($data['work_order_id'] ?? null, $user), 403, 'You can only verify assets at a site you lead.');
+        }
+
+        $available = AssetStock::availableAt($asset, $data['location'], $data['work_order_id'] ?? null);
+        if ($data['quantity'] > $available) {
+            return back()->withErrors(['quantity' => "Only {$available} available at that location."])->withInput();
+        }
+
         $verification = AssetVerification::create($data + [
             'asset_id' => $asset->id,
-            'work_order_id' => $asset->current_work_order_id,
             'verified_by' => $user->id,
         ]);
 
-        match ($data['result']) {
-            'not_found' => $this->transitionAssetStatus($asset, 'missing', $user, "Verification #{$verification->id} found the asset missing."),
-            'damaged' => $this->transitionAssetStatus($asset, 'damaged', $user, "Verification #{$verification->id} found the asset damaged."),
+        $badBucket = match ($data['result']) {
+            'not_found' => 'missing',
+            'damaged' => 'damaged',
             default => null,
         };
+
+        if ($badBucket) {
+            AssetStock::adjust($asset, $data['location'], $data['work_order_id'] ?? null, 'available', -$data['quantity']);
+            AssetStock::adjust($asset, $data['location'], $data['work_order_id'] ?? null, $badBucket, $data['quantity']);
+        }
+
+        // Legacy whole-asset status flag only flips when this verification
+        // covers everything that was available there, mirroring the same
+        // heuristic used by Movement::confirm() and repair reporting.
+        if ($data['quantity'] === $available) {
+            match ($data['result']) {
+                'not_found' => $this->transitionAssetStatus($asset, 'missing', $user, "Verification #{$verification->id} found the asset missing."),
+                'damaged' => $this->transitionAssetStatus($asset, 'damaged', $user, "Verification #{$verification->id} found the asset damaged."),
+                default => null,
+            };
+        }
 
         if ($request->hasFile('proof')) {
             try {
@@ -92,10 +116,16 @@ class AssetVerificationController extends Controller
         return view('assets.verifications.edit', compact('verification'));
     }
 
+    /**
+     * result/location/quantity/work_order_id are deliberately not editable
+     * here - they already moved quantity between Asset Stock buckets when
+     * this verification was recorded, and changing them after the fact
+     * without re-deriving that ledger effect would desync it. Only the
+     * descriptive fields can be corrected.
+     */
     public function update(Request $request, AssetVerification $verification): RedirectResponse
     {
         $data = $request->validate([
-            'result' => ['required', 'in:'.implode(',', AssetVerification::RESULTS)],
             'condition' => ['nullable', 'string', 'max:150'],
             'remarks' => ['nullable', 'string'],
             'verified_at' => ['required', 'date'],
@@ -106,6 +136,13 @@ class AssetVerificationController extends Controller
         return redirect()->route('assets.show', $verification->asset_id)->with('success', 'Verification updated.');
     }
 
+    /**
+     * Deleting a verification only removes the history entry - it does not
+     * move quantity back to Available. Unlike a pending Movement or an
+     * open Repair, a verification's Missing/Damaged finding isn't a
+     * reservation waiting to be settled; it's a real-world fact as of that
+     * check, and removing the record shouldn't silently un-report it.
+     */
     public function destroy(AssetVerification $verification): RedirectResponse
     {
         $verification->delete();

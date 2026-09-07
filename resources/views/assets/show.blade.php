@@ -38,6 +38,7 @@
                     <div><dt class="text-gray-400">Brand / Model</dt><dd class="text-gray-800 dark:text-gray-200">{{ collect([$asset->brand, $asset->model])->filter()->join(' / ') ?: '—' }}</dd></div>
                     <div><dt class="text-gray-400">Serial Number</dt><dd class="text-gray-800 dark:text-gray-200">{{ $asset->serial_number ?: '—' }}</dd></div>
                     <div><dt class="text-gray-400">Condition</dt><dd class="text-gray-800 dark:text-gray-200">{{ $asset->condition ?: '—' }}</dd></div>
+                    <div><dt class="text-gray-400">Quantity</dt><dd class="text-gray-800 dark:text-gray-200">{{ $asset->quantity }}</dd></div>
                     <div><dt class="text-gray-400">Current Location</dt>
                         <dd class="text-gray-800 dark:text-gray-200">
                             @if ($asset->current_location === 'work_order' && $asset->currentWorkOrder)
@@ -49,6 +50,48 @@
                     </div>
                     <div class="col-span-2"><dt class="text-gray-400">Remarks</dt><dd class="text-gray-800 dark:text-gray-200">{{ $asset->remarks ?: '—' }}</dd></div>
                 </dl>
+            </x-card>
+
+            <x-card :padded="false">
+                <div class="flex items-center justify-between p-4">
+                    <h3 class="text-sm font-semibold text-gray-500">Stock by Location</h3>
+                    <span class="text-xs text-gray-400">Total Quantity: {{ $asset->quantity }}</span>
+                </div>
+                @if ($asset->stocks->isEmpty())
+                    <p class="px-4 pb-4 text-sm text-gray-400">No stock recorded yet.</p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    <th class="px-4 py-2">Location</th>
+                                    <th class="px-4 py-2 text-right">Available</th>
+                                    <th class="px-4 py-2 text-right">In Transit</th>
+                                    <th class="px-4 py-2 text-right">Missing</th>
+                                    <th class="px-4 py-2 text-right">Damaged</th>
+                                    <th class="px-4 py-2 text-right">Under Repair</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach ($asset->stockByLocation() as $group)
+                                    @php $first = $group->first(); @endphp
+                                    <tr>
+                                        <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+                                            @if ($first->location === 'work_order' && $first->workOrder)
+                                                <a href="{{ route('work-orders.show', $first->workOrder) }}" class="text-indigo-600 hover:underline">{{ $first->workOrder->work_order_no }}</a>
+                                            @else
+                                                {{ ucwords(str_replace('_', ' ', $first->location)) }}
+                                            @endif
+                                        </td>
+                                        @foreach (\App\Models\AssetStock::STATUSES as $status)
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $group->firstWhere('status', $status)->quantity ?? 0 }}</td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </x-card>
 
             <x-card>
@@ -128,6 +171,7 @@
                                         <th class="px-4 py-2">From</th>
                                         <th class="px-4 py-2">To</th>
                                         <th class="px-4 py-2">Type</th>
+                                        <th class="px-4 py-2 text-right">Qty</th>
                                         <th class="px-4 py-2">Status</th>
                                         <th class="px-4 py-2">Remarks</th>
                                         <th class="px-4 py-2"></th>
@@ -141,6 +185,7 @@
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $movement->quantity }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$movement->status" /></td>
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->remarks ?: '—' }}</td>
                                             <td class="px-4 py-2 text-right whitespace-nowrap">
@@ -190,6 +235,8 @@
                                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         <th class="px-4 py-2">Reported</th>
                                         <th class="px-4 py-2">Type</th>
+                                        <th class="px-4 py-2">At</th>
+                                        <th class="px-4 py-2 text-right">Qty</th>
                                         <th class="px-4 py-2">Issue</th>
                                         <th class="px-4 py-2">Technician / Vendor</th>
                                         <th class="px-4 py-2">Warranty</th>
@@ -204,6 +251,8 @@
                                         <tr>
                                             <td class="px-4 py-2 text-gray-500">{{ $repair->reported_date->format('d M Y') }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ ucwords($repair->repair_type) }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $repair->location === 'work_order' && $repair->workOrder ? $repair->workOrder->work_order_no : ucwords(str_replace('_', ' ', $repair->location)) }}</td>
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $repair->quantity }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $repair->issue_description }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $repair->technician_vendor ?: '—' }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
@@ -255,6 +304,8 @@
                                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         <th class="px-4 py-2">Verified On</th>
+                                        <th class="px-4 py-2">At</th>
+                                        <th class="px-4 py-2 text-right">Qty</th>
                                         <th class="px-4 py-2">Result</th>
                                         <th class="px-4 py-2">Condition</th>
                                         <th class="px-4 py-2">Verified By</th>
@@ -269,6 +320,8 @@
                                     @foreach ($asset->verifications as $verification)
                                         <tr>
                                             <td class="px-4 py-2 text-gray-500">{{ $verification->verified_at->format('d M Y') }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $verification->location === 'work_order' && $verification->workOrder ? $verification->workOrder->work_order_no : ucwords(str_replace('_', ' ', $verification->location)) }}</td>
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $verification->quantity }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$verification->result" /></td>
                                             <td class="px-4 py-2 text-gray-500">{{ $verification->condition ?: '—' }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $verification->verifiedBy?->name }}</td>
@@ -398,81 +451,150 @@
             @if ($canCreateMovement)
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">New Movement</h3>
-                    <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3" x-data="{ toLocation: 'work_order' }">
-                        @csrf
-                        <x-select-input name="type" class="w-full text-sm" required>
-                            @foreach (\App\Models\AssetMovement::TYPES as $type)
-                                @continue($type === 'purchase')
-                                <option value="{{ $type }}">{{ ucwords(str_replace('_', ' ', $type)) }}</option>
-                            @endforeach
-                        </x-select-input>
-                        <x-select-input name="to_location" class="w-full text-sm" x-model="toLocation" required>
-                            @foreach (\App\Models\AssetMovement::LOCATIONS as $location)
-                                <option value="{{ $location }}">{{ ucwords(str_replace('_', ' ', $location)) }}</option>
-                            @endforeach
-                        </x-select-input>
-                        <div x-show="toLocation === 'work_order'">
-                            <x-select-input name="to_work_order_id" class="w-full text-sm">
-                                <option value="">Select Work Order</option>
-                                @foreach (\App\Models\WorkOrder::orderByDesc('created_at')->limit(200)->get() as $wo)
-                                    <option value="{{ $wo->id }}">{{ $wo->work_order_no }}</option>
+                    @if ($availableStocks->isEmpty())
+                        <p class="text-sm text-gray-400">No available stock to move.</p>
+                    @else
+                        <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3" x-data="{ toLocation: 'work_order', from: '', fromAvailable: null }">
+                            @csrf
+                            <x-select-input name="type" class="w-full text-sm" required>
+                                @foreach (\App\Models\AssetMovement::TYPES as $type)
+                                    @continue($type === 'purchase')
+                                    <option value="{{ $type }}">{{ ucwords(str_replace('_', ' ', $type)) }}</option>
                                 @endforeach
                             </x-select-input>
-                        </div>
-                        <x-text-input type="date" name="moved_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
-                        <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
-                        <x-primary-button class="w-full justify-center">Record Movement</x-primary-button>
-                    </form>
+                            <div>
+                                <x-input-label value="From Location" />
+                                <x-select-input class="w-full text-sm" required
+                                    x-on:change="const o = $event.target.selectedOptions[0]; from = o.value; fromAvailable = o.dataset.available">
+                                    <option value="">Select Location</option>
+                                    @foreach ($availableStocks as $stock)
+                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
+                                            {{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} — {{ $stock->quantity }} available
+                                        </option>
+                                    @endforeach
+                                </x-select-input>
+                                <input type="hidden" name="from_location" :value="from.split('|')[0]">
+                                <input type="hidden" name="from_work_order_id" :value="from.split('|')[1] || ''">
+                            </div>
+                            <div>
+                                <x-input-label value="Quantity" />
+                                <x-text-input type="number" name="quantity" min="1" x-bind:max="fromAvailable" class="w-full text-sm" required />
+                                <p class="mt-1 text-xs text-gray-400" x-show="fromAvailable" x-text="'Max ' + fromAvailable + ' available.'"></p>
+                            </div>
+                            <x-select-input name="to_location" class="w-full text-sm" x-model="toLocation" required>
+                                @foreach (\App\Models\AssetMovement::LOCATIONS as $location)
+                                    <option value="{{ $location }}">{{ ucwords(str_replace('_', ' ', $location)) }}</option>
+                                @endforeach
+                            </x-select-input>
+                            <div x-show="toLocation === 'work_order'">
+                                <x-select-input name="to_work_order_id" class="w-full text-sm">
+                                    <option value="">Select Work Order</option>
+                                    @foreach (\App\Models\WorkOrder::orderByDesc('created_at')->limit(200)->get() as $wo)
+                                        <option value="{{ $wo->id }}">{{ $wo->work_order_no }}</option>
+                                    @endforeach
+                                </x-select-input>
+                            </div>
+                            <x-text-input type="date" name="moved_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
+                            <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
+                            <x-primary-button class="w-full justify-center">Record Movement</x-primary-button>
+                        </form>
+                    @endif
                 </x-card>
             @endif
 
             @if ($canCreateVerification)
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">Verify Asset</h3>
-                    <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3">
-                        @csrf
-                        <x-select-input name="result" class="w-full text-sm" required>
-                            @foreach (\App\Models\AssetVerification::RESULTS as $result)
-                                <option value="{{ $result }}">{{ ucwords(str_replace('_', ' ', $result)) }}</option>
-                            @endforeach
-                        </x-select-input>
-                        <x-text-input name="condition" class="w-full text-sm" placeholder="Condition observed" />
-                        <x-text-input type="date" name="verified_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
-                        <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
-                        <div>
-                            <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
-                            <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
-                        </div>
-                        <x-primary-button class="w-full justify-center">Record Verification</x-primary-button>
-                    </form>
+                    @if ($availableStocks->isEmpty())
+                        <p class="text-sm text-gray-400">No available stock to verify.</p>
+                    @else
+                        <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ at: '', atAvailable: null }">
+                            @csrf
+                            <x-select-input name="result" class="w-full text-sm" required>
+                                @foreach (\App\Models\AssetVerification::RESULTS as $result)
+                                    <option value="{{ $result }}">{{ ucwords(str_replace('_', ' ', $result)) }}</option>
+                                @endforeach
+                            </x-select-input>
+                            <div>
+                                <x-input-label value="At Location" />
+                                <x-select-input class="w-full text-sm" required
+                                    x-on:change="const o = $event.target.selectedOptions[0]; at = o.value; atAvailable = o.dataset.available">
+                                    <option value="">Select Location</option>
+                                    @foreach ($availableStocks as $stock)
+                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
+                                            {{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} — {{ $stock->quantity }} available
+                                        </option>
+                                    @endforeach
+                                </x-select-input>
+                                <input type="hidden" name="location" :value="at.split('|')[0]">
+                                <input type="hidden" name="work_order_id" :value="at.split('|')[1] || ''">
+                            </div>
+                            <div>
+                                <x-input-label value="Quantity" />
+                                <x-text-input type="number" name="quantity" min="1" x-bind:max="atAvailable" class="w-full text-sm" required />
+                                <p class="mt-1 text-xs text-gray-400" x-show="atAvailable" x-text="'Max ' + atAvailable + ' available.'"></p>
+                            </div>
+                            <x-text-input name="condition" class="w-full text-sm" placeholder="Condition observed" />
+                            <x-text-input type="date" name="verified_at" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
+                            <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
+                            <div>
+                                <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
+                                <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
+                            </div>
+                            <x-primary-button class="w-full justify-center">Record Verification</x-primary-button>
+                        </form>
+                    @endif
                 </x-card>
             @endif
 
             @if ($canCreateRepair)
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">Report a Repair</h3>
-                    <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3">
-                        @csrf
-                        <x-select-input name="repair_type" class="w-full text-sm" required>
-                            @foreach (\App\Models\AssetRepair::TYPES as $type)
-                                <option value="{{ $type }}">{{ ucwords($type) }}</option>
-                            @endforeach
-                        </x-select-input>
-                        <x-textarea-input name="issue_description" rows="2" class="w-full text-sm" placeholder="Issue description" required></x-textarea-input>
-                        <x-text-input name="technician_vendor" class="w-full text-sm" placeholder="Technician / Vendor" />
-                        <label class="flex items-center gap-2 text-xs text-gray-500">
-                            <input type="checkbox" name="is_warranty_repair" value="1" class="rounded border-gray-300">
-                            Warranty repair
-                        </label>
-                        <x-text-input type="number" step="0.01" name="cost" class="w-full text-sm" placeholder="Cost (if known)" />
-                        <x-text-input type="date" name="reported_date" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
-                        <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
-                        <div>
-                            <label class="text-xs text-gray-400">Attachments (optional)</label>
-                            <input type="file" name="attachments[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="mt-1 block w-full text-sm">
-                        </div>
-                        <x-primary-button class="w-full justify-center">Report Repair</x-primary-button>
-                    </form>
+                    @if ($availableStocks->isEmpty())
+                        <p class="text-sm text-gray-400">No available stock to report a repair for.</p>
+                    @else
+                        <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ at: '', atAvailable: null }">
+                            @csrf
+                            <x-select-input name="repair_type" class="w-full text-sm" required>
+                                @foreach (\App\Models\AssetRepair::TYPES as $type)
+                                    <option value="{{ $type }}">{{ ucwords($type) }}</option>
+                                @endforeach
+                            </x-select-input>
+                            <div>
+                                <x-input-label value="At Location" />
+                                <x-select-input class="w-full text-sm" required
+                                    x-on:change="const o = $event.target.selectedOptions[0]; at = o.value; atAvailable = o.dataset.available">
+                                    <option value="">Select Location</option>
+                                    @foreach ($availableStocks as $stock)
+                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
+                                            {{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} — {{ $stock->quantity }} available
+                                        </option>
+                                    @endforeach
+                                </x-select-input>
+                                <input type="hidden" name="location" :value="at.split('|')[0]">
+                                <input type="hidden" name="work_order_id" :value="at.split('|')[1] || ''">
+                            </div>
+                            <div>
+                                <x-input-label value="Quantity" />
+                                <x-text-input type="number" name="quantity" min="1" x-bind:max="atAvailable" class="w-full text-sm" required />
+                                <p class="mt-1 text-xs text-gray-400" x-show="atAvailable" x-text="'Max ' + atAvailable + ' available.'"></p>
+                            </div>
+                            <x-textarea-input name="issue_description" rows="2" class="w-full text-sm" placeholder="Issue description" required></x-textarea-input>
+                            <x-text-input name="technician_vendor" class="w-full text-sm" placeholder="Technician / Vendor" />
+                            <label class="flex items-center gap-2 text-xs text-gray-500">
+                                <input type="checkbox" name="is_warranty_repair" value="1" class="rounded border-gray-300">
+                                Warranty repair
+                            </label>
+                            <x-text-input type="number" step="0.01" name="cost" class="w-full text-sm" placeholder="Cost (if known)" />
+                            <x-text-input type="date" name="reported_date" class="w-full text-sm" value="{{ now()->format('Y-m-d') }}" required />
+                            <x-textarea-input name="remarks" rows="2" class="w-full text-sm" placeholder="Remarks"></x-textarea-input>
+                            <div>
+                                <label class="text-xs text-gray-400">Attachments (optional)</label>
+                                <input type="file" name="attachments[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="mt-1 block w-full text-sm">
+                            </div>
+                            <x-primary-button class="w-full justify-center">Report Repair</x-primary-button>
+                        </form>
+                    @endif
                 </x-card>
             @endif
 

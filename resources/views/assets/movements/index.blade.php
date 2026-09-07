@@ -66,6 +66,7 @@
                             <th class="px-4 py-3">From</th>
                             <th class="px-4 py-3">To</th>
                             <th class="px-4 py-3">Type</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Created By</th>
                             @canany(['movements.edit', 'movements.delete'])
@@ -84,6 +85,7 @@
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $movement->quantity }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$movement->status" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->createdBy?->name }}</td>
                                 @canany(['movements.edit', 'movements.delete'])

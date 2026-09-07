@@ -9,12 +9,12 @@
             @method('PUT')
 
             <div>
-                <x-input-label for="result" value="Result" />
-                <x-select-input id="result" name="result" class="mt-1 block w-full">
-                    @foreach (\App\Models\AssetVerification::RESULTS as $result)
-                        <option value="{{ $result }}" @selected(old('result', $verification->result) === $result)>{{ ucwords(str_replace('_', ' ', $result)) }}</option>
-                    @endforeach
-                </x-select-input>
+                <x-input-label value="Result" />
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ ucwords(str_replace('_', ' ', $verification->result)) }}</p>
+                <p class="mt-1 text-xs text-gray-400">
+                    At {{ $verification->location === 'work_order' && $verification->workOrder ? $verification->workOrder->work_order_no : ucwords(str_replace('_', ' ', $verification->location)) }},
+                    quantity {{ $verification->quantity }} - not editable, since it already moved stock between buckets. Remove and re-record this entry to change it.
+                </p>
             </div>
             <div>
                 <x-input-label for="condition" value="Condition" />

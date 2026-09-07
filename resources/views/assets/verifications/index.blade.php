@@ -44,6 +44,7 @@
                             <th class="px-4 py-3">Verified On</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Work Order</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Result</th>
                             <th class="px-4 py-3">Condition</th>
                             <th class="px-4 py-3">Verified By</th>
@@ -62,6 +63,7 @@
                                     <p class="text-xs text-gray-400">{{ $verification->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->workOrder?->work_order_no ?? '—' }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $verification->quantity }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$verification->result" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->condition ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $verification->verifiedBy?->name }}</td>

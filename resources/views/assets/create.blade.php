@@ -30,6 +30,10 @@
                     <x-text-input id="serial_number" name="serial_number" class="mt-1 block w-full" value="{{ old('serial_number') }}" />
                 </div>
                 <div>
+                    <x-input-label for="quantity" value="Quantity" />
+                    <x-text-input id="quantity" type="number" min="1" name="quantity" class="mt-1 block w-full" value="{{ old('quantity', 1) }}" required />
+                </div>
+                <div>
                     <x-input-label for="condition" value="Current Condition" />
                     <x-text-input id="condition" name="condition" class="mt-1 block w-full" value="{{ old('condition') }}" placeholder="e.g. Good, Fair, Needs Service" />
                 </div>

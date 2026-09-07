@@ -61,6 +61,7 @@
                             <th class="px-4 py-3">Reported</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Type</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
                             <th class="px-4 py-3">Technician / Vendor</th>
                             <th class="px-4 py-3">Warranty</th>
                             <th class="px-4 py-3 text-right">Cost</th>
@@ -79,6 +80,7 @@
                                     <p class="text-xs text-gray-400">{{ $repair->asset->asset_code ?? '—' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ ucwords($repair->repair_type) }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $repair->quantity }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $repair->technician_vendor ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
                                 <td class="px-4 py-3 text-right text-gray-500">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>

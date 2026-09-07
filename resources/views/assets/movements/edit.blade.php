@@ -35,6 +35,11 @@
                 </x-select-input>
             </div>
             <div>
+                <x-input-label for="quantity" value="Quantity" />
+                <x-text-input id="quantity" type="number" min="1" name="quantity" class="mt-1 block w-full" value="{{ old('quantity', $movement->quantity) }}" required />
+                <p class="mt-1 text-xs text-gray-400">From: {{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }} (fixed - cancel and re-record to change the source).</p>
+            </div>
+            <div>
                 <x-input-label for="moved_at" value="Date" />
                 <x-text-input id="moved_at" type="date" name="moved_at" class="mt-1 block w-full" value="{{ old('moved_at', $movement->moved_at->format('Y-m-d')) }}" required />
             </div>
