@@ -85,6 +85,34 @@ class AssetVerificationController extends Controller
         return back()->with('success', 'Verification recorded.');
     }
 
+    public function edit(AssetVerification $verification): View
+    {
+        $verification->load('asset');
+
+        return view('assets.verifications.edit', compact('verification'));
+    }
+
+    public function update(Request $request, AssetVerification $verification): RedirectResponse
+    {
+        $data = $request->validate([
+            'result' => ['required', 'in:'.implode(',', AssetVerification::RESULTS)],
+            'condition' => ['nullable', 'string', 'max:150'],
+            'remarks' => ['nullable', 'string'],
+            'verified_at' => ['required', 'date'],
+        ]);
+
+        $verification->update($data);
+
+        return redirect()->route('assets.show', $verification->asset_id)->with('success', 'Verification updated.');
+    }
+
+    public function destroy(AssetVerification $verification): RedirectResponse
+    {
+        $verification->delete();
+
+        return back()->with('success', 'Verification entry removed.');
+    }
+
     public function pdf(Asset $asset)
     {
         $asset->load(['verifications.workOrder', 'verifications.verifiedBy']);

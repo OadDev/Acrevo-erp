@@ -161,6 +161,13 @@
                                                         @endif
                                                     @endcan
                                                 @endif
+                                                @can('movements.delete')
+                                                    <form method="POST" action="{{ route('asset-movements.destroy', $movement) }}" class="inline" onsubmit="return confirm('Remove this movement entry? This cannot be undone.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                                    </form>
+                                                @endcan
                                             </td>
                                         </tr>
                                     @endforeach
@@ -217,6 +224,16 @@
                                                         </form>
                                                     @endif
                                                 @endcan
+                                                @can('repairs.edit')
+                                                    <a href="{{ route('asset-repairs.edit', $repair) }}" class="ml-2 text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                                @endcan
+                                                @can('repairs.delete')
+                                                    <form method="POST" action="{{ route('asset-repairs.destroy', $repair) }}" class="inline" onsubmit="return confirm('Remove this repair entry? This cannot be undone.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                                    </form>
+                                                @endcan
                                             </td>
                                         </tr>
                                     @endforeach
@@ -243,6 +260,9 @@
                                         <th class="px-4 py-2">Verified By</th>
                                         <th class="px-4 py-2">Remarks</th>
                                         <th class="px-4 py-2">Proof</th>
+                                        @canany(['verifications.edit', 'verifications.delete'])
+                                            <th class="px-4 py-2"></th>
+                                        @endcanany
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -258,6 +278,20 @@
                                                     <a href="{{ $proof->getUrl() }}" target="_blank" class="text-xs text-indigo-600 hover:underline">View</a>
                                                 @endforeach
                                             </td>
+                                            @canany(['verifications.edit', 'verifications.delete'])
+                                                <td class="px-4 py-2 text-right whitespace-nowrap">
+                                                    @can('verifications.edit')
+                                                        <a href="{{ route('asset-verifications.edit', $verification) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                                                    @endcan
+                                                    @can('verifications.delete')
+                                                        <form method="POST" action="{{ route('asset-verifications.destroy', $verification) }}" class="inline" onsubmit="return confirm('Remove this verification entry? This cannot be undone.')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Remove</button>
+                                                        </form>
+                                                    @endcan
+                                                </td>
+                                            @endcanany
                                         </tr>
                                     @endforeach
                                 </tbody>

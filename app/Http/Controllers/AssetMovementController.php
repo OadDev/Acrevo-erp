@@ -148,6 +148,13 @@ class AssetMovementController extends Controller
         return back()->with('success', 'Movement cancelled. The asset\'s location is unchanged.');
     }
 
+    public function destroy(AssetMovement $movement): RedirectResponse
+    {
+        $movement->delete();
+
+        return back()->with('success', 'Movement removed.');
+    }
+
     public function pdf(Asset $asset)
     {
         $asset->load(['movements.fromWorkOrder', 'movements.toWorkOrder', 'movements.createdBy', 'movements.confirmedBy']);

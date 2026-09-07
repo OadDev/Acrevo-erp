@@ -89,6 +89,13 @@ class AssetRepairController extends Controller
         return back()->with('success', 'Repair entry recorded.');
     }
 
+    public function edit(AssetRepair $repair): View
+    {
+        $repair->load('asset');
+
+        return view('assets.repairs.edit', compact('repair'));
+    }
+
     public function update(Request $request, AssetRepair $repair): RedirectResponse
     {
         $data = $request->validate([
@@ -138,6 +145,13 @@ class AssetRepairController extends Controller
         };
 
         return back()->with('success', "Repair marked \"{$data['status']}\".");
+    }
+
+    public function destroy(AssetRepair $repair): RedirectResponse
+    {
+        $repair->delete();
+
+        return back()->with('success', 'Repair entry removed.');
     }
 
     public function pdf(Asset $asset)
