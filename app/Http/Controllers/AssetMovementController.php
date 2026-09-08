@@ -121,16 +121,23 @@ class AssetMovementController extends Controller
         // Undo this movement's existing reservation, then check the new
         // quantity against what that frees up at the source - simplest way
         // to keep the ledger correct whatever combination of type/
-        // to_location/quantity actually changed.
-        AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', -$movement->quantity);
-        AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $movement->quantity);
+        // to_location/quantity actually changed. release() (rather than a
+        // blind adjust()) is safe for a movement that predates the
+        // quantity ledger and never actually reserved anything - it
+        // releases at most what's really sitting in that bucket.
+        $released = AssetStock::release($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', $movement->quantity);
+        if ($released > 0) {
+            AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $released);
+        }
 
         $available = AssetStock::availableAt($asset, $movement->from_location, $movement->from_work_order_id);
         if ($data['quantity'] > $available) {
             // Redo the original reservation before bailing, so a rejected
             // edit doesn't leave the ledger mid-change.
-            AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', -$movement->quantity);
-            AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', $movement->quantity);
+            if ($released > 0) {
+                AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', -$released);
+                AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', $released);
+            }
 
             return back()->withErrors(['quantity' => "Only {$available} available at that location."])->withInput();
         }
@@ -168,7 +175,16 @@ class AssetMovementController extends Controller
         // movement sat pending; it must still resolve to settle the ledger.
         $asset = Asset::withTrashed()->find($movement->asset_id);
 
-        AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', -$movement->quantity);
+        // release() rather than a blind adjust() - a movement that predates
+        // the quantity ledger never actually reserved anything here, so
+        // there's nothing to release; the asset is still arriving though,
+        // so debit the source for whatever wasn't already reserved instead
+        // (best effort - release() clamps if the source is short too).
+        $released = AssetStock::release($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', $movement->quantity);
+        $unreserved = $movement->quantity - $released;
+        if ($unreserved > 0) {
+            AssetStock::release($asset, $movement->from_location, $movement->from_work_order_id, 'available', $unreserved);
+        }
         AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'available', $movement->quantity);
 
         // Keeps the legacy single current_location/current_work_order_id in
@@ -200,8 +216,13 @@ class AssetMovementController extends Controller
         // withTrashed() - the asset may have been removed while this
         // movement sat pending; it must still resolve to settle the ledger.
         $asset = Asset::withTrashed()->find($movement->asset_id);
-        AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', -$movement->quantity);
-        AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $movement->quantity);
+        // release() - a movement that predates the quantity ledger never
+        // actually reserved anything, so there's nothing to give back to
+        // the source either.
+        $released = AssetStock::release($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', $movement->quantity);
+        if ($released > 0) {
+            AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $released);
+        }
 
         $movement->update(['status' => 'cancelled']);
 
@@ -217,8 +238,13 @@ class AssetMovementController extends Controller
             // withTrashed() - the asset may have been removed since.
             $asset = Asset::withTrashed()->find($movement->asset_id);
             if ($asset) {
-                AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', -$movement->quantity);
-                AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $movement->quantity);
+                // release() - a movement that predates the quantity ledger
+                // never actually reserved anything, so there's nothing to
+                // give back to the source either.
+                $released = AssetStock::release($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', $movement->quantity);
+                if ($released > 0) {
+                    AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $released);
+                }
             }
         }
 
