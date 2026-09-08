@@ -13,7 +13,7 @@
                 <x-select-input id="type" name="type" class="mt-1 block w-full">
                     @foreach (\App\Models\AssetMovement::TYPES as $type)
                         @continue($type === 'purchase')
-                        <option value="{{ $type }}" @selected(old('type', $movement->type) === $type)>{{ ucwords(str_replace('_', ' ', $type)) }}</option>
+                        <option value="{{ $type }}" @selected(old('type', $movement->type) === $type)>{{ \App\Models\AssetMovement::labelForType($type) }}</option>
                     @endforeach
                 </x-select-input>
             </div>

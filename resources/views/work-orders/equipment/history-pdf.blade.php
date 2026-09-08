@@ -41,7 +41,7 @@
                         <td>{{ $movement->asset->asset_code }} — {{ $movement->asset->name }}</td>
                         <td>{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                         <td>{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
-                        <td>{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                        <td>{{ $movement->typeLabel() }}</td>
                         <td>{{ ucwords($movement->status) }}</td>
                     </tr>
                 @endforeach

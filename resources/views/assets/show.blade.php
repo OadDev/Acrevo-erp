@@ -184,7 +184,7 @@
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
-                                            <td class="px-4 py-2 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                            <td class="px-4 py-2 text-gray-500">{{ $movement->typeLabel() }}</td>
                                             <td class="px-4 py-2 text-right text-gray-500">{{ $movement->quantity }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$movement->status" /></td>
                                             <td class="px-4 py-2 text-gray-500">{{ $movement->remarks ?: '—' }}</td>
@@ -459,7 +459,7 @@
                             <x-select-input name="type" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetMovement::TYPES as $type)
                                     @continue($type === 'purchase')
-                                    <option value="{{ $type }}">{{ ucwords(str_replace('_', ' ', $type)) }}</option>
+                                    <option value="{{ $type }}">{{ \App\Models\AssetMovement::labelForType($type) }}</option>
                                 @endforeach
                             </x-select-input>
                             <div>
