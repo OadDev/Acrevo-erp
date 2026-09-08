@@ -126,10 +126,15 @@
                                     @endif
                                 </td>
                                 @if ($showRemoved)
-                                    <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
-                                        <form method="POST" action="{{ route('assets.restore', $asset->id) }}">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+                                        <form method="POST" action="{{ route('assets.restore', $asset->id) }}" class="inline">
                                             @csrf
                                             <button class="text-sm font-medium text-indigo-600 hover:underline">Restore</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('assets.force-delete', $asset->id) }}" class="inline" onsubmit="return confirm('Permanently delete {{ $asset->asset_code }}? This cannot be undone - all of its movement, repair, and verification history goes with it.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="ml-3 text-sm font-medium text-rose-600 hover:underline">Remove</button>
                                         </form>
                                     </td>
                                 @endif
