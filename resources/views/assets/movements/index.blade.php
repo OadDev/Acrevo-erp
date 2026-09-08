@@ -11,7 +11,7 @@
                 <x-select-input name="type" class="text-sm">
                     <option value="">All Types</option>
                     @foreach (\App\Models\AssetMovement::TYPES as $type)
-                        <option value="{{ $type }}" @selected(request('type') === $type)>{{ ucwords(str_replace('_', ' ', $type)) }}</option>
+                        <option value="{{ $type }}" @selected(request('type') === $type)>{{ \App\Models\AssetMovement::labelForType($type) }}</option>
                     @endforeach
                 </x-select-input>
                 <x-select-input name="status" class="text-sm">
@@ -84,7 +84,7 @@
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
-                                <td class="px-4 py-3 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                <td class="px-4 py-3 text-gray-500">{{ $movement->typeLabel() }}</td>
                                 <td class="px-4 py-3 text-right text-gray-500">{{ $movement->quantity }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$movement->status" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $movement->createdBy?->name }}</td>

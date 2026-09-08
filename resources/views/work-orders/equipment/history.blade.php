@@ -51,7 +51,7 @@
                                 </td>
                                 <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                                 <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
-                                <td class="px-4 py-2 text-gray-500">{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                                <td class="px-4 py-2 text-gray-500">{{ $movement->typeLabel() }}</td>
                                 <td class="px-4 py-2"><x-badge :status="$movement->status" /></td>
                             </tr>
                         @endforeach

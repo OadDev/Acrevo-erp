@@ -40,7 +40,7 @@
                         <td>{{ $movement->moved_at->format('d M Y') }}</td>
                         <td>{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                         <td>{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
-                        <td>{{ ucwords(str_replace('_', ' ', $movement->type)) }}</td>
+                        <td>{{ $movement->typeLabel() }}</td>
                         <td>{{ ucwords($movement->status) }}</td>
                         <td>{{ ($movement->status === 'confirmed' ? $movement->confirmedBy : $movement->createdBy)?->name }}</td>
                         <td>{{ $movement->remarks ?: '—' }}</td>
