@@ -36,11 +36,39 @@ class AssetStock extends Model
      */
     public static function availableAt(Asset $asset, string $location, ?string $workOrderId): int
     {
+        return static::quantityAt($asset, $location, $workOrderId, 'available');
+    }
+
+    public static function quantityAt(Asset $asset, string $location, ?string $workOrderId, string $status): int
+    {
         return (int) $asset->stocks()
             ->where('location', $location)
             ->where('work_order_id', $workOrderId)
-            ->where('status', 'available')
+            ->where('status', $status)
             ->sum('quantity');
+    }
+
+    /**
+     * Releases up to $quantity out of a bucket, never taking it below zero,
+     * and returns how much was actually released. Movements/repairs created
+     * before this ledger existed never reserved anything in the first
+     * place (their in_transit/under_repair bucket is 0), so confirming,
+     * cancelling, editing, or removing one of those must not blow up trying
+     * to release more than was ever put there - it should release nothing
+     * and leave it to the caller to decide what, if anything, to credit
+     * elsewhere. A movement/repair created under this ledger always has
+     * its full quantity reserved, so this is a no-op difference for those -
+     * it releases the full amount, same as adjust() would have.
+     */
+    public static function release(Asset $asset, string $location, ?string $workOrderId, string $status, int $quantity): int
+    {
+        $toRelease = min($quantity, static::quantityAt($asset, $location, $workOrderId, $status));
+
+        if ($toRelease > 0) {
+            static::adjust($asset, $location, $workOrderId, $status, -$toRelease);
+        }
+
+        return $toRelease;
     }
 
     /**

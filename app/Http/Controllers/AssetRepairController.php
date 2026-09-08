@@ -168,9 +168,13 @@ class AssetRepairController extends Controller
         // 'in_progress' leaves the quantity right where it is (still under
         // repair either way). 'completed'/'cancelled' both return it to
         // Available - only once, whichever terminal status it lands on.
+        // release() rather than a blind adjust() - a repair that predates
+        // the quantity ledger never actually reserved anything into
+        // under_repair, so there's at most what the ledger backfill seeded
+        // to release, not necessarily the full repair quantity.
         if (in_array($data['status'], ['completed', 'cancelled'], true) && ! in_array($previousStatus, ['completed', 'cancelled'], true)) {
-            AssetStock::adjust($asset, $repair->location, $repair->work_order_id, 'under_repair', -$repair->quantity);
-            AssetStock::adjust($asset, $repair->location, $repair->work_order_id, 'available', $repair->quantity);
+            $released = AssetStock::release($asset, $repair->location, $repair->work_order_id, 'under_repair', $repair->quantity);
+            AssetStock::adjust($asset, $repair->location, $repair->work_order_id, 'available', $released);
         }
 
         match ($data['status']) {
@@ -192,8 +196,9 @@ class AssetRepairController extends Controller
             // withTrashed() - the asset may have been removed since.
             $asset = Asset::withTrashed()->find($repair->asset_id);
             if ($asset) {
-                AssetStock::adjust($asset, $repair->location, $repair->work_order_id, 'under_repair', -$repair->quantity);
-                AssetStock::adjust($asset, $repair->location, $repair->work_order_id, 'available', $repair->quantity);
+                // release() - see the same note in updateStatus() above.
+                $released = AssetStock::release($asset, $repair->location, $repair->work_order_id, 'under_repair', $repair->quantity);
+                AssetStock::adjust($asset, $repair->location, $repair->work_order_id, 'available', $released);
             }
         }
 
