@@ -37,6 +37,17 @@
                     <x-input-label for="serial_number" value="Serial Number" />
                     <x-text-input id="serial_number" name="serial_number" class="mt-1 block w-full" value="{{ old('serial_number', $asset->serial_number) }}" />
                 </div>
+                @if ($isAdmin)
+                    <div>
+                        <x-input-label for="quantity" value="Quantity" />
+                        <x-text-input id="quantity" type="number" min="1" name="quantity" class="mt-1 block w-full" value="{{ old('quantity', $asset->quantity) }}" />
+                        <p class="mt-1 text-xs text-gray-400">
+                            Adjusts the Available quantity at
+                            {{ $asset->current_location === 'work_order' && $asset->currentWorkOrder ? $asset->currentWorkOrder->work_order_no : ucwords(str_replace('_', ' ', $asset->current_location)) }}.
+                            A decrease can't exceed what's Available there - if the rest is elsewhere or in another state, adjust it via a Movement, Repair, or Verification first.
+                        </p>
+                    </div>
+                @endif
                 <div class="sm:col-span-2">
                     <x-input-label for="remarks" value="Remarks" />
                     <x-textarea-input id="remarks" name="remarks" rows="2" class="mt-1 block w-full">{{ old('remarks', $asset->remarks) }}</x-textarea-input>
