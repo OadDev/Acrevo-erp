@@ -14,8 +14,11 @@ use Illuminate\View\View;
 class WorkOrderEquipmentController extends Controller
 {
     /**
-     * Current equipment at this site - every Asset whose
-     * current_work_order_id points here right now.
+     * Current equipment at this site - every Asset with an Available
+     * quantity in the AssetStock ledger at this work order - plus every
+     * Movement still pending confirmation into this site, so a Team Leader
+     * can see and act on an incoming assignment right here instead of
+     * having to find it in the wider Movement History list.
      */
     public function index(Request $request, WorkOrder $workOrder): View
     {
@@ -23,7 +26,22 @@ class WorkOrderEquipmentController extends Controller
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
 
-        return view('work-orders.equipment.index', compact('workOrder', 'assets'));
+        $pendingMovements = AssetMovement::query()
+            ->where('to_work_order_id', $workOrder->id)
+            ->where('status', 'pending')
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'fromWorkOrder', 'createdBy'])
+            ->orderByDesc('moved_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $user = $request->user();
+        $ledWorkOrderIds = $user->hasRole('Admin') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
+            ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
+            ->pluck('id');
+
+        $canConfirmHere = $user->can('movements.approve') && ($ledWorkOrderIds === null || $ledWorkOrderIds->contains($workOrder->id));
+
+        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere'));
     }
 
     public function pdf(Request $request, WorkOrder $workOrder)
@@ -68,10 +86,24 @@ class WorkOrderEquipmentController extends Controller
         return $pdf->download("{$workOrder->work_order_no}-equipment-history.pdf");
     }
 
+    /**
+     * Every Asset holding Available quantity at this work order in the
+     * AssetStock ledger - not just those whose legacy current_work_order_id
+     * happens to point here, since that field only follows a Movement that
+     * covers an asset's entire available stock (see AssetMovementController
+     * ::confirm()). A partial quantity confirmed into this site still shows
+     * up here even though current_work_order_id may still point elsewhere.
+     */
     private function currentEquipment(Request $request, WorkOrder $workOrder)
     {
         return Asset::query()
-            ->where('current_work_order_id', $workOrder->id)
+            ->whereHas('stocks', fn ($q) => $q->where('location', 'work_order')
+                ->where('work_order_id', $workOrder->id)
+                ->where('status', 'available')
+                ->where('quantity', '>', 0))
+            ->with(['stocks' => fn ($q) => $q->where('location', 'work_order')
+                ->where('work_order_id', $workOrder->id)
+                ->where('status', 'available')])
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")

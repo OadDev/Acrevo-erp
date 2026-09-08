@@ -11,6 +11,52 @@
         </x-page-header>
     </x-slot>
 
+    @if ($pendingMovements->isNotEmpty())
+        <x-card :padded="false" class="mb-4">
+            <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Waiting for Confirmation</h3></div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-2">Asset</th>
+                            <th class="px-4 py-2">From</th>
+                            <th class="px-4 py-2 text-right">Qty</th>
+                            <th class="px-4 py-2">Sent</th>
+                            <th class="px-4 py-2">Status</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($pendingMovements as $movement)
+                            <tr>
+                                <td class="px-4 py-2">
+                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $movement->asset->name ?? 'Removed Asset' }}</p>
+                                    <p class="text-xs text-gray-400">{{ $movement->asset->asset_code ?? '—' }}</p>
+                                </td>
+                                <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-500">{{ $movement->quantity }}</td>
+                                <td class="px-4 py-2 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
+                                <td class="px-4 py-2"><x-badge status="waiting_for_confirmation" /></td>
+                                <td class="px-4 py-2 text-right whitespace-nowrap">
+                                    @if ($canConfirmHere)
+                                        <form method="POST" action="{{ route('asset-movements.confirm', $movement) }}" class="inline">
+                                            @csrf
+                                            <button class="text-xs font-medium text-emerald-600 hover:underline">Confirm</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('asset-movements.cancel', $movement) }}" class="inline" onsubmit="return confirm('Cancel this movement?')">
+                                            @csrf
+                                            <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Cancel</button>
+                                        </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-card>
+    @endif
+
     <x-card class="mb-4">
         <form method="GET" action="{{ route('work-orders.equipment.index', $workOrder) }}" class="space-y-3">
             <input type="search" name="q" value="{{ request('q') }}" placeholder="Search by Asset ID, name, serial number, or category..." class="w-full rounded-lg border-gray-200 text-sm dark:border-gray-700 dark:bg-gray-800">
@@ -48,6 +94,7 @@
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Category</th>
                             <th class="px-4 py-3">Serial Number</th>
+                            <th class="px-4 py-3 text-right">Qty Here</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Condition</th>
                         </tr>
@@ -61,6 +108,7 @@
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->category ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->serial_number ?: '—' }}</td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $asset->stocks->sum('quantity') }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$asset->status" /></td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->condition ?: '—' }}</td>
                             </tr>

@@ -30,7 +30,7 @@
     @else
         <table>
             <thead>
-                <tr><th>Asset ID</th><th>Name</th><th>Category</th><th>Serial Number</th><th>Status</th><th>Condition</th></tr>
+                <tr><th>Asset ID</th><th>Name</th><th>Category</th><th>Serial Number</th><th>Qty Here</th><th>Status</th><th>Condition</th></tr>
             </thead>
             <tbody>
                 @foreach ($assets as $asset)
@@ -39,6 +39,7 @@
                         <td>{{ $asset->name }}</td>
                         <td>{{ $asset->category ?: '—' }}</td>
                         <td>{{ $asset->serial_number ?: '—' }}</td>
+                        <td>{{ $asset->stocks->sum('quantity') }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $asset->status)) }}</td>
                         <td>{{ $asset->condition ?: '—' }}</td>
                     </tr>
