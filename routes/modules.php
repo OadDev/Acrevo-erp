@@ -470,6 +470,7 @@ Route::middleware('permission:assets.delete')->group(function () {
 });
 Route::middleware('permission:assets.restore')->group(function () {
     Route::post('assets/{id}/restore', [AssetController::class, 'restore'])->name('assets.restore');
+    Route::delete('assets/{id}/force-delete', [AssetController::class, 'forceDelete'])->name('assets.force-delete');
 });
 Route::middleware('permission:assets.approve')->group(function () {
     Route::get('asset-change-requests', [AssetChangeRequestController::class, 'index'])->name('asset-change-requests.index');

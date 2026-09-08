@@ -364,6 +364,23 @@ class AssetController extends Controller
         return redirect()->route('assets.show', $asset)->with('success', 'Asset restored.');
     }
 
+    /**
+     * Permanently deletes an already-removed asset - only reachable from
+     * the Removed Assets list, so it can never be applied to an active
+     * one. Every dependent record (movements, repairs, verifications,
+     * stock ledger rows, status logs, change requests) cascade-deletes at
+     * the database level along with it; equipment requests that reference
+     * it just lose that reference (asset_id set to null) instead of being
+     * deleted themselves.
+     */
+    public function forceDelete(int $id): RedirectResponse
+    {
+        $asset = Asset::onlyTrashed()->findOrFail($id);
+        $asset->forceDelete();
+
+        return redirect()->route('assets.index', ['removed' => 1])->with('success', 'Asset permanently deleted.');
+    }
+
     public function pdf(Asset $asset)
     {
         $asset->load([
