@@ -114,7 +114,9 @@ class AssetMovementController extends Controller
             'remarks' => ['nullable', 'string'],
         ]);
 
-        $asset = $movement->asset;
+        // withTrashed() - a pending movement survives its asset being
+        // removed (see index()'s note above), so it must still resolve.
+        $asset = Asset::withTrashed()->find($movement->asset_id);
 
         // Undo this movement's existing reservation, then check the new
         // quantity against what that frees up at the source - simplest way
@@ -162,7 +164,9 @@ class AssetMovementController extends Controller
             abort_unless($receivingAtOwnSite, 403, 'You can only confirm movements arriving at a site you lead.');
         }
 
-        $asset = $movement->asset;
+        // withTrashed() - the asset may have been removed while this
+        // movement sat pending; it must still resolve to settle the ledger.
+        $asset = Asset::withTrashed()->find($movement->asset_id);
 
         AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', -$movement->quantity);
         AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'available', $movement->quantity);
@@ -193,7 +197,9 @@ class AssetMovementController extends Controller
     {
         abort_unless($movement->status === 'pending', 422, 'This movement has already been reviewed.');
 
-        $asset = $movement->asset;
+        // withTrashed() - the asset may have been removed while this
+        // movement sat pending; it must still resolve to settle the ledger.
+        $asset = Asset::withTrashed()->find($movement->asset_id);
         AssetStock::adjust($asset, $movement->to_location, $movement->to_work_order_id, 'in_transit', -$movement->quantity);
         AssetStock::adjust($asset, $movement->from_location, $movement->from_work_order_id, 'available', $movement->quantity);
 

@@ -146,7 +146,9 @@ class AssetRepairController extends Controller
     public function updateStatus(Request $request, AssetRepair $repair): RedirectResponse
     {
         $user = $request->user();
-        $asset = $repair->asset;
+        // withTrashed() - the asset may have been removed while this
+        // repair sat open; it must still resolve to settle the ledger.
+        $asset = Asset::withTrashed()->find($repair->asset_id);
 
         if (! $user->hasRole('Admin')) {
             abort_unless($this->isTeamLeaderOfWorkOrder($repair->work_order_id, $user), 403, 'You can only update repairs for assets at a site you lead.');
