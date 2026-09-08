@@ -196,12 +196,41 @@ class AssetController extends Controller
      * holds assets.edit (Management, or anyone else an Admin grants it to)
      * goes through requestUpdate() instead - the asset's own values never
      * change until an Admin approves that request.
+     *
+     * quantity is deliberately kept out of validateMasterDetails() (and so
+     * out of the change-request flow too) - AssetChangeRequestController::
+     * approve() applies new_values with a raw Asset::update(), which would
+     * silently desync Asset::quantity from the AssetStock ledger. Handling
+     * it here, Admin-only, lets it go through AssetStock::adjust() instead
+     * so the ledger stays the source of truth.
      */
     public function update(Request $request, Asset $asset): RedirectResponse
     {
         abort_unless($request->user()->hasRole('Admin'), 403, 'Only an Admin can apply asset changes directly. Submit this as a change request instead.');
 
         $data = $this->validateMasterDetails($request);
+
+        $quantityData = $request->validate(['quantity' => ['nullable', 'integer', 'min:1']]);
+
+        if (($quantityData['quantity'] ?? null) !== null) {
+            $delta = $quantityData['quantity'] - $asset->quantity;
+
+            if ($delta < 0) {
+                $available = AssetStock::availableAt($asset, $asset->current_location, $asset->current_work_order_id);
+
+                if ($available < abs($delta)) {
+                    $where = $asset->current_location === 'work_order' && $asset->currentWorkOrder
+                        ? $asset->currentWorkOrder->work_order_no
+                        : ucwords(str_replace('_', ' ', $asset->current_location));
+
+                    return back()->withErrors(['quantity' => "Can only reduce by up to {$available} - that's what's Available at {$where}. If the rest is elsewhere or in another state, adjust it there via a Movement, Repair, or Verification first."])->withInput();
+                }
+            }
+
+            if ($delta !== 0) {
+                AssetStock::adjust($asset, $asset->current_location, $asset->current_work_order_id, 'available', $delta);
+            }
+        }
 
         $asset->update($data);
 
