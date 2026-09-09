@@ -11,9 +11,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+
 class Site extends Model implements HasMedia
 {
-    use HasFactory, HasSequenceNumber, HasUuids, InteractsWithMedia;
+    use HasFactory, HasSequenceNumber, HasUuids, InteractsWithMedia, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
+    }
 
     public const DOCUMENT_CATEGORIES = ['kyc', 'land_document', 'gov_record', 'other'];
 

@@ -11,7 +11,17 @@ use Illuminate\Database\Eloquent\Model;
  * is stored as plain text, so removing a category here never touches
  * historical entries that already used it.
  */
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+
 class LedgerCategory extends Model
 {
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
+    }
+
     protected $fillable = ['name', 'created_by'];
 }

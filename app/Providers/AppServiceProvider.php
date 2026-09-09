@@ -5,11 +5,13 @@ namespace App\Providers;
 use App\Events\WorkOrderStatusChanged;
 use App\Listeners\NotifyWorkOrderStakeholders;
 use App\Models\WorkOrder;
+use App\Observers\MediaActivityObserver;
 use App\Observers\WorkOrderObserver;
 use App\Support\MailSettings;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         WorkOrder::observe(WorkOrderObserver::class);
+        Media::observe(MediaActivityObserver::class);
 
         Event::listen(WorkOrderStatusChanged::class, NotifyWorkOrderStakeholders::class);
 

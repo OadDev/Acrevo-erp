@@ -38,7 +38,7 @@ class ApprovalRequest extends Model implements HasMedia
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnlyDirty()->dontSubmitEmptyLogs();
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 
     public function registerMediaCollections(): void
