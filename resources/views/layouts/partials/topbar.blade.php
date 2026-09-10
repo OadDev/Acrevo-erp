@@ -30,30 +30,51 @@
         </button>
 
         <div x-data="{ open: false }" class="relative">
-            <button @click="open = !open" @click.outside="open = false" class="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">
+            <button @click="open = !open" @click.outside="open = false" class="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" title="Notifications">
                 <x-icon name="bell" class="h-5 w-5" />
                 @php($unread = auth()->user()->unreadNotifications()->count())
                 @if ($unread > 0)
-                    <span class="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-rose-500"></span>
+                    <span class="absolute -right-1 -top-1 flex h-4.5 min-w-[1.125rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white dark:ring-gray-900">
+                        {{ $unread > 9 ? '9+' : $unread }}
+                    </span>
                 @endif
             </button>
-            <div x-show="open" x-cloak x-transition class="absolute right-0 mt-2 w-80 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                <p class="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Notifications</p>
+            <div x-show="open" x-cloak x-transition class="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                        Notifications
+                        @if ($unread > 0)
+                            <span class="ml-1 text-xs font-medium text-gray-400">&middot; {{ $unread }} new</span>
+                        @endif
+                    </p>
+                    @if ($unread > 0)
+                        <form method="POST" action="{{ route('notifications.read-all') }}">
+                            @csrf
+                            <button type="submit" class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">Mark all read</button>
+                        </form>
+                    @endif
+                </div>
+
                 <div class="max-h-80 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
                     @forelse (auth()->user()->notifications()->latest()->take(8)->get() as $notification)
-                        @if (isset($notification->data['url']))
-                            <a href="{{ $notification->data['url'] }}" class="block rounded-lg px-2 py-2.5 text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50">
-                                {{ $notification->data['message'] ?? 'Notification' }}
-                                <p class="mt-0.5 text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</p>
-                            </a>
-                        @else
-                            <div class="px-2 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-                                {{ $notification->data['message'] ?? 'Notification' }}
-                                <p class="mt-0.5 text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</p>
-                            </div>
-                        @endif
+                        @php($isUnread = is_null($notification->read_at))
+                        <a href="{{ route('notifications.read', $notification->id) }}"
+                            class="flex items-start gap-2.5 px-4 py-3 text-sm transition hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full {{ $isUnread ? 'bg-indigo-600' : 'bg-transparent' }}"></span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block {{ $isUnread ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300' }}">
+                                    {{ $notification->data['message'] ?? 'Notification' }}
+                                </span>
+                                <span class="mt-0.5 block text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</span>
+                            </span>
+                        </a>
                     @empty
-                        <p class="px-2 py-4 text-center text-sm text-gray-400">You're all caught up.</p>
+                        <div class="flex flex-col items-center gap-2 px-4 py-10 text-center">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-700/60">
+                                <x-icon name="bell" class="h-5 w-5" />
+                            </span>
+                            <p class="text-sm text-gray-400">You're all caught up.</p>
+                        </div>
                     @endforelse
                 </div>
             </div>
