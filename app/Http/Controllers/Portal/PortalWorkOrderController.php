@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\WorkOrder;
+use App\Services\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -50,7 +51,15 @@ class PortalWorkOrderController extends Controller
             'qcInspections.inspectedBy',
         ]);
 
-        return view('portal.work-orders.show', compact('workOrder'));
+        // Only creates the discussion thread (and adds the client as a
+        // participant) once Admin has actually turned this on for them -
+        // otherwise the client stays out of a thread staff might already
+        // be using internally.
+        $discussion = $workOrder->client->canAccessWorkOrderDiscussion()
+            ? app(ConversationService::class)->discussionFor($workOrder, auth()->user())
+            : null;
+
+        return view('portal.work-orders.show', compact('workOrder', 'discussion'));
     }
 
     public function accept(WorkOrder $workOrder): RedirectResponse

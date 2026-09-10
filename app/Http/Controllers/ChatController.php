@@ -85,24 +85,23 @@ class ChatController extends Controller
 
         abort_if(blank($data['body'] ?? null) && empty($request->file('files', [])), 422, 'Write a message or attach a file.');
 
-        $message = $conversation->messages()->create([
-            'user_id' => $user->id,
-            'body' => $data['body'] ?? null,
-        ]);
-
         try {
-            foreach ($request->file('files', []) as $file) {
-                $message->addMedia($file)->toMediaCollection('attachments');
-            }
+            $this->conversations->postMessage($conversation, $user, $data['body'] ?? null, $request->file('files', []));
         } catch (FileIsTooBig $e) {
             return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
         }
 
-        $conversation->markReadFor($user);
-        $this->conversations->recordMentionsAndNotify($message, $conversation, $user);
-        $conversation->touch();
-
         return back();
+    }
+
+    public function clear(Conversation $conversation): RedirectResponse
+    {
+        foreach ($conversation->messages as $message) {
+            $message->clearMediaCollection('attachments');
+        }
+        $conversation->messages()->delete();
+
+        return back()->with('success', 'Discussion cleared.');
     }
 
     public function destroyMedia(Request $request, Conversation $conversation, Media $media): RedirectResponse

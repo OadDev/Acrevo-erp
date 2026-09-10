@@ -61,6 +61,16 @@
                                     </label>
                                 @endforeach
                             </div>
+
+                            <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" name="work_order_discussion_access" value="1" class="rounded border-gray-300 text-indigo-600"
+                                        @checked($client->work_order_discussion_access)>
+                                    Allow this client to participate in Work Order Discussion
+                                </label>
+                                <p class="mt-1 text-xs text-gray-400">Lets this client view and send messages in the Discussion tab of their own work orders. Off by default, even for unrestricted clients.</p>
+                            </div>
+
                             <x-primary-button class="mt-4">Save Permissions</x-primary-button>
                         </form>
                     </div>

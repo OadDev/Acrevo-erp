@@ -134,7 +134,14 @@
             @include('work-orders.tabs.tickets')
         </div>
         <div x-show="tab === 'discussion'" x-cloak>
-            <x-discussion-card :conversation="$discussion" title="Work Order Discussion" />
+            <x-discussion-card
+                :conversation="$discussion"
+                title="Work Order Discussion"
+                :subtitle="$workOrder->client->canAccessWorkOrderDiscussion()
+                    ? 'The client has been granted access - they can view and send messages here too.'
+                    : 'Internal notes and conversation about this record - not visible to the client.'"
+                :clearable="auth()->user()->can('conversations.clear')"
+            />
         </div>
     </div>
 </x-app-layout>

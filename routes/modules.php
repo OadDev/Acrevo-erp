@@ -36,6 +36,7 @@ use App\Http\Controllers\Portal\PortalInvoiceController;
 use App\Http\Controllers\Portal\PortalQuotationController;
 use App\Http\Controllers\Portal\PortalTicketController;
 use App\Http\Controllers\Portal\PortalWorkOrderController;
+use App\Http\Controllers\Portal\PortalWorkOrderDiscussionController;
 use App\Http\Controllers\QcInspectionController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\QuotationMediaController;
@@ -617,6 +618,9 @@ Route::middleware('permission:chat.access')->group(function () {
     Route::get('conversations/{conversation}/poll', [ChatController::class, 'poll'])->name('conversations.poll');
     Route::delete('conversations/{conversation}/media/{media}', [ChatController::class, 'destroyMedia'])->name('conversations.media.destroy');
 });
+Route::middleware('permission:conversations.clear')->group(function () {
+    Route::post('conversations/{conversation}/clear', [ChatController::class, 'clear'])->name('conversations.clear');
+});
 Route::middleware('permission:tasks.manage')->group(function () {
     Route::resource('admin/task-schedules', TaskScheduleController::class)
         ->except('show')
@@ -682,6 +686,8 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::get('work-orders/{workOrder}/approval-requests/approved-pdf', [PortalApprovalRequestController::class, 'approvedPdf'])->name('work-orders.approval-requests.approved-pdf');
     Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/pdf', [PortalApprovalRequestController::class, 'pdf'])->name('work-orders.approval-requests.pdf');
     Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/zip', [PortalApprovalRequestController::class, 'zip'])->name('work-orders.approval-requests.zip');
+    Route::post('work-orders/{workOrder}/discussion/messages', [PortalWorkOrderDiscussionController::class, 'store'])->name('work-orders.discussion.messages.store');
+    Route::get('work-orders/{workOrder}/discussion/poll', [PortalWorkOrderDiscussionController::class, 'poll'])->name('work-orders.discussion.poll');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
     Route::get('tickets/{ticket}', [PortalTicketController::class, 'show'])->name('tickets.show');

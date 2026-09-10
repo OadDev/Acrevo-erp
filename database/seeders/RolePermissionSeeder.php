@@ -115,6 +115,7 @@ class RolePermissionSeeder extends Seeder
         ],
         'chat' => [
             'chat.access',
+            'conversations.clear',
         ],
     ];
 
