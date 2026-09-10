@@ -511,6 +511,16 @@
                 @endforelse
             </x-card>
             @endif
+
+            @if ($discussion)
+            <x-discussion-card
+                :conversation="$discussion"
+                title="Discussion"
+                subtitle="Message our team about this work order."
+                :store-url="route('portal.work-orders.discussion.messages.store', $workOrder)"
+                :poll-url="route('portal.work-orders.discussion.poll', $workOrder)"
+            />
+            @endif
         </div>
     </div>
 </x-app-layout>

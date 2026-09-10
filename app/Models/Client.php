@@ -24,12 +24,17 @@ class Client extends Model
     protected $fillable = [
         'client_code', 'name', 'type', 'email', 'phone', 'alternate_phone',
         'address', 'city', 'state', 'pincode', 'gstin', 'source',
-        'assigned_sales_user_id', 'notes', 'is_active', 'visible_sections', 'created_by',
+        'assigned_sales_user_id', 'notes', 'is_active', 'visible_sections',
+        'work_order_discussion_access', 'created_by',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'visible_sections' => 'array'];
+        return [
+            'is_active' => 'boolean',
+            'visible_sections' => 'array',
+            'work_order_discussion_access' => 'boolean',
+        ];
     }
 
     /**
@@ -40,6 +45,17 @@ class Client extends Model
     public function canViewSection(string $key): bool
     {
         return $this->visible_sections === null || in_array($key, $this->visible_sections, true);
+    }
+
+    /**
+     * Unlike canViewSection() above, this has no "unrestricted" bypass -
+     * it defaults to false for every client, since it's not just read
+     * visibility but the ability to send messages into a thread staff
+     * also see. An Admin has to turn it on explicitly per client.
+     */
+    public function canAccessWorkOrderDiscussion(): bool
+    {
+        return $this->work_order_discussion_access;
     }
 
     public function getActivitylogOptions(): LogOptions
