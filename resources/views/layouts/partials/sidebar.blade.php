@@ -182,7 +182,8 @@
                         <x-nav-link :href="route('admin.activity-logs.index')" :active="request()->routeIs('admin.activity-logs.*')" icon="history">Activity Logs</x-nav-link>
                     @endcan
                     @can('system_settings.manage')
-                        <x-nav-link :href="route('admin.settings.mail.edit')" :active="request()->routeIs('admin.settings.*')" icon="mail">Mail Settings</x-nav-link>
+                        <x-nav-link :href="route('admin.settings.mail.edit')" :active="request()->routeIs('admin.settings.mail.*')" icon="mail">Mail Settings</x-nav-link>
+                        <x-nav-link :href="route('admin.settings.login-page.edit')" :active="request()->routeIs('admin.settings.login-page.*')" icon="image">Login Page</x-nav-link>
                     @endcan
                 </x-nav-group>
             @endcanany

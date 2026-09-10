@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\LoginPageSettingController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
@@ -665,6 +666,8 @@ Route::middleware('permission:system_settings.manage')->group(function () {
     Route::get('admin/settings/mail', [SettingsController::class, 'editMail'])->name('admin.settings.mail.edit');
     Route::put('admin/settings/mail', [SettingsController::class, 'updateMail'])->name('admin.settings.mail.update');
     Route::post('admin/settings/mail/test', [SettingsController::class, 'sendTest'])->name('admin.settings.mail.test');
+    Route::get('admin/settings/login-page', [LoginPageSettingController::class, 'edit'])->name('admin.settings.login-page.edit');
+    Route::put('admin/settings/login-page', [LoginPageSettingController::class, 'update'])->name('admin.settings.login-page.update');
 });
 
 /*
