@@ -117,6 +117,10 @@ class RolePermissionSeeder extends Seeder
             'chat.access',
             'conversations.clear',
         ],
+        'work_schedules' => [
+            'work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details',
+            'work_schedules.view_dates', 'work_schedules.view_progress', 'work_schedules.manage',
+        ],
     ];
 
     /**
@@ -131,6 +135,9 @@ class RolePermissionSeeder extends Seeder
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // View-only, scoped in the controller to sites of clients
+            // assigned to this Sales user - no work_schedules.manage.
+            'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
@@ -171,6 +178,10 @@ class RolePermissionSeeder extends Seeder
             // receipt of it - no approve, deciding a request (and any
             // purchase it needs) is Admin's call.
             'equipment_requests' => ['equipment_requests.view', 'equipment_requests.create', 'equipment_requests.receive', 'equipment_requests.download_pdf'],
+            // View-only, scoped in the controller to sites this Team Leader
+            // leads - no work_schedules.manage, updating progress/dates is
+            // Admin's call for now.
+            'work_schedules' => ['work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
@@ -259,6 +270,13 @@ class RolePermissionSeeder extends Seeder
         ],
         'Client' => [
             'client_portal' => '*',
+            // View-only, scoped in the controller to this Client's own
+            // site(s) - view_overall doubles as "my site(s) list" since it's
+            // scoped the same way, letting the portal nav link straight to
+            // it without a client-specific route. Delay/progress detail is
+            // withheld by default since it can include internal remarks -
+            // Admin can grant it per-client.
+            'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates'],
         ],
     ];
 

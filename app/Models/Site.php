@@ -62,6 +62,11 @@ class Site extends Model implements HasMedia
         return $this->hasMany(SiteSubContractor::class);
     }
 
+    public function workSchedules(): HasMany
+    {
+        return $this->hasMany(SiteWorkSchedule::class)->orderBy('sequence_order');
+    }
+
     public function registerMediaCollections(): void
     {
         foreach (self::DOCUMENT_CATEGORIES as $category) {

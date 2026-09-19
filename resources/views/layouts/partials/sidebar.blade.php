@@ -31,6 +31,9 @@
             <x-nav-group label="My Projects">
                 <x-nav-link :href="route('portal.quotations.index')" :active="request()->routeIs('portal.quotations.*')" icon="file-text">Quotations</x-nav-link>
                 <x-nav-link :href="route('portal.work-orders.index')" :active="request()->routeIs('portal.work-orders.*')" icon="briefcase">Current Projects</x-nav-link>
+                @can('work_schedules.view_overall')
+                    <x-nav-link :href="route('work-schedules.overall')" :active="request()->routeIs('work-schedules.*') || request()->routeIs('sites.work-schedule.*')" icon="calendar-check">Work Schedule</x-nav-link>
+                @endcan
                 <x-nav-link :href="route('portal.tickets.index')" :active="request()->routeIs('portal.tickets.*')" icon="ticket">Tickets</x-nav-link>
                 <x-nav-link :href="route('portal.invoices.index')" :active="request()->routeIs('portal.invoices.*')" icon="receipt">Invoices &amp; Payments</x-nav-link>
             </x-nav-group>
@@ -48,12 +51,18 @@
                         <x-nav-link :href="route('quotations.index')" :active="request()->routeIs('quotations.*')" icon="file-text">Quotations</x-nav-link>
                     @endcan
                     @can('work_orders.view')
-                        <x-nav-link :href="route('sites.index')" :active="request()->routeIs('sites.*')" icon="map-pin">Sites</x-nav-link>
+                        <x-nav-link :href="route('sites.index')" :active="request()->routeIs('sites.*') && ! request()->routeIs('sites.work-schedule.*')" icon="map-pin">Sites</x-nav-link>
                         <x-nav-link :href="route('work-orders.index')" :active="request()->routeIs('work-orders.index') || request()->routeIs('work-orders.show') || request()->routeIs('work-orders.create')" icon="clipboard">Work Orders</x-nav-link>
                         <x-nav-link :href="route('work-orders.completed')" :active="request()->routeIs('work-orders.completed')" icon="check-circle">Completed Sites</x-nav-link>
                     @endcan
                 </x-nav-group>
             @endcanany
+
+            @can('work_schedules.view_overall')
+                <x-nav-group label="Site Work Schedule">
+                    <x-nav-link :href="route('work-schedules.overall')" :active="request()->routeIs('work-schedules.*') || request()->routeIs('sites.work-schedule.*')" icon="calendar-check">Work Schedule Planner</x-nav-link>
+                </x-nav-group>
+            @endcan
 
             @if (auth()->user()->can('assigned_work.view') || (auth()->user()->can('tasks.view') && auth()->user()->employee) || auth()->user()->can('subcontractor_finance.view'))
                 <x-nav-group label="Executive Team">
