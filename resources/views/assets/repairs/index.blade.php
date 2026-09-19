@@ -58,6 +58,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-3">S.No</th>
                             <th class="px-4 py-3">Reported</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Type</th>
@@ -74,6 +75,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($repairs as $repair)
                             <tr>
+                                <td class="px-4 py-3 text-gray-500">{{ $repairs->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 text-gray-500 @if ($repair->asset) cursor-pointer @endif" @if ($repair->asset) onclick="window.location='{{ route('assets.show', $repair->asset) }}'" @endif>{{ $repair->reported_date->format('d M Y') }}</td>
                                 <td class="px-4 py-3 @if ($repair->asset) cursor-pointer @endif" @if ($repair->asset) onclick="window.location='{{ route('assets.show', $repair->asset) }}'" @endif>
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $repair->asset->name ?? 'Removed Asset' }}</p>

@@ -31,13 +31,14 @@
         <table>
             <thead>
                 <tr>
-                    <th>Verified On</th><th>Work Order</th><th>Result</th><th>Condition</th>
+                    <th>S.No</th><th>Verified On</th><th>Work Order</th><th>Result</th><th>Condition</th>
                     <th>Verified By</th><th>Remarks</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($asset->verifications as $verification)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $verification->verified_at->format('d M Y') }}</td>
                         <td>{{ $verification->workOrder?->work_order_no ?? '—' }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $verification->result)) }}</td>

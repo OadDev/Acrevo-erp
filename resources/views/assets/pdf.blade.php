@@ -75,11 +75,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Date</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
+                <tr><th>S.No</th><th>Date</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
             </thead>
             <tbody>
                 @foreach ($asset->movements as $movement)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $movement->moved_at->format('d M Y') }}</td>
                         <td>{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                         <td>{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>
@@ -97,11 +98,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Reported</th><th>Completed</th><th>Type</th><th>Issue</th><th>Technician / Vendor</th><th>Warranty</th><th class="text-right">Cost</th><th>Status</th></tr>
+                <tr><th>S.No</th><th>Reported</th><th>Completed</th><th>Type</th><th>Issue</th><th>Technician / Vendor</th><th>Warranty</th><th class="text-right">Cost</th><th>Status</th></tr>
             </thead>
             <tbody>
                 @foreach ($asset->repairs as $repair)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $repair->reported_date->format('d M Y') }}</td>
                         <td>{{ optional($repair->completed_date)->format('d M Y') ?? '—' }}</td>
                         <td>{{ ucwords($repair->repair_type) }}</td>
@@ -122,11 +124,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Verified On</th><th>Work Order</th><th>Result</th><th>Condition</th><th>Verified By</th><th>Remarks</th></tr>
+                <tr><th>S.No</th><th>Verified On</th><th>Work Order</th><th>Result</th><th>Condition</th><th>Verified By</th><th>Remarks</th></tr>
             </thead>
             <tbody>
                 @foreach ($asset->verifications as $verification)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $verification->verified_at->format('d M Y') }}</td>
                         <td>{{ $verification->workOrder?->work_order_no ?? '—' }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $verification->result)) }}</td>
@@ -145,11 +148,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Date</th><th>From</th><th>To</th><th>Updated By</th><th>Site / WO</th><th>Reason</th></tr>
+                <tr><th>S.No</th><th>Date</th><th>From</th><th>To</th><th>Updated By</th><th>Site / WO</th><th>Reason</th></tr>
             </thead>
             <tbody>
                 @foreach ($asset->statusLogs->sortBy('created_at') as $log)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $log->created_at->format('d M Y') }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $log->previous_status)) }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $log->new_status)) }}</td>

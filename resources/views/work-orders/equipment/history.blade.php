@@ -33,6 +33,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-2">S.No</th>
                             <th class="px-4 py-2">Date</th>
                             <th class="px-4 py-2">Asset</th>
                             <th class="px-4 py-2">From</th>
@@ -44,6 +45,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($movements as $movement)
                             <tr @if ($movement->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $movement->asset) }}'" @endif>
+                                <td class="px-4 py-2 text-gray-500">{{ $movements->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-2 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
                                 <td class="px-4 py-2">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $movement->asset->name ?? 'Removed Asset' }}</p>
@@ -71,6 +73,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-2">S.No</th>
                             <th class="px-4 py-2">Reported</th>
                             <th class="px-4 py-2">Asset</th>
                             <th class="px-4 py-2">Type</th>
@@ -81,6 +84,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($repairs as $repair)
                             <tr @if ($repair->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $repair->asset) }}'" @endif>
+                                <td class="px-4 py-2 text-gray-500">{{ $repairs->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-2 text-gray-500">{{ $repair->reported_date->format('d M Y') }}</td>
                                 <td class="px-4 py-2">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $repair->asset->name ?? 'Removed Asset' }}</p>
@@ -107,6 +111,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-2">S.No</th>
                             <th class="px-4 py-2">Date</th>
                             <th class="px-4 py-2">Asset</th>
                             <th class="px-4 py-2">Reported By</th>
@@ -116,6 +121,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($missingLogs as $log)
                             <tr @if ($log->asset) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $log->asset) }}'" @endif>
+                                <td class="px-4 py-2 text-gray-500">{{ $missingLogs->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-2 text-gray-500">{{ $log->created_at->format('d M Y, h:i A') }}</td>
                                 <td class="px-4 py-2">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $log->asset->name ?? 'Removed Asset' }}</p>

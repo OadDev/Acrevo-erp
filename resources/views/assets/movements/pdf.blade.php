@@ -31,12 +31,13 @@
         <table>
             <thead>
                 <tr>
-                    <th>Date</th><th>From</th><th>To</th><th>Type</th><th>Status</th><th>Updated By</th><th>Remarks</th>
+                    <th>S.No</th><th>Date</th><th>From</th><th>To</th><th>Type</th><th>Status</th><th>Updated By</th><th>Remarks</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($asset->movements as $movement)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $movement->moved_at->format('d M Y') }}</td>
                         <td>{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
                         <td>{{ $movement->locationLabel($movement->to_location, $movement->toWorkOrder) }}</td>

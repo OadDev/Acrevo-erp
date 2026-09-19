@@ -41,6 +41,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-3">S.No</th>
                             <th class="px-4 py-3">Verified On</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Work Order</th>
@@ -57,6 +58,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($verifications as $verification)
                             <tr>
+                                <td class="px-4 py-3 text-gray-500">{{ $verifications->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 text-gray-500 @if ($verification->asset) cursor-pointer @endif" @if ($verification->asset) onclick="window.location='{{ route('assets.show', $verification->asset) }}'" @endif>{{ $verification->verified_at->format('d M Y') }}</td>
                                 <td class="px-4 py-3 @if ($verification->asset) cursor-pointer @endif" @if ($verification->asset) onclick="window.location='{{ route('assets.show', $verification->asset) }}'" @endif>
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $verification->asset->name ?? 'Removed Asset' }}</p>

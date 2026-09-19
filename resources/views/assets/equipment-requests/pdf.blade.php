@@ -21,13 +21,14 @@
         <table>
             <thead>
                 <tr>
-                    <th>Requested</th><th>Item</th><th>Qty</th><th>Work Order</th>
+                    <th>S.No</th><th>Requested</th><th>Item</th><th>Qty</th><th>Work Order</th>
                     <th>Requested By</th><th>Status</th><th>Approved By</th><th>Asset</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($equipmentRequests as $equipmentRequest)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $equipmentRequest->created_at->format('d M Y') }}</td>
                         <td>{{ $equipmentRequest->item_name }}</td>
                         <td>{{ $equipmentRequest->quantity }}</td>

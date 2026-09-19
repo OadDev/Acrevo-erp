@@ -21,13 +21,14 @@
         <table>
             <thead>
                 <tr>
-                    <th>Asset ID</th><th>Name</th><th>Category</th><th>Last Known Site / WO</th>
+                    <th>S.No</th><th>Asset ID</th><th>Name</th><th>Category</th><th>Last Known Site / WO</th>
                     <th>Reported By</th><th>Reported Date</th><th>Days Missing</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($assets as $asset)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $asset->asset_code }}</td>
                         <td>{{ $asset->name }}</td>
                         <td>{{ $asset->category ?: '—' }}</td>
