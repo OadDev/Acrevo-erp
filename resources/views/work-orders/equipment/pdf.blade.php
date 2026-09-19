@@ -44,11 +44,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Asset ID</th><th>Name</th><th>Category</th><th>Serial Number</th><th>Qty Here</th><th>Status</th><th>Condition</th></tr>
+                <tr><th>S.No</th><th>Asset ID</th><th>Name</th><th>Category</th><th>Serial Number</th><th>Qty Here</th><th>Status</th><th>Condition</th></tr>
             </thead>
             <tbody>
                 @foreach ($assets as $asset)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $asset->asset_code }}</td>
                         <td>{{ $asset->name }}</td>
                         <td>{{ $asset->category ?: '—' }}</td>

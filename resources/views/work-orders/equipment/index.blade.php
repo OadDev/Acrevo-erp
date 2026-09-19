@@ -130,6 +130,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-3">S.No</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Category</th>
                             <th class="px-4 py-3">Serial Number</th>
@@ -141,6 +142,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($assets as $asset)
                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('assets.show', $asset) }}'">
+                                <td class="px-4 py-3 text-gray-500">{{ $assets->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $asset->name }}</p>
                                     <p class="text-xs text-gray-400">{{ $asset->asset_code }}</p>
