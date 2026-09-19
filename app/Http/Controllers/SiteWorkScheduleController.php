@@ -135,10 +135,13 @@ class SiteWorkScheduleController extends Controller
             'work_name' => ['required', 'string', 'max:255'],
             'work_details' => ['nullable', 'string', 'max:2000'],
             'duration_days' => ['required', 'integer', 'min:1'],
+            'revised_end_date' => ['nullable', 'date'],
             'schedule_mode' => ['required', 'in:'.implode(',', SiteWorkSchedule::MODES)],
             'depends_on_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
             'lag_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'start_date' => ['nullable', 'date'],
+            'original_start_date' => ['nullable', 'date'],
+            'original_duration_days' => ['nullable', 'integer', 'min:1'],
             'actual_start_date' => ['nullable', 'date'],
             'actual_end_date' => ['nullable', 'date'],
             'actual_progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
@@ -159,13 +162,31 @@ class SiteWorkScheduleController extends Controller
             return back()->withErrors(['start_date' => 'A start date is required for an independent work.'])->withInput();
         }
 
+        if ($data['schedule_mode'] === 'independent' && ! empty($data['start_date'])) {
+            $workSchedule->revised_start_date = $data['start_date'];
+        }
+
+        // A directly-typed Revised End Date overrides the Duration field -
+        // computed against this work's start date (the one just set above
+        // for an independent work, otherwise its last-known revised start,
+        // since a dependent work's true start isn't final until the
+        // recalculation below runs).
+        $durationDays = $data['duration_days'];
+
+        if (! empty($data['revised_end_date'])) {
+            $anchorStart = $workSchedule->revised_start_date;
+            $computed = $anchorStart->diffInDays(\Illuminate\Support\Carbon::parse($data['revised_end_date'])) + 1;
+            abort_if($computed < 1, 422, "Revised End Date must be on or after this work's start date ({$anchorStart->format('d M Y')}).");
+            $durationDays = $computed;
+        }
+
         $workSchedule->fill([
             'work_name' => $data['work_name'],
             'work_details' => $data['work_details'] ?? null,
             'schedule_mode' => $data['schedule_mode'],
             'depends_on_schedule_id' => $dependsOnId,
             'lag_days' => $data['lag_days'] ?? 0,
-            'revised_duration_days' => $data['duration_days'],
+            'revised_duration_days' => $durationDays,
             'actual_start_date' => $data['actual_start_date'] ?? null,
             'actual_end_date' => $data['actual_end_date'] ?? null,
             'actual_progress_percent' => $data['actual_progress_percent'] ?? null,
@@ -173,8 +194,20 @@ class SiteWorkScheduleController extends Controller
             'delay_reason' => $data['delay_reason'] ?? null,
         ]);
 
-        if ($data['schedule_mode'] === 'independent' && ! empty($data['start_date'])) {
-            $workSchedule->revised_start_date = $data['start_date'];
+        // Correcting the Original (baseline) schedule is a deliberate,
+        // separate action from revising the plan - only touched when the
+        // admin explicitly fills in the baseline-correction fields, e.g.
+        // to fix a typo made when the work was first created. Routine
+        // schedule changes never reach here, keeping variance meaningful.
+        if (! empty($data['original_start_date']) || ! empty($data['original_duration_days'])) {
+            $originalStart = ! empty($data['original_start_date'])
+                ? \Illuminate\Support\Carbon::parse($data['original_start_date'])
+                : $workSchedule->original_start_date;
+            $originalDuration = $data['original_duration_days'] ?? $workSchedule->original_duration_days;
+
+            $workSchedule->original_start_date = $originalStart;
+            $workSchedule->original_duration_days = $originalDuration;
+            $workSchedule->original_end_date = $originalStart->copy()->addDays(max(0, $originalDuration - 1));
         }
 
         $workSchedule->save();

@@ -196,6 +196,11 @@
                             <x-input-label value="Duration (days)" />
                             <x-text-input type="number" min="1" name="duration_days" class="mt-1 block w-full" required value="{{ $schedule->revised_duration_days }}" />
                         </div>
+                        <div>
+                            <x-input-label value="Revised End Date" />
+                            <x-text-input type="date" name="revised_end_date" class="mt-1 block w-full" />
+                            <p class="mt-1 text-xs text-gray-400">Currently {{ $schedule->revised_end_date->format('d M Y') }}. Set a date here to override Duration above.</p>
+                        </div>
                         @if ($priorSchedules->isEmpty())
                             <div>
                                 <x-input-label value="Start Date" />
@@ -255,6 +260,23 @@
                         <div class="sm:col-span-2">
                             <x-input-label value="Notes" />
                             <textarea name="work_details" rows="2" class="mt-1 block w-full rounded-lg border-gray-200 text-sm dark:border-gray-700 dark:bg-gray-800">{{ $schedule->work_details }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-400">Correct Original Baseline</p>
+                        <p class="mt-1 text-xs text-amber-700 dark:text-amber-400/80">
+                            Original Start / End Date ({{ $schedule->original_start_date->format('d M Y') }} – {{ $schedule->original_end_date->format('d M Y') }}) is normally frozen once set, so Variance stays meaningful. Only fill these in to fix a mistake made when this work was first added — it resets the baseline, not just the plan.
+                        </p>
+                        <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <x-input-label value="Original Start Date" />
+                                <x-text-input type="date" name="original_start_date" class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <x-input-label value="Original Duration (days)" />
+                                <x-text-input type="number" min="1" name="original_duration_days" class="mt-1 block w-full" />
+                            </div>
                         </div>
                     </div>
 

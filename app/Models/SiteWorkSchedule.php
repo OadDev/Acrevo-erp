@@ -101,10 +101,16 @@ class SiteWorkSchedule extends Model
     /**
      * Positive = extended/delayed by N days versus the original plan,
      * negative = finishing that many days early, 0 = on the original plan.
+     * Compares against the actual completion date once known, otherwise
+     * the current planned (revised) end date - so recording an Actual End
+     * Date immediately updates the variance shown, without needing to
+     * separately touch duration or the dependency gap.
      */
     public function varianceDays(): int
     {
-        return $this->original_end_date->diffInDays($this->revised_end_date, false);
+        $comparisonEnd = $this->actual_end_date ?? $this->revised_end_date;
+
+        return $this->original_end_date->diffInDays($comparisonEnd, false);
     }
 
     public function isDelayed(): bool
