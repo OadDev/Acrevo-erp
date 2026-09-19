@@ -412,6 +412,15 @@ class AssetController extends Controller
         return $pdf->download("{$asset->asset_code}.pdf");
     }
 
+    public function stockPdf(Asset $asset)
+    {
+        $asset->load(['stocks' => fn ($q) => $q->where('quantity', '>', 0)->with('workOrder')]);
+
+        $pdf = Pdf::loadView('assets.stock-pdf', compact('asset'));
+
+        return $pdf->download("{$asset->asset_code}-stock-by-location.pdf");
+    }
+
     /**
      * A dedicated, always-current view of every asset presently marked
      * "missing" - "Reported By" / "Reported Date" are pulled from that

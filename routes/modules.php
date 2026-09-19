@@ -454,6 +454,7 @@ Route::middleware('permission:assets.view')->group(function () {
 });
 Route::middleware('permission:assets.download_pdf')->group(function () {
     Route::get('assets/{asset}/pdf', [AssetController::class, 'pdf'])->name('assets.pdf');
+    Route::get('assets/{asset}/stock/pdf', [AssetController::class, 'stockPdf'])->name('assets.stock.pdf');
 });
 Route::middleware('permission:assets.edit')->group(function () {
     Route::get('assets/{asset}/edit', [AssetController::class, 'edit'])->name('assets.edit');
