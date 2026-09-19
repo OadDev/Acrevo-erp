@@ -45,6 +45,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDocumentController;
 use App\Http\Controllers\SiteVisitController;
+use App\Http\Controllers\SiteWorkScheduleController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
@@ -119,6 +120,29 @@ Route::middleware('permission:work_orders.view')->group(function () {
     Route::resource('sites', SiteController::class)->only(['index', 'show']);
     Route::get('sites/{site}/pdf', [SiteController::class, 'pdf'])->name('sites.pdf');
     Route::get('sites/{site}/zip', [SiteController::class, 'zip'])->name('sites.zip');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Site Work Schedule Planner
+|--------------------------------------------------------------------------
+| Site-level access (who can see which site's schedule at all) is enforced
+| inside SiteWorkScheduleController via accessibleSiteIds(), not here - the
+| permission middleware below only gates whether the feature is reachable
+| at all for this role, same split used throughout Equipment & Assets.
+*/
+Route::middleware('permission:work_schedules.view_overall')->group(function () {
+    Route::get('work-schedules', [SiteWorkScheduleController::class, 'overall'])->name('work-schedules.overall');
+    Route::get('work-schedules/pdf', [SiteWorkScheduleController::class, 'overallPdf'])->name('work-schedules.overall.pdf');
+});
+Route::middleware('permission:work_schedules.view_site')->group(function () {
+    Route::get('sites/{site}/work-schedule', [SiteWorkScheduleController::class, 'show'])->name('sites.work-schedule.show');
+    Route::get('sites/{site}/work-schedule/pdf', [SiteWorkScheduleController::class, 'pdf'])->name('sites.work-schedule.pdf');
+});
+Route::middleware('permission:work_schedules.manage')->group(function () {
+    Route::post('sites/{site}/work-schedule', [SiteWorkScheduleController::class, 'store'])->name('sites.work-schedule.store');
+    Route::put('sites/{site}/work-schedule/{workSchedule}', [SiteWorkScheduleController::class, 'update'])->name('sites.work-schedule.update');
+    Route::delete('sites/{site}/work-schedule/{workSchedule}', [SiteWorkScheduleController::class, 'destroy'])->name('sites.work-schedule.destroy');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
