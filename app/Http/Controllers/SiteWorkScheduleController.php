@@ -74,16 +74,26 @@ class SiteWorkScheduleController extends Controller
     {
         $this->authorizeSite($request->user(), $site);
 
-        $isFirst = $site->workSchedules()->count() === 0;
+        $hasExisting = $site->workSchedules()->exists();
 
         $data = $request->validate([
             'work_name' => ['required', 'string', 'max:255'],
             'work_details' => ['nullable', 'string', 'max:2000'],
             'duration_days' => ['required', 'integer', 'min:1'],
-            'is_parallel' => ['nullable', 'boolean'],
+            'schedule_mode' => [$hasExisting ? 'required' : 'nullable', 'in:'.implode(',', SiteWorkSchedule::MODES)],
+            'depends_on_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
             'lag_days' => ['nullable', 'integer', 'min:0', 'max:365'],
-            'start_date' => [$isFirst ? 'required' : 'nullable', 'date'],
+            'start_date' => ['nullable', 'date'],
         ]);
+
+        $mode = $hasExisting ? $data['schedule_mode'] : 'independent';
+
+        if ($mode === 'depends_on') {
+            $dependency = $site->workSchedules()->find($data['depends_on_schedule_id'] ?? null);
+            abort_unless($dependency, 422, 'Pick a work on this site for the new work to depend on.');
+        } elseif (empty($data['start_date'])) {
+            return back()->withErrors(['start_date' => 'A start date is required for an independent work.'])->withInput();
+        }
 
         $sequenceOrder = ($site->workSchedules()->max('sequence_order') ?? 0) + 1;
         $placeholder = $data['start_date'] ?? now()->toDateString();
@@ -92,7 +102,8 @@ class SiteWorkScheduleController extends Controller
             'sequence_order' => $sequenceOrder,
             'work_name' => $data['work_name'],
             'work_details' => $data['work_details'] ?? null,
-            'is_parallel' => $isFirst ? false : (bool) ($data['is_parallel'] ?? false),
+            'schedule_mode' => $mode,
+            'depends_on_schedule_id' => $mode === 'depends_on' ? $data['depends_on_schedule_id'] : null,
             'lag_days' => $data['lag_days'] ?? 0,
             'revised_duration_days' => $data['duration_days'],
             'original_duration_days' => $data['duration_days'],
@@ -120,13 +131,12 @@ class SiteWorkScheduleController extends Controller
         $this->authorizeSite($request->user(), $site);
         abort_unless($workSchedule->site_id === $site->id, 404);
 
-        $isFirst = $workSchedule->sequence_order === (int) $site->workSchedules()->min('sequence_order');
-
         $data = $request->validate([
             'work_name' => ['required', 'string', 'max:255'],
             'work_details' => ['nullable', 'string', 'max:2000'],
             'duration_days' => ['required', 'integer', 'min:1'],
-            'is_parallel' => ['nullable', 'boolean'],
+            'schedule_mode' => ['required', 'in:'.implode(',', SiteWorkSchedule::MODES)],
+            'depends_on_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
             'lag_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'start_date' => ['nullable', 'date'],
             'actual_start_date' => ['nullable', 'date'],
@@ -136,10 +146,24 @@ class SiteWorkScheduleController extends Controller
             'delay_reason' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $dependsOnId = null;
+
+        if ($data['schedule_mode'] === 'depends_on') {
+            $dependsOnId = $data['depends_on_schedule_id'] ?? null;
+            $dependency = $dependsOnId ? $site->workSchedules()->find($dependsOnId) : null;
+
+            abort_unless($dependency, 422, 'Pick a work on this site for this work to depend on.');
+            abort_if($dependsOnId === $workSchedule->id, 422, 'A work cannot depend on itself.');
+            abort_if($dependency->id > $workSchedule->id, 422, 'A work can only depend on a work that was added before it.');
+        } elseif (empty($data['start_date']) && $workSchedule->schedule_mode !== 'independent') {
+            return back()->withErrors(['start_date' => 'A start date is required for an independent work.'])->withInput();
+        }
+
         $workSchedule->fill([
             'work_name' => $data['work_name'],
             'work_details' => $data['work_details'] ?? null,
-            'is_parallel' => $isFirst ? false : (bool) ($data['is_parallel'] ?? false),
+            'schedule_mode' => $data['schedule_mode'],
+            'depends_on_schedule_id' => $dependsOnId,
             'lag_days' => $data['lag_days'] ?? 0,
             'revised_duration_days' => $data['duration_days'],
             'actual_start_date' => $data['actual_start_date'] ?? null,
@@ -149,7 +173,7 @@ class SiteWorkScheduleController extends Controller
             'delay_reason' => $data['delay_reason'] ?? null,
         ]);
 
-        if ($isFirst && ! empty($data['start_date'])) {
+        if ($data['schedule_mode'] === 'independent' && ! empty($data['start_date'])) {
             $workSchedule->revised_start_date = $data['start_date'];
         }
 

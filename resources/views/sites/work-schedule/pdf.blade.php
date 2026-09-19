@@ -49,7 +49,7 @@
                     @php [$dayStart, $dayEnd] = $schedule->dayRange(); $variance = $schedule->varianceDays(); @endphp
                     <tr>
                         <td>{{ $loop->iteration }}</td>
-                        <td>{{ $schedule->work_name }}{{ $schedule->is_parallel ? ' (parallel)' : '' }}</td>
+                        <td>{{ $schedule->work_name }}{{ $schedule->schedule_mode === 'depends_on' && $schedule->dependsOn ? ' (after '.$schedule->dependsOn->work_name.')' : '' }}</td>
                         <td>Day {{ $dayStart }}{{ $dayEnd !== $dayStart ? '–'.$dayEnd : '' }}</td>
                         <td>{{ $schedule->revised_start_date->format('d/m') }}–{{ $schedule->revised_end_date->format('d/m/y') }}</td>
                         <td class="text-right">{{ $schedule->revised_duration_days }}d</td>
