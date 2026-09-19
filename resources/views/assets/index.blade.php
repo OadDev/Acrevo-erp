@@ -111,7 +111,11 @@
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->condition ?: '—' }}</td>
                                 <td class="px-4 py-3 text-right text-gray-500">{{ $asset->quantity }}</td>
                                 <td class="px-4 py-3 text-gray-500">
-                                    @if ($asset->current_location === 'work_order' && $asset->currentWorkOrder)
+                                    @if (request('work_order_id') && $asset->relationLoaded('stocks'))
+                                        @php $woQty = $asset->stocks->sum('quantity'); @endphp
+                                        {{ $workOrders->firstWhere('id', request('work_order_id'))?->work_order_no }}
+                                        <span class="text-xs text-gray-400">&middot; {{ $woQty }} {{ Str::plural('unit', $woQty) }}</span>
+                                    @elseif ($asset->current_location === 'work_order' && $asset->currentWorkOrder)
                                         {{ $asset->currentWorkOrder->work_order_no }}
                                     @else
                                         {{ ucwords(str_replace('_', ' ', $asset->current_location)) }}

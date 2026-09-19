@@ -91,7 +91,10 @@ class AssetRepairController extends Controller
         // everything that was available there, mirroring how a Movement's
         // confirm() keeps current_location in sync - so a partial repair on
         // bulk stock doesn't misreport the rest of the asset as under repair.
-        if ($data['quantity'] === $available) {
+        // (int) cast - $data['quantity'] comes back from validate() as the
+        // raw request string, and $available is a genuine int, so a bare
+        // === here was always false regardless of the actual quantities.
+        if ((int) $data['quantity'] === $available) {
             $this->transitionAssetStatus($asset, 'under_repair', $user, "Repair #{$repair->id} reported.");
         }
 

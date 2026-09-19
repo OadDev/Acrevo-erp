@@ -17,7 +17,7 @@ class AssetVerification extends Model implements HasMedia
     public const RESULTS = ['verified_ok', 'damaged', 'not_found'];
 
     protected $fillable = [
-        'asset_id', 'result', 'quantity', 'location', 'condition', 'remarks', 'work_order_id', 'verified_at', 'verified_by',
+        'asset_id', 'result', 'asset_status_before', 'quantity', 'location', 'condition', 'remarks', 'work_order_id', 'verified_at', 'verified_by',
     ];
 
     protected function casts(): array

@@ -32,9 +32,26 @@ class AssetController extends Controller
     {
         $showRemoved = $request->boolean('removed') && $request->user()->can('assets.restore');
 
+        $filterWorkOrderId = $request->get('work_order_id');
+
         $assets = Asset::query()
             ->when($showRemoved, fn ($q) => $q->onlyTrashed())
             ->with('currentWorkOrder.site')
+            // Once an asset's quantity is split across locations, the
+            // legacy current_work_order_id only ever reflects wherever the
+            // last movement happened to send the whole remaining balance
+            // (see AssetMovementController::confirm()) - it can easily
+            // point somewhere the asset no longer has any stock at all,
+            // while staying silent about every work order it's actually
+            // sitting at. The AssetStock ledger is the source of truth for
+            // "is any of this asset currently at this work order", so the
+            // filter has to go through it instead.
+            ->when($filterWorkOrderId, fn ($q, $v) => $q->whereHas('stocks', fn ($q2) => $q2
+                ->where('work_order_id', $v)
+                ->where('quantity', '>', 0)))
+            ->when($filterWorkOrderId, fn ($q, $v) => $q->with(['stocks' => fn ($q2) => $q2
+                ->where('work_order_id', $v)
+                ->where('quantity', '>', 0)]))
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
@@ -49,7 +66,6 @@ class AssetController extends Controller
             ->when($request->get('condition'), fn ($q, $v) => $q->where('condition', $v))
             ->when($request->get('brand'), fn ($q, $v) => $q->where('brand', $v))
             ->when($request->get('current_location'), fn ($q, $v) => $q->where('current_location', $v))
-            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('current_work_order_id', $v))
             ->when($request->get('warranty_status'), function ($q, $v) {
                 return match ($v) {
                     'active' => $q->whereNotNull('warranty_end')->where('warranty_end', '>', now()->addDays(30)),
@@ -418,7 +434,16 @@ class AssetController extends Controller
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('serial_number', 'like', "%{$search}%")
                 ->orWhere('category', 'like', "%{$search}%")))
-            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('current_work_order_id', $v))
+            // current_work_order_id only tracks wherever the last Movement
+            // sent the asset's whole remaining balance - it's not updated
+            // when a Verification finds a specific bucket missing, so it
+            // can easily point somewhere other than the work order this
+            // asset is actually reported missing at. The AssetStock
+            // ledger's own "missing" bucket is what's authoritative here.
+            ->when($request->get('work_order_id'), fn ($q, $v) => $q->whereHas('stocks', fn ($q2) => $q2
+                ->where('work_order_id', $v)
+                ->where('status', 'missing')
+                ->where('quantity', '>', 0)))
             ->when($request->get('from') || $request->get('to'), fn ($q) => $q->whereHas('statusLogs', function ($q2) use ($request) {
                 $q2->where('new_status', 'missing')
                     ->when($request->get('from'), fn ($q3, $v) => $q3->whereDate('created_at', '>=', $v))
@@ -455,7 +480,10 @@ class AssetController extends Controller
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('serial_number', 'like', "%{$search}%")
                 ->orWhere('category', 'like', "%{$search}%")))
-            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('current_work_order_id', $v))
+            ->when($request->get('work_order_id'), fn ($q, $v) => $q->whereHas('stocks', fn ($q2) => $q2
+                ->where('work_order_id', $v)
+                ->where('status', 'missing')
+                ->where('quantity', '>', 0)))
             ->when($request->get('from') || $request->get('to'), fn ($q) => $q->whereHas('statusLogs', function ($q2) use ($request) {
                 $q2->where('new_status', 'missing')
                     ->when($request->get('from'), fn ($q3, $v) => $q3->whereDate('created_at', '>=', $v))
