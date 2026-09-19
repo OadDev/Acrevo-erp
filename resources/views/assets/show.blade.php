@@ -55,7 +55,12 @@
             <x-card :padded="false">
                 <div class="flex items-center justify-between p-4">
                     <h3 class="text-sm font-semibold text-gray-500">Stock by Location</h3>
-                    <span class="text-xs text-gray-400">Total Quantity: {{ $asset->quantity }}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-400">Total Quantity: {{ $asset->quantity }}</span>
+                        @can('assets.download_pdf')
+                            <x-link-button :href="route('assets.stock.pdf', $asset)" variant="secondary">Download PDF</x-link-button>
+                        @endcan
+                    </div>
                 </div>
                 @if ($asset->stocks->isEmpty())
                     <p class="px-4 pb-4 text-sm text-gray-400">No stock recorded yet.</p>

@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\AssetMovement;
 use App\Models\AssetRepair;
 use App\Models\AssetStatusLog;
+use App\Models\AssetStock;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class WorkOrderEquipmentController extends Controller
         $this->authorize('view', $workOrder);
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
+        $stockSummary = $this->stockSummary($workOrder);
 
         $pendingMovements = AssetMovement::query()
             ->where('to_work_order_id', $workOrder->id)
@@ -41,7 +43,7 @@ class WorkOrderEquipmentController extends Controller
 
         $canConfirmHere = $user->can('movements.approve') && ($ledWorkOrderIds === null || $ledWorkOrderIds->contains($workOrder->id));
 
-        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere'));
+        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere', 'stockSummary'));
     }
 
     public function pdf(Request $request, WorkOrder $workOrder)
@@ -49,8 +51,9 @@ class WorkOrderEquipmentController extends Controller
         $this->authorize('view', $workOrder);
 
         $assets = $this->currentEquipment($request, $workOrder)->get();
+        $stockSummary = $this->stockSummary($workOrder);
 
-        $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets'));
+        $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets', 'stockSummary'));
 
         return $pdf->download("{$workOrder->work_order_no}-equipment.pdf");
     }
@@ -111,6 +114,28 @@ class WorkOrderEquipmentController extends Controller
                 ->orWhere('category', 'like', "%{$search}%")))
             ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
             ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc');
+    }
+
+    /**
+     * Total/Available/Damaged/Missing quantity across every asset ever
+     * allocated to this work order, straight from the AssetStock ledger -
+     * lets a Team Leader see losses at a glance instead of having to open
+     * each asset's own Stock by Location card one at a time.
+     */
+    private function stockSummary(WorkOrder $workOrder): array
+    {
+        $byStatus = AssetStock::where('location', 'work_order')
+            ->where('work_order_id', $workOrder->id)
+            ->selectRaw('status, sum(quantity) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return [
+            'total' => $byStatus->sum(),
+            'available' => (int) ($byStatus['available'] ?? 0),
+            'damaged' => (int) ($byStatus['damaged'] ?? 0),
+            'missing' => (int) ($byStatus['missing'] ?? 0),
+        ];
     }
 
     private function movementsQuery(Request $request, WorkOrder $workOrder)

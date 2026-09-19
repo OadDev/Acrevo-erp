@@ -11,6 +11,45 @@
         </x-page-header>
     </x-slot>
 
+    <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Total Allocated</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['total'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                <x-icon name="layers" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Available</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['available'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                <x-icon name="check-circle" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Damaged</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['damaged'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                <x-icon name="alert-triangle" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Missing</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['missing'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+                <x-icon name="search" class="h-5 w-5" />
+            </div>
+        </x-card>
+    </div>
+
     @if ($pendingMovements->isNotEmpty())
         <x-card :padded="false" class="mb-4">
             <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Waiting for Confirmation</h3></div>

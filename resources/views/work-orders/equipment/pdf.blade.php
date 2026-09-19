@@ -25,6 +25,20 @@
         </tr>
     </table>
 
+    <table>
+        <thead>
+            <tr><th>Total Allocated</th><th>Available</th><th>Damaged</th><th>Missing</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ $stockSummary['total'] }}</td>
+                <td>{{ $stockSummary['available'] }}</td>
+                <td>{{ $stockSummary['damaged'] }}</td>
+                <td>{{ $stockSummary['missing'] }}</td>
+            </tr>
+        </tbody>
+    </table>
+
     @if ($assets->isEmpty())
         <p class="muted">No equipment is currently assigned to this site.</p>
     @else
