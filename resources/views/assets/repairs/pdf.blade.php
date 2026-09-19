@@ -32,13 +32,14 @@
         <table>
             <thead>
                 <tr>
-                    <th>Reported</th><th>Completed</th><th>Type</th><th>Issue</th><th>Technician / Vendor</th>
+                    <th>S.No</th><th>Reported</th><th>Completed</th><th>Type</th><th>Issue</th><th>Technician / Vendor</th>
                     <th>Warranty</th><th class="text-right">Cost</th><th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($asset->repairs as $repair)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $repair->reported_date->format('d M Y') }}</td>
                         <td>{{ optional($repair->completed_date)->format('d M Y') ?? '—' }}</td>
                         <td>{{ ucwords($repair->repair_type) }}</td>

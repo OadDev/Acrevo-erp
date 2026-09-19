@@ -68,6 +68,7 @@
                 <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-3">S.No</th>
                             <th class="px-4 py-3">Requested</th>
                             <th class="px-4 py-3">Item</th>
                             <th class="px-4 py-3">Work Order</th>
@@ -80,6 +81,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($equipmentRequests as $equipmentRequest)
                             <tr>
+                                <td class="px-4 py-3 text-gray-500">{{ $equipmentRequests->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $equipmentRequest->created_at->format('d M Y') }}</td>
                                 <td class="px-4 py-3">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $equipmentRequest->item_name }} @if($equipmentRequest->quantity > 1)<span class="text-xs text-gray-400">&times;{{ $equipmentRequest->quantity }}</span>@endif</p>

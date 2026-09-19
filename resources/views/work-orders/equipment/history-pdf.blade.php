@@ -32,11 +32,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Date</th><th>Asset</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
+                <tr><th>S.No</th><th>Date</th><th>Asset</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
             </thead>
             <tbody>
                 @foreach ($movements as $movement)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $movement->moved_at->format('d M Y') }}</td>
                         <td>{{ $movement->asset->asset_code }} — {{ $movement->asset->name }}</td>
                         <td>{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
@@ -55,11 +56,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Reported</th><th>Asset</th><th>Type</th><th>Issue</th><th>Status</th></tr>
+                <tr><th>S.No</th><th>Reported</th><th>Asset</th><th>Type</th><th>Issue</th><th>Status</th></tr>
             </thead>
             <tbody>
                 @foreach ($repairs as $repair)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $repair->reported_date->format('d M Y') }}</td>
                         <td>{{ $repair->asset->asset_code }} — {{ $repair->asset->name }}</td>
                         <td>{{ ucwords($repair->repair_type) }}</td>
@@ -77,11 +79,12 @@
     @else
         <table>
             <thead>
-                <tr><th>Date</th><th>Asset</th><th>Reported By</th><th>Reason / Remarks</th></tr>
+                <tr><th>S.No</th><th>Date</th><th>Asset</th><th>Reported By</th><th>Reason / Remarks</th></tr>
             </thead>
             <tbody>
                 @foreach ($missingLogs as $log)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $log->created_at->format('d M Y, h:i A') }}</td>
                         <td>{{ $log->asset->asset_code }} — {{ $log->asset->name }}</td>
                         <td>{{ $log->updatedBy?->name }}</td>

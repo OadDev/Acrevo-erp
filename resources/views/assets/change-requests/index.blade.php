@@ -12,6 +12,7 @@
                     <div class="p-4" x-data="{ open: false }">
                         <div class="flex items-center justify-between">
                             <div>
+                                <span class="mr-1 text-xs text-gray-400">#{{ $changeRequests->firstItem() + $loop->index }}</span>
                                 <a href="{{ route('assets.show', $changeRequest->asset) }}" class="font-medium text-indigo-600 hover:underline">{{ $changeRequest->asset->asset_code }} — {{ $changeRequest->asset->name }}</a>
                                 <p class="text-xs text-gray-400">Requested by {{ $changeRequest->requestedBy?->name }} &middot; {{ $changeRequest->created_at->format('d M Y, h:i A') }}</p>
                             </div>
