@@ -74,6 +74,9 @@ class AssetVerificationController extends Controller
         $verification = AssetVerification::create($data + [
             'asset_id' => $asset->id,
             'verified_by' => $user->id,
+            // Snapshot so destroy() can put the legacy status back exactly
+            // where it was if this verification is the one that moved it.
+            'asset_status_before' => $asset->status,
         ]);
 
         $badBucket = match ($data['result']) {
@@ -90,7 +93,10 @@ class AssetVerificationController extends Controller
         // Legacy whole-asset status flag only flips when this verification
         // covers everything that was available there, mirroring the same
         // heuristic used by Movement::confirm() and repair reporting.
-        if ($data['quantity'] === $available) {
+        // (int) cast - $data['quantity'] comes back from validate() as the
+        // raw request string, and $available is a genuine int, so a bare
+        // === here was always false regardless of the actual quantities.
+        if ((int) $data['quantity'] === $available) {
             match ($data['result']) {
                 'not_found' => $this->transitionAssetStatus($asset, 'missing', $user, "Verification #{$verification->id} found the asset missing."),
                 'damaged' => $this->transitionAssetStatus($asset, 'damaged', $user, "Verification #{$verification->id} found the asset damaged."),
@@ -137,14 +143,45 @@ class AssetVerificationController extends Controller
     }
 
     /**
-     * Deleting a verification only removes the history entry - it does not
-     * move quantity back to Available. Unlike a pending Movement or an
-     * open Repair, a verification's Missing/Damaged finding isn't a
-     * reservation waiting to be settled; it's a real-world fact as of that
-     * check, and removing the record shouldn't silently un-report it.
+     * Removing a verification undoes what it did: the quantity it moved
+     * into Missing/Damaged goes back to Available, and the legacy
+     * whole-asset status returns to what it was before this verification
+     * flipped it - otherwise an asset stays stuck showing on Missing
+     * Assets (or Damaged) forever once the entry that reported it is gone.
      */
-    public function destroy(AssetVerification $verification): RedirectResponse
+    public function destroy(Request $request, AssetVerification $verification): RedirectResponse
     {
+        // withTrashed() - the asset may have been removed while this
+        // verification sat in its history; it must still resolve to settle
+        // the ledger.
+        $asset = Asset::withTrashed()->find($verification->asset_id);
+
+        if ($asset) {
+            $badBucket = match ($verification->result) {
+                'not_found' => 'missing',
+                'damaged' => 'damaged',
+                default => null,
+            };
+
+            if ($badBucket) {
+                // release() rather than a blind adjust() - some of what this
+                // verification moved into the bucket may since have been
+                // moved on by a later Movement/Repair/Verification, so
+                // there may be less left to release than it originally put
+                // there.
+                $released = AssetStock::release($asset, $verification->location, $verification->work_order_id, $badBucket, $verification->quantity);
+                AssetStock::adjust($asset, $verification->location, $verification->work_order_id, 'available', $released);
+
+                // Only restorable when asset_status_before was actually
+                // captured - verifications recorded before that snapshot
+                // existed have nothing to revert to, so their status is
+                // left as-is rather than guessed at.
+                if ($verification->asset_status_before) {
+                    $this->transitionAssetStatus($asset, $verification->asset_status_before, $request->user(), "Verification #{$verification->id} removed.");
+                }
+            }
+        }
+
         $verification->delete();
 
         return back()->with('success', 'Verification entry removed.');
