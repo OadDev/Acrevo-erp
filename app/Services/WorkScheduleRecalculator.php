@@ -8,20 +8,25 @@ use Illuminate\Support\Carbon;
 
 /**
  * Rebuilds every SiteWorkSchedule's revised_start_date/revised_end_date
- * for a site, in sequence_order, whenever any schedule for that site is
- * added, edited, reordered, or removed.
+ * for a site whenever any schedule for that site is added, edited, or
+ * removed.
  *
- * The chain rule (per site, walking sequence_order ascending):
- *   - A sequential item (is_parallel = false) starts the day after the
- *     running end date (the latest effective end date reached by any
- *     item so far), plus its own lag_days gap. It becomes the new
- *     "anchor" for any parallel items that follow.
- *   - A parallel item (is_parallel = true) starts alongside the current
- *     anchor's effective start date, plus its own lag_days.
- *   - "Effective" end/start date is the actual_* date once the work is
- *     marked completed/started, otherwise the planned revised_* date -
- *     so an early or late actual completion automatically reflows
- *     everything scheduled after it.
+ * Each work is one of two modes:
+ *   - 'independent': its revised_start_date is whatever the admin set
+ *     directly and is never touched here - two or more independent works
+ *     can freely start on the same day with no relationship to each
+ *     other, and editing one never moves another.
+ *   - 'depends_on': starts the day after its dependency's effective end
+ *     date, plus its own lag_days gap. "Effective" end is the actual_*
+ *     date once the dependency is completed, otherwise its planned
+ *     revised_end_date - so an early or late actual completion
+ *     automatically reflows whatever depends on it.
+ *
+ * A schedule may only depend on a schedule with a smaller id (enforced in
+ * SiteWorkScheduleController's validation), which makes the dependency
+ * graph a DAG by construction - processing in ascending id order always
+ * resolves a dependency before the row that needs it, in one pass, with
+ * no cycle risk.
  *
  * original_* fields are never touched here - only set once, at creation.
  */
@@ -29,23 +34,15 @@ class WorkScheduleRecalculator
 {
     public static function recalculate(Site $site): void
     {
-        $schedules = $site->workSchedules()->orderBy('sequence_order')->get();
-
-        if ($schedules->isEmpty()) {
-            return;
-        }
-
-        $runningEnd = null;
-        $anchorStart = null;
+        $schedules = $site->workSchedules()->orderBy('id')->get()->keyBy('id');
 
         foreach ($schedules as $schedule) {
-            if ($schedule->is_parallel && $anchorStart !== null) {
-                $start = $anchorStart->copy()->addDays($schedule->lag_days);
+            if ($schedule->schedule_mode === 'depends_on' && $schedule->depends_on_schedule_id && $schedules->has($schedule->depends_on_schedule_id)) {
+                $dependency = $schedules->get($schedule->depends_on_schedule_id);
+                $dependencyEnd = $dependency->actual_end_date ?? $dependency->revised_end_date;
+                $start = $dependencyEnd->copy()->addDay()->addDays($schedule->lag_days);
             } else {
-                $start = $runningEnd === null
-                    ? $schedule->revised_start_date ?? $schedule->original_start_date
-                    : $runningEnd->copy()->addDay()->addDays($schedule->lag_days);
-                $anchorStart = $start;
+                $start = $schedule->revised_start_date;
             }
 
             $end = $start->copy()->addDays(max(0, $schedule->revised_duration_days - 1));
@@ -55,14 +52,6 @@ class WorkScheduleRecalculator
                     'revised_start_date' => $start,
                     'revised_end_date' => $end,
                 ])->save();
-            }
-
-            $effectiveEnd = $schedule->actual_end_date ?? $end;
-            $runningEnd = $runningEnd === null ? $effectiveEnd : $runningEnd->max($effectiveEnd);
-
-            $effectiveAnchorStart = $schedule->actual_start_date ?? $start;
-            if (! $schedule->is_parallel) {
-                $anchorStart = $effectiveAnchorStart;
             }
         }
     }

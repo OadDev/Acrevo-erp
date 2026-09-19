@@ -38,7 +38,7 @@
     @can('work_schedules.manage')
         <x-card class="mb-6">
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Add Work</h3>
-            <form method="POST" action="{{ route('sites.work-schedule.store', $site) }}" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <form method="POST" action="{{ route('sites.work-schedule.store', $site) }}" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" x-data="{ mode: '{{ $schedules->isEmpty() ? 'independent' : 'depends_on' }}' }">
                 @csrf
                 <div class="sm:col-span-2 lg:col-span-2">
                     <x-input-label for="work_name" value="Work Name / Details" />
@@ -55,12 +55,30 @@
                     </div>
                 @else
                     <div>
-                        <x-input-label for="lag_days" value="Gap Before Starting (days)" />
-                        <x-text-input id="lag_days" type="number" min="0" name="lag_days" class="mt-1 block w-full" value="0" />
+                        <x-input-label value="Scheduling" />
+                        <x-select-input name="schedule_mode" x-model="mode" class="mt-1 block w-full">
+                            <option value="independent">Independent (its own start date)</option>
+                            <option value="depends_on">Depends on another work</option>
+                        </x-select-input>
                     </div>
-                    <div class="flex items-center gap-2 pt-6">
-                        <input type="checkbox" id="is_parallel" name="is_parallel" value="1" class="rounded border-gray-300 text-indigo-600 dark:border-gray-600">
-                        <x-input-label for="is_parallel" value="Runs parallel with previous work" class="!mb-0" />
+                    <div x-show="mode === 'independent'">
+                        <x-input-label for="start_date" value="Start Date" />
+                        <x-text-input id="start_date" type="date" name="start_date" class="mt-1 block w-full" />
+                    </div>
+                    <div x-show="mode === 'depends_on'" class="sm:col-span-2 lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <x-input-label value="Depends On" />
+                            <x-select-input name="depends_on_schedule_id" class="mt-1 block w-full">
+                                <option value="">Select a work...</option>
+                                @foreach ($schedules as $existing)
+                                    <option value="{{ $existing->id }}">{{ $existing->work_name }}</option>
+                                @endforeach
+                            </x-select-input>
+                        </div>
+                        <div>
+                            <x-input-label value="Gap After It Ends (days)" />
+                            <x-text-input type="number" min="0" name="lag_days" class="mt-1 block w-full" value="0" />
+                        </div>
                     </div>
                 @endif
                 <div class="sm:col-span-2 lg:col-span-4">
@@ -109,8 +127,10 @@
                                 <td class="px-4 py-3 text-gray-500">{{ $loop->iteration }}</td>
                                 <td class="px-4 py-3">
                                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $schedule->work_name }}</p>
-                                    @if ($schedule->is_parallel)
-                                        <p class="text-xs text-indigo-500">Parallel work</p>
+                                    @if ($schedule->schedule_mode === 'depends_on' && $schedule->dependsOn)
+                                        <p class="text-xs text-indigo-500">After: {{ $schedule->dependsOn->work_name }}</p>
+                                    @else
+                                        <p class="text-xs text-gray-400">Independent</p>
                                     @endif
                                     @can('work_schedules.view_details')
                                         @if ($schedule->work_details)
@@ -160,8 +180,9 @@
 
     @can('work_schedules.manage')
         @foreach ($schedules as $schedule)
+            @php $priorSchedules = $schedules->filter(fn ($s) => $s->id < $schedule->id); @endphp
             <x-modal :name="'edit-schedule-'.$schedule->id" max-width="lg">
-                <form method="POST" action="{{ route('sites.work-schedule.update', [$site, $schedule]) }}" class="p-6">
+                <form method="POST" action="{{ route('sites.work-schedule.update', [$site, $schedule]) }}" class="p-6" x-data="{ mode: '{{ $schedule->schedule_mode }}' }">
                     @csrf
                     @method('PUT')
                     <h3 class="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Edit — {{ $schedule->work_name }}</h3>
@@ -175,19 +196,36 @@
                             <x-input-label value="Duration (days)" />
                             <x-text-input type="number" min="1" name="duration_days" class="mt-1 block w-full" required value="{{ $schedule->revised_duration_days }}" />
                         </div>
-                        @if ($schedule->sequence_order === (int) $schedules->min('sequence_order'))
+                        @if ($priorSchedules->isEmpty())
                             <div>
-                                <x-input-label value="Start Date (Day 1)" />
+                                <x-input-label value="Start Date" />
                                 <x-text-input type="date" name="start_date" class="mt-1 block w-full" value="{{ $schedule->revised_start_date->format('Y-m-d') }}" />
                             </div>
+                            <input type="hidden" name="schedule_mode" value="independent">
                         @else
                             <div>
-                                <x-input-label value="Gap Before Starting (days)" />
-                                <x-text-input type="number" min="0" name="lag_days" class="mt-1 block w-full" value="{{ $schedule->lag_days }}" />
+                                <x-input-label value="Scheduling" />
+                                <x-select-input name="schedule_mode" x-model="mode" class="mt-1 block w-full">
+                                    <option value="independent">Independent (its own start date)</option>
+                                    <option value="depends_on">Depends on another work</option>
+                                </x-select-input>
                             </div>
-                            <div class="flex items-center gap-2 pt-6">
-                                <input type="checkbox" name="is_parallel" value="1" class="rounded border-gray-300 text-indigo-600 dark:border-gray-600" @checked($schedule->is_parallel)>
-                                <x-input-label value="Runs parallel with previous work" class="!mb-0" />
+                            <div x-show="mode === 'independent'">
+                                <x-input-label value="Start Date" />
+                                <x-text-input type="date" name="start_date" class="mt-1 block w-full" value="{{ $schedule->revised_start_date->format('Y-m-d') }}" />
+                            </div>
+                            <div x-show="mode === 'depends_on'">
+                                <x-input-label value="Depends On" />
+                                <x-select-input name="depends_on_schedule_id" class="mt-1 block w-full">
+                                    <option value="">Select a work...</option>
+                                    @foreach ($priorSchedules as $option)
+                                        <option value="{{ $option->id }}" @selected($schedule->depends_on_schedule_id === $option->id)>{{ $option->work_name }}</option>
+                                    @endforeach
+                                </x-select-input>
+                            </div>
+                            <div x-show="mode === 'depends_on'">
+                                <x-input-label value="Gap After It Ends (days)" />
+                                <x-text-input type="number" min="0" name="lag_days" class="mt-1 block w-full" value="{{ $schedule->lag_days }}" />
                             </div>
                         @endif
                         <div>
