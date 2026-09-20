@@ -283,6 +283,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:assets.view')->group(function () {
         Route::get('equipment', [WorkOrderEquipmentController::class, 'index'])->name('equipment.index');
         Route::get('equipment/pdf', [WorkOrderEquipmentController::class, 'pdf'])->name('equipment.pdf');
+        Route::get('equipment/summary/pdf', [WorkOrderEquipmentController::class, 'summaryPdf'])->name('equipment.summary.pdf');
     });
     Route::middleware('permission:assets.view_history')->group(function () {
         Route::get('equipment/history', [WorkOrderEquipmentController::class, 'history'])->name('equipment.history');

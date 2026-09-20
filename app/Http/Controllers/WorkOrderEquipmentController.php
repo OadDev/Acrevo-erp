@@ -27,6 +27,7 @@ class WorkOrderEquipmentController extends Controller
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
         $stockSummary = $this->stockSummary($workOrder);
+        $assetWiseSummary = $this->assetWiseSummary($workOrder);
 
         $pendingMovements = AssetMovement::query()
             ->where('to_work_order_id', $workOrder->id)
@@ -43,7 +44,7 @@ class WorkOrderEquipmentController extends Controller
 
         $canConfirmHere = $user->can('movements.approve') && ($ledWorkOrderIds === null || $ledWorkOrderIds->contains($workOrder->id));
 
-        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere', 'stockSummary'));
+        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere', 'stockSummary', 'assetWiseSummary'));
     }
 
     public function pdf(Request $request, WorkOrder $workOrder)
@@ -56,6 +57,24 @@ class WorkOrderEquipmentController extends Controller
         $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets', 'stockSummary'));
 
         return $pdf->download("{$workOrder->work_order_no}-equipment.pdf");
+    }
+
+    /**
+     * The asset-wise breakdown behind the "recover the cost from whoever's
+     * responsible" workflow: one row per asset name allocated to this work
+     * order, with how much of it is Available (in use), Damaged, or Missing,
+     * so Admin doesn't have to open each asset's own Stock by Location card
+     * to add it up by hand.
+     */
+    public function summaryPdf(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorize('view', $workOrder);
+
+        $assetWiseSummary = $this->assetWiseSummary($workOrder);
+
+        $pdf = Pdf::loadView('work-orders.equipment.summary-pdf', compact('workOrder', 'assetWiseSummary'));
+
+        return $pdf->download("{$workOrder->work_order_no}-equipment-summary.pdf");
     }
 
     /**
@@ -136,6 +155,36 @@ class WorkOrderEquipmentController extends Controller
             'damaged' => (int) ($byStatus['damaged'] ?? 0),
             'missing' => (int) ($byStatus['missing'] ?? 0),
         ];
+    }
+
+    /**
+     * The same ledger as stockSummary(), but broken down per asset instead
+     * of totalled across all of them - one row per Asset with its Total
+     * Allocated/In Use (Available)/Damaged/Missing quantities at this work
+     * order, so a damaged or missing quantity can be traced back to exactly
+     * which asset it belongs to and its cost recovered accordingly.
+     */
+    private function assetWiseSummary(WorkOrder $workOrder)
+    {
+        return AssetStock::where('location', 'work_order')
+            ->where('work_order_id', $workOrder->id)
+            ->where('quantity', '>', 0)
+            ->with(['asset' => fn ($q) => $q->withTrashed()])
+            ->get()
+            ->groupBy('asset_id')
+            ->map(function ($stocks) {
+                $byStatus = $stocks->groupBy('status')->map(fn ($group) => $group->sum('quantity'));
+
+                return (object) [
+                    'asset' => $stocks->first()->asset,
+                    'total' => $stocks->sum('quantity'),
+                    'in_use' => (int) ($byStatus['available'] ?? 0),
+                    'damaged' => (int) ($byStatus['damaged'] ?? 0),
+                    'missing' => (int) ($byStatus['missing'] ?? 0),
+                ];
+            })
+            ->sortBy(fn ($row) => $row->asset?->name ?? '')
+            ->values();
     }
 
     private function movementsQuery(Request $request, WorkOrder $workOrder)

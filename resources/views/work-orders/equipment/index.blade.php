@@ -2,6 +2,7 @@
     <x-slot name="header">
         <x-page-header :title="'Equipment — '.$workOrder->work_order_no" subtitle="Current equipment assigned to this site.">
             <x-slot name="actions">
+                <x-link-button :href="route('work-orders.equipment.summary.pdf', $workOrder)" variant="secondary">Download Asset-wise Report (PDF)</x-link-button>
                 <x-link-button :href="route('work-orders.equipment.pdf', array_merge(['workOrder' => $workOrder], request()->query()))" variant="secondary">Download PDF</x-link-button>
                 @can('assets.view_history')
                     <x-link-button :href="route('work-orders.equipment.history', $workOrder)" variant="secondary">Equipment History</x-link-button>
@@ -49,6 +50,36 @@
             </div>
         </x-card>
     </div>
+
+    <x-card :padded="false" class="mb-4">
+        <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Asset-wise Summary</h3></div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th class="px-4 py-2">Asset Name</th>
+                        <th class="px-4 py-2 text-right">Total Allocated</th>
+                        <th class="px-4 py-2 text-right">In Use</th>
+                        <th class="px-4 py-2 text-right">Damaged</th>
+                        <th class="px-4 py-2 text-right">Missing</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse ($assetWiseSummary as $row)
+                        <tr>
+                            <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $row->asset?->name ?? 'Removed Asset' }}</td>
+                            <td class="px-4 py-2 text-right text-gray-500">{{ $row->total }}</td>
+                            <td class="px-4 py-2 text-right text-emerald-600">{{ $row->in_use }}</td>
+                            <td class="px-4 py-2 text-right text-amber-600">{{ $row->damaged }}</td>
+                            <td class="px-4 py-2 text-right text-rose-600">{{ $row->missing }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">No equipment allocated to this site yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </x-card>
 
     @if ($pendingMovements->isNotEmpty())
         <x-card :padded="false" class="mb-4">
