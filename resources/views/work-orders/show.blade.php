@@ -89,9 +89,6 @@
         <div x-show="tab === 'materials'" x-cloak>
             @include('work-orders.tabs.materials')
         </div>
-        <div x-show="tab === 'equipment'" x-cloak>
-            @include('work-orders.tabs.equipment')
-        </div>
         <div x-show="tab === 'manpower'" x-cloak>
             @include('work-orders.tabs.manpower')
         </div>

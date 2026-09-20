@@ -218,11 +218,6 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(CompanyLedger::class);
     }
 
-    public function assets(): HasMany
-    {
-        return $this->hasMany(WorkOrderAsset::class);
-    }
-
     public function summaries(): HasMany
     {
         return $this->hasMany(WorkOrderSummary::class);

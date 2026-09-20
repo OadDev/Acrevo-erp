@@ -22,7 +22,6 @@ trait LoadsWorkOrderPdfRelations
             'dailyChecklists.executiveTeam',
             'dailyProgressReports' => fn ($q) => $q->latest(),
             'materialEntries.addedBy', 'materialUsageEntries.addedBy', 'labourEntries.employee', 'timeSchedules', 'budgetItems', 'measurementBooks.items', 'ledgers.media', 'ledgers.createdBy',
-            'assets.createdBy',
             'companyLedgers.media', 'companyLedgers.createdBy',
             'summaries' => fn ($q) => $q->orderBy('entry_date'),
             'attendances.employee', 'attendances.markedBy',

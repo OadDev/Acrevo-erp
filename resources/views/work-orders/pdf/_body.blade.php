@@ -259,29 +259,6 @@
     @endif
 @endif
 
-@if (in_array('equipment', $sections, true))
-    <h2 class="section-title">{{ $sectionLabels['equipment'] }}</h2>
-    @if ($workOrder->assets->isNotEmpty())
-        <table>
-            <thead><tr><th>Asset Name</th><th class="text-right">Total</th><th class="text-right">In Use</th><th class="text-right">Damaged</th><th class="text-right">Missing</th><th>Remarks</th></tr></thead>
-            <tbody>
-                @foreach ($workOrder->assets as $entry)
-                    <tr>
-                        <td>{{ $entry->asset_name }}</td>
-                        <td class="text-right">{{ $entry->allocated_quantity }}</td>
-                        <td class="text-right">{{ $entry->inUseQuantity() }}</td>
-                        <td class="text-right">{{ $entry->damaged_quantity }}</td>
-                        <td class="text-right">{{ $entry->missing_quantity }}</td>
-                        <td>{{ $entry->remarks ?? '—' }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @else
-        <p class="empty">No equipment entries yet.</p>
-    @endif
-@endif
-
 @if (in_array('manpower', $sections, true))
     <h2 class="section-title">{{ $sectionLabels['manpower'] }}</h2>
     <table class="meta-table">
