@@ -42,6 +42,7 @@
                     <th>S.No</th><th>Work</th><th>Day</th><th>Date</th>
                     <th class="text-right">Original Days</th><th class="text-right">Revised Days</th>
                     <th>Original End</th><th>Revised End</th>
+                    <th>Actual Start</th><th>Actual End</th><th class="text-right">Actual Duration</th>
                     <th class="text-right">Previous Work Delay</th><th class="text-right">Own Delay</th>
                     <th>Progress</th><th>Status</th><th>Delay / Remarks</th>
                 </tr>
@@ -52,6 +53,7 @@
                         [$dayStart, $dayEnd] = $schedule->dayRange();
                         $previousDelay = $schedule->previousWorkDelayDays();
                         $ownDelay = $schedule->ownDelayDays();
+                        $actualDuration = $schedule->actualDurationDays();
                     @endphp
                     <tr>
                         <td>{{ $loop->iteration }}</td>
@@ -62,6 +64,9 @@
                         <td class="text-right">{{ $schedule->revised_duration_days }}d</td>
                         <td>{{ $schedule->original_end_date->format('d M Y') }}</td>
                         <td>{{ $schedule->revised_end_date->format('d M Y') }}</td>
+                        <td>{{ $schedule->actual_start_date?->format('d M Y') ?? '—' }}</td>
+                        <td>{{ $schedule->actual_end_date?->format('d M Y') ?? '—' }}</td>
+                        <td class="text-right">{{ $actualDuration !== null ? $actualDuration.'d' : '—' }}</td>
                         <td class="text-right">{{ $previousDelay > 0 ? '+'.$previousDelay : $previousDelay }}d</td>
                         <td class="text-right">{{ $ownDelay > 0 ? '+'.$ownDelay : $ownDelay }}d</td>
                         <td>{{ $schedule->actual_progress_percent !== null ? $schedule->actual_progress_percent.'%' : '—' }}</td>

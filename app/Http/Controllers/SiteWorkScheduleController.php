@@ -143,7 +143,15 @@ class SiteWorkScheduleController extends Controller
             'original_start_date' => ['nullable', 'date'],
             'original_duration_days' => ['nullable', 'integer', 'min:1'],
             'actual_start_date' => ['nullable', 'date'],
-            'actual_end_date' => ['nullable', 'date'],
+            'actual_end_date' => [
+                'nullable', 'date',
+                function ($attribute, $value, $fail) use ($request) {
+                    $start = $request->input('actual_start_date');
+                    if ($start && $value && \Illuminate\Support\Carbon::parse($value)->lt(\Illuminate\Support\Carbon::parse($start))) {
+                        $fail('Actual End Date must be on or after the Actual Start Date.');
+                    }
+                },
+            ],
             'actual_progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'status' => ['required', 'in:'.implode(',', SiteWorkSchedule::STATUSES)],
             'delay_reason' => ['nullable', 'string', 'max:2000'],

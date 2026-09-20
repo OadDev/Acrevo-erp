@@ -118,6 +118,40 @@ class SiteWorkSchedule extends Model
     }
 
     /**
+     * How many days the work actually took, from its real start to its
+     * real completion - independent of the original/revised duration
+     * fields, which are never touched by recording these dates. Null
+     * while either date is still missing (e.g. work not yet started, or
+     * still in progress with no completion date recorded yet).
+     */
+    public function actualDurationDays(): ?int
+    {
+        if (! $this->actual_start_date || ! $this->actual_end_date) {
+            return null;
+        }
+
+        return $this->actual_start_date->diffInDays($this->actual_end_date) + 1;
+    }
+
+    /**
+     * Positive = started that many days later than currently planned,
+     * negative = started early, 0 = started exactly on plan, null = not
+     * started yet. Compares against revised_start_date (this work's own,
+     * already dependency-adjusted plan), not the original start date, so
+     * this reflects whether the work itself started on time against what
+     * it was actually supposed to start on - not whatever the schedule
+     * looked like before an earlier work's delay shifted it.
+     */
+    public function startVarianceDays(): ?int
+    {
+        if (! $this->actual_start_date) {
+            return null;
+        }
+
+        return $this->revised_start_date->diffInDays($this->actual_start_date, false);
+    }
+
+    /**
      * The portion of this work's total variance that it inherited from its
      * dependency running late (or early) - i.e. the dependency's own total
      * variance, carried forward. Zero for an independent work, since

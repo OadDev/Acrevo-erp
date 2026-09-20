@@ -109,6 +109,9 @@
                                 <th class="px-4 py-3 text-right">Revised Days</th>
                                 <th class="px-4 py-3">Original End</th>
                                 <th class="px-4 py-3">Revised End</th>
+                                <th class="px-4 py-3">Actual Start</th>
+                                <th class="px-4 py-3">Actual End</th>
+                                <th class="px-4 py-3 text-right">Actual Duration</th>
                                 <th class="px-4 py-3 text-right">Previous Work Delay</th>
                                 <th class="px-4 py-3 text-right">Own Delay</th>
                             @endcan
@@ -128,6 +131,8 @@
                                 [$dayStart, $dayEnd] = $schedule->dayRange();
                                 $previousDelay = $schedule->previousWorkDelayDays();
                                 $ownDelay = $schedule->ownDelayDays();
+                                $startVariance = $schedule->startVarianceDays();
+                                $actualDuration = $schedule->actualDurationDays();
                             @endphp
                             <tr>
                                 <td class="px-4 py-3 text-gray-500">{{ $loop->iteration }}</td>
@@ -151,6 +156,11 @@
                                     <td class="px-4 py-3 text-right text-gray-500">{{ $schedule->revised_duration_days }}d</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->original_end_date->format('d M Y') }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->revised_end_date->format('d M Y') }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap {{ $startVariance > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500' }}">
+                                        {{ $schedule->actual_start_date?->format('d M Y') ?? '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->actual_end_date?->format('d M Y') ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-right text-gray-500">{{ $actualDuration !== null ? $actualDuration.'d' : '—' }}</td>
                                     <td class="px-4 py-3 text-right font-medium {{ $previousDelay > 0 ? 'text-amber-600 dark:text-amber-400' : ($previousDelay < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400') }}">
                                         {{ $previousDelay > 0 ? '+'.$previousDelay : $previousDelay }}d
                                     </td>
@@ -258,10 +268,12 @@
                         <div>
                             <x-input-label value="Actual Start Date" />
                             <x-text-input type="date" name="actual_start_date" class="mt-1 block w-full" value="{{ $schedule->actual_start_date?->format('Y-m-d') }}" />
+                            <p class="mt-1 text-xs text-gray-400">The date work really started on site.</p>
                         </div>
                         <div>
                             <x-input-label value="Actual End Date" />
                             <x-text-input type="date" name="actual_end_date" class="mt-1 block w-full" value="{{ $schedule->actual_end_date?->format('Y-m-d') }}" />
+                            <p class="mt-1 text-xs text-gray-400">Leave blank while still ongoing. Recording these never changes Original or Revised Days above.</p>
                         </div>
                         <div class="sm:col-span-2">
                             <x-input-label value="Delay Reason / Remarks" />
