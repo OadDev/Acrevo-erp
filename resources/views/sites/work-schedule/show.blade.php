@@ -105,10 +105,12 @@
                             @can('work_schedules.view_dates')
                                 <th class="px-4 py-3">Day</th>
                                 <th class="px-4 py-3">Date</th>
-                                <th class="px-4 py-3 text-right">Duration</th>
+                                <th class="px-4 py-3 text-right">Original Days</th>
+                                <th class="px-4 py-3 text-right">Revised Days</th>
                                 <th class="px-4 py-3">Original End</th>
                                 <th class="px-4 py-3">Revised End</th>
-                                <th class="px-4 py-3 text-right">Variance</th>
+                                <th class="px-4 py-3 text-right">Previous Work Delay</th>
+                                <th class="px-4 py-3 text-right">Own Delay</th>
                             @endcan
                             @can('work_schedules.view_progress')
                                 <th class="px-4 py-3">Progress</th>
@@ -122,7 +124,11 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($schedules as $schedule)
-                            @php [$dayStart, $dayEnd] = $schedule->dayRange(); $variance = $schedule->varianceDays(); @endphp
+                            @php
+                                [$dayStart, $dayEnd] = $schedule->dayRange();
+                                $previousDelay = $schedule->previousWorkDelayDays();
+                                $ownDelay = $schedule->ownDelayDays();
+                            @endphp
                             <tr>
                                 <td class="px-4 py-3 text-gray-500">{{ $loop->iteration }}</td>
                                 <td class="px-4 py-3">
@@ -141,11 +147,15 @@
                                 @can('work_schedules.view_dates')
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">Day {{ $dayStart }}{{ $dayEnd !== $dayStart ? '–'.$dayEnd : '' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->revised_start_date->format('d/m') }}–{{ $schedule->revised_end_date->format('d/m/y') }}</td>
+                                    <td class="px-4 py-3 text-right text-gray-500">{{ $schedule->original_duration_days }}d</td>
                                     <td class="px-4 py-3 text-right text-gray-500">{{ $schedule->revised_duration_days }}d</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->original_end_date->format('d M Y') }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->revised_end_date->format('d M Y') }}</td>
-                                    <td class="px-4 py-3 text-right font-medium {{ $variance > 0 ? 'text-rose-600 dark:text-rose-400' : ($variance < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400') }}">
-                                        {{ $variance > 0 ? '+'.$variance : $variance }}d
+                                    <td class="px-4 py-3 text-right font-medium {{ $previousDelay > 0 ? 'text-amber-600 dark:text-amber-400' : ($previousDelay < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400') }}">
+                                        {{ $previousDelay > 0 ? '+'.$previousDelay : $previousDelay }}d
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-medium {{ $ownDelay > 0 ? 'text-rose-600 dark:text-rose-400' : ($ownDelay < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400') }}">
+                                        {{ $ownDelay > 0 ? '+'.$ownDelay : $ownDelay }}d
                                     </td>
                                 @endcan
                                 @can('work_schedules.view_progress')

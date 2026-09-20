@@ -105,6 +105,10 @@ class SiteWorkSchedule extends Model
      * the current planned (revised) end date - so recording an Actual End
      * Date immediately updates the variance shown, without needing to
      * separately touch duration or the dependency gap.
+     *
+     * This is the work's TOTAL variance - it doesn't distinguish how much
+     * of it is this work's own doing versus inherited from a delayed
+     * dependency. See previousWorkDelayDays()/ownDelayDays() for that split.
      */
     public function varianceDays(): int
     {
@@ -113,10 +117,41 @@ class SiteWorkSchedule extends Model
         return $this->original_end_date->diffInDays($comparisonEnd, false);
     }
 
+    /**
+     * The portion of this work's total variance that it inherited from its
+     * dependency running late (or early) - i.e. the dependency's own total
+     * variance, carried forward. Zero for an independent work, since
+     * nothing upstream can push its start date around.
+     */
+    public function previousWorkDelayDays(): int
+    {
+        if ($this->schedule_mode !== 'depends_on' || ! $this->dependsOn) {
+            return 0;
+        }
+
+        return $this->dependsOn->varianceDays();
+    }
+
+    /**
+     * This work's own contribution to its total variance, with whatever it
+     * inherited from a delayed dependency subtracted out - so a work that's
+     * exactly on its own (already-shifted) schedule shows 0 here even if
+     * the site overall is running late because of an earlier work.
+     */
+    public function ownDelayDays(): int
+    {
+        return $this->varianceDays() - $this->previousWorkDelayDays();
+    }
+
+    /**
+     * True only when this work's OWN execution has overrun its own
+     * (already dependency-adjusted) schedule - never true just because an
+     * earlier, unrelated work pushed this one's start date out.
+     */
     public function isDelayed(): bool
     {
-        if ($this->status === 'completed') {
-            return $this->actual_end_date && $this->actual_end_date->gt($this->original_end_date);
+        if ($this->actual_end_date) {
+            return $this->actual_end_date->gt($this->revised_end_date);
         }
 
         return now()->startOfDay()->gt($this->revised_end_date);
