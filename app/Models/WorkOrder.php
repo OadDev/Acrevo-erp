@@ -158,6 +158,14 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(WorkOrderExecutiveTeam::class);
     }
 
+    // Every Asset currently assigned to this site - the "current equipment"
+    // list. Historical equipment (transferred out, returned, etc.) lives in
+    // AssetMovement rows referencing this work order, not here.
+    public function assets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'current_work_order_id');
+    }
+
     public function subContractors(): HasMany
     {
         return $this->hasMany(WorkOrderSubContractor::class);
@@ -165,27 +173,31 @@ class WorkOrder extends Model implements HasMedia
 
     public function dailyChecklists(): HasMany
     {
-        return $this->hasMany(DailyChecklist::class);
+        // Ordered by entry date (not insertion order), so a backdated entry
+        // added later still lands in the right chronological place.
+        return $this->hasMany(DailyChecklist::class)->orderBy('date')->orderBy('id');
     }
 
     public function dailyProgressReports(): HasMany
     {
-        return $this->hasMany(DailyProgressReport::class);
+        return $this->hasMany(DailyProgressReport::class)->orderBy('date')->orderBy('id');
     }
 
     public function materialEntries(): HasMany
     {
-        return $this->hasMany(MaterialEntry::class);
+        // Ordered by entry date (not insertion order), so a backdated entry
+        // added later still lands in the right chronological place.
+        return $this->hasMany(MaterialEntry::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function materialUsageEntries(): HasMany
     {
-        return $this->hasMany(MaterialUsageEntry::class)->latest('date');
+        return $this->hasMany(MaterialUsageEntry::class)->orderBy('date')->orderBy('id');
     }
 
     public function labourEntries(): HasMany
     {
-        return $this->hasMany(LabourEntry::class);
+        return $this->hasMany(LabourEntry::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function timeSchedules(): HasMany
@@ -200,32 +212,32 @@ class WorkOrder extends Model implements HasMedia
 
     public function attendances(): HasMany
     {
-        return $this->hasMany(Attendance::class)->latest('date');
+        return $this->hasMany(Attendance::class)->orderBy('date')->orderBy('id');
     }
 
     public function measurementBooks(): HasMany
     {
-        return $this->hasMany(MeasurementBook::class);
+        return $this->hasMany(MeasurementBook::class)->orderBy('date')->orderBy('id');
     }
 
     public function ledgers(): HasMany
     {
-        return $this->hasMany(Ledger::class);
+        return $this->hasMany(Ledger::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function companyLedgers(): HasMany
     {
-        return $this->hasMany(CompanyLedger::class);
+        return $this->hasMany(CompanyLedger::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function summaries(): HasMany
     {
-        return $this->hasMany(WorkOrderSummary::class);
+        return $this->hasMany(WorkOrderSummary::class)->orderBy('entry_date')->orderBy('id');
     }
 
     public function qcInspections(): HasMany
     {
-        return $this->hasMany(QcInspection::class);
+        return $this->hasMany(QcInspection::class)->orderBy('inspection_date')->orderBy('id');
     }
 
     public function tickets(): HasMany
@@ -251,5 +263,57 @@ class WorkOrder extends Model implements HasMedia
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * Whether a given PDF section (see WorkOrderPdfSections) has any files
+     * attached, used to decide whether that section's "ZIP Download"
+     * button is worth showing. Relies on the relations already being
+     * eager-loaded (see LoadsWorkOrderPdfRelations) so this never queries.
+     */
+    public function hasAttachmentsForSection(string $section): bool
+    {
+        return match ($section) {
+            'progress' => $this->media->isNotEmpty()
+                || $this->dailyProgressReports->contains(fn (DailyProgressReport $report) => $report->getMedia('attachments')->isNotEmpty()),
+            'checklist' => $this->dailyChecklists->contains(
+                fn (DailyChecklist $checklist) => $checklist->checklistItems->contains(fn (DailyChecklistItem $item) => $item->getMedia('proof')->isNotEmpty())
+            ),
+            'ledger' => $this->ledgers->contains(fn (Ledger $entry) => $entry->getMedia('bill')->isNotEmpty()),
+            'company-ledger' => $this->companyLedgers->contains(fn (CompanyLedger $entry) => $entry->getMedia('bill')->isNotEmpty()),
+            'approvals' => $this->approvalRequests->contains(fn (ApprovalRequest $approval) => $approval->getMedia('attachment')->isNotEmpty()),
+            'tickets' => $this->tickets->contains(fn (Ticket $ticket) => $ticket->getMedia('attachments')->isNotEmpty()),
+            default => false,
+        };
+    }
+
+    /**
+     * Keeps this work order's status in step with its tickets: any open or
+     * in-progress ticket keeps it in a ticket-driven state (ticket_raised,
+     * or rework_in_progress once someone starts working the ticket), and
+     * once none remain it returns to in_progress - but only if a ticket is
+     * what put it into that state in the first place, so this never
+     * overrides an unrelated status like qc_pending or client_review.
+     */
+    public function syncStatusFromTickets(): void
+    {
+        $activeStatuses = $this->tickets()->whereIn('status', ['open', 'in_progress'])->pluck('status');
+
+        if ($activeStatuses->isEmpty()) {
+            if (in_array($this->status, ['ticket_raised', 'rework_in_progress'], true)) {
+                $this->transitionTo('in_progress', 'All tickets resolved — resuming normal work.');
+            }
+
+            return;
+        }
+
+        $desired = $activeStatuses->contains('in_progress') ? 'rework_in_progress' : 'ticket_raised';
+
+        if ($this->status !== $desired) {
+            $remarks = $desired === 'rework_in_progress'
+                ? 'A ticket is being worked on — rework in progress.'
+                : 'A ticket is open on this work order.';
+            $this->transitionTo($desired, $remarks);
+        }
     }
 }

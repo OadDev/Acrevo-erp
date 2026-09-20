@@ -17,18 +17,34 @@
                             <th class="px-5 py-3">Client</th>
                             <th class="px-5 py-3">Amount</th>
                             <th class="px-5 py-3">Status</th>
+                            @if (auth()->user()->hasRole('Admin'))
+                                <th class="px-5 py-3"></th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($quotations as $quotation)
-                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('quotations.show', $quotation) }}'">
-                                <td class="px-5 py-3">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('quotations.show', $quotation) }}'">
                                     <span class="font-medium text-gray-900 dark:text-white">{{ $quotation->quotation_no }}</span>
                                     <p class="text-xs text-gray-400">v{{ $quotation->version }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $quotation->client?->name ?? 'Unknown client' }}</td>
-                                <td class="px-5 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">₹{{ number_format($quotation->total_amount, 2) }}</td>
-                                <td class="px-5 py-3"><x-badge :status="$quotation->status" /></td>
+                                <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('quotations.show', $quotation) }}'">{{ $quotation->client?->name ?? 'Unknown client' }}</td>
+                                <td class="cursor-pointer px-5 py-3 text-sm font-medium text-gray-800 dark:text-gray-200" onclick="window.location='{{ route('quotations.show', $quotation) }}'">₹{{ number_format($quotation->total_amount, 2) }}</td>
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('quotations.show', $quotation) }}'"><x-badge :status="$quotation->status" /></td>
+                                @if (auth()->user()->hasRole('Admin'))
+                                    <td class="px-5 py-3 text-right">
+                                        @if ($quotation->workOrders->isEmpty())
+                                            <form method="POST" action="{{ route('quotations.destroy', $quotation) }}" onsubmit="return confirm('Permanently remove this quotation? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="text-sm text-rose-600 hover:underline">Remove</button>
+                                            </form>
+                                        @else
+                                            <span class="text-sm text-gray-300" title="Remove all work orders generated from this quotation first">Remove</span>
+                                        @endif
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>

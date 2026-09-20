@@ -13,6 +13,15 @@ class PdfDocument
 
     public function __construct(string $html)
     {
+        // mPDF's HTML parser leans on PCRE, and the default 1MB
+        // pcre.backtrack_limit is easy to exceed once a work order has
+        // enough entries across enough sections (the full multi-section
+        // export, e.g. inside the ZIP download) - past that, WriteHTML()
+        // throws instead of rendering. Raise it well above anything this
+        // app's PDFs realistically produce.
+        ini_set('pcre.backtrack_limit', '10000000');
+        ini_set('pcre.recursion_limit', '10000000');
+
         $this->mpdf = new Mpdf([
             'format' => 'A4',
             'default_font' => 'dejavusans',
@@ -31,12 +40,25 @@ class PdfDocument
 
     public function download(string $filename = 'document.pdf'): Response
     {
+        // Filenames built from a person's name (payslips, attendance PDFs)
+        // can legitimately contain "/" - Indian formal names commonly
+        // include "S/o", "D/o", "W/o" - but Symfony's Content-Disposition
+        // builder rejects "/" and "\" outright with an uncaught
+        // InvalidArgumentException, 500ing the whole download.
+        $filename = str_replace(['/', '\\'], '-', $filename);
+
         $output = $this->output();
 
         return new Response($output, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => HeaderUtils::makeDisposition('attachment', $filename, $this->fallbackName($filename)),
             'Content-Length' => strlen($output),
+            // Every download is generated fresh from the current DB state
+            // (e.g. a just-deleted attachment must never come back on the
+            // next download) - never let a browser or intermediate proxy
+            // cache and replay a stale copy.
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
     }
 

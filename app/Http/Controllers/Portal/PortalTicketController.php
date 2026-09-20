@@ -39,7 +39,7 @@ class PortalTicketController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
         ]);
 
         $workOrder = WorkOrder::findOrFail($data['work_order_id']);
@@ -60,8 +60,28 @@ class PortalTicketController extends Controller
             return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
         }
 
-        $workOrder->transitionTo('ticket_raised', 'Client raised a ticket: '.$ticket->title);
+        $workOrder->syncStatusFromTickets();
 
         return redirect()->route('portal.tickets.index')->with('success', 'Ticket submitted. Our team will get back to you shortly.');
+    }
+
+    public function show(Ticket $ticket): View
+    {
+        $this->authorize('view', $ticket);
+
+        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'media', 'comments.user']);
+
+        return view('portal.tickets.show', compact('ticket'));
+    }
+
+    public function addComment(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+
+        $data = $request->validate(['comment' => ['required', 'string']]);
+
+        $ticket->comments()->create($data + ['user_id' => $request->user()->id]);
+
+        return back()->with('success', 'Comment added.');
     }
 }

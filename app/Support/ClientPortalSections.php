@@ -9,6 +9,7 @@ class ClientPortalSections
      * show/hide per client on the client portal's work order page.
      */
     public const SECTIONS = [
+        'overview' => 'Overview',
         'media' => 'Progress Photos & Videos',
         'checklist' => 'Daily Work & Checklist',
         'progress' => 'Progress Updates',

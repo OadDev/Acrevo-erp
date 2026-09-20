@@ -8,9 +8,10 @@
     :class="open ? 'translate-x-0' : '-translate-x-full'"
     class="fixed inset-y-0 left-0 z-40 w-64 transform bg-white transition-transform duration-200 ease-in-out dark:bg-gray-900 dark:border-gray-800 border-r border-gray-200 lg:static lg:translate-x-0 flex flex-col"
 >
-    <div class="flex h-16 items-center gap-2 border-b border-gray-200 px-5 dark:border-gray-800">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">GW</div>
-        <span class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">{{ config('app.name', 'Geethan Works ERP') }}</span>
+    <div class="flex h-16 items-center border-b border-gray-200 px-5 dark:border-gray-800">
+        <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <x-brand-mark size="sm" />
+        </a>
     </div>
 
     <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-5">
@@ -30,6 +31,9 @@
             <x-nav-group label="My Projects">
                 <x-nav-link :href="route('portal.quotations.index')" :active="request()->routeIs('portal.quotations.*')" icon="file-text">Quotations</x-nav-link>
                 <x-nav-link :href="route('portal.work-orders.index')" :active="request()->routeIs('portal.work-orders.*')" icon="briefcase">Current Projects</x-nav-link>
+                @can('work_schedules.view_overall')
+                    <x-nav-link :href="route('work-schedules.overall')" :active="request()->routeIs('work-schedules.*') || request()->routeIs('sites.work-schedule.*')" icon="calendar-check">Work Schedule</x-nav-link>
+                @endcan
                 <x-nav-link :href="route('portal.tickets.index')" :active="request()->routeIs('portal.tickets.*')" icon="ticket">Tickets</x-nav-link>
                 <x-nav-link :href="route('portal.invoices.index')" :active="request()->routeIs('portal.invoices.*')" icon="receipt">Invoices &amp; Payments</x-nav-link>
             </x-nav-group>
@@ -47,12 +51,18 @@
                         <x-nav-link :href="route('quotations.index')" :active="request()->routeIs('quotations.*')" icon="file-text">Quotations</x-nav-link>
                     @endcan
                     @can('work_orders.view')
-                        <x-nav-link :href="route('sites.index')" :active="request()->routeIs('sites.*')" icon="map-pin">Sites</x-nav-link>
+                        <x-nav-link :href="route('sites.index')" :active="request()->routeIs('sites.*') && ! request()->routeIs('sites.work-schedule.*')" icon="map-pin">Sites</x-nav-link>
                         <x-nav-link :href="route('work-orders.index')" :active="request()->routeIs('work-orders.index') || request()->routeIs('work-orders.show') || request()->routeIs('work-orders.create')" icon="clipboard">Work Orders</x-nav-link>
                         <x-nav-link :href="route('work-orders.completed')" :active="request()->routeIs('work-orders.completed')" icon="check-circle">Completed Sites</x-nav-link>
                     @endcan
                 </x-nav-group>
             @endcanany
+
+            @can('work_schedules.view_overall')
+                <x-nav-group label="Site Work Schedule">
+                    <x-nav-link :href="route('work-schedules.overall')" :active="request()->routeIs('work-schedules.*') || request()->routeIs('sites.work-schedule.*')" icon="calendar-check">Work Schedule Planner</x-nav-link>
+                </x-nav-group>
+            @endcan
 
             @if (auth()->user()->can('assigned_work.view') || (auth()->user()->can('tasks.view') && auth()->user()->employee) || auth()->user()->can('subcontractor_finance.view'))
                 <x-nav-group label="Executive Team">
@@ -133,6 +143,30 @@
                 </x-nav-group>
             @endcanany
 
+            @can('assets.view')
+                <x-nav-group label="Equipment &amp; Assets">
+                    <x-nav-link :href="route('assets.index')" :active="request()->routeIs('assets.*') && ! request()->routeIs('asset-change-requests.*')" icon="wrench">Assets</x-nav-link>
+                    @can('movements.view')
+                        <x-nav-link :href="route('asset-movements.index')" :active="request()->routeIs('asset-movements.*')" icon="history">Movement History</x-nav-link>
+                    @endcan
+                    @can('repairs.view')
+                        <x-nav-link :href="route('asset-repairs.index')" :active="request()->routeIs('asset-repairs.*')" icon="wrench">Repair History</x-nav-link>
+                    @endcan
+                    @can('verifications.view')
+                        <x-nav-link :href="route('asset-verifications.index')" :active="request()->routeIs('asset-verifications.*')" icon="clipboard-check">Verification History</x-nav-link>
+                    @endcan
+                    @can('assets.view_missing')
+                        <x-nav-link :href="route('assets.missing')" :active="request()->routeIs('assets.missing')" icon="search">Missing Equipment</x-nav-link>
+                    @endcan
+                    @can('equipment_requests.view')
+                        <x-nav-link :href="route('equipment-requests.index')" :active="request()->routeIs('equipment-requests.*')" icon="inbox">Equipment Requests</x-nav-link>
+                    @endcan
+                    @can('assets.approve')
+                        <x-nav-link :href="route('asset-change-requests.index')" :active="request()->routeIs('asset-change-requests.*')" icon="clipboard-check">Pending Approvals</x-nav-link>
+                    @endcan
+                </x-nav-group>
+            @endcan
+
             @can('reports.view')
                 <x-nav-group label="Insights">
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')" icon="bar-chart">Reports</x-nav-link>
@@ -157,7 +191,8 @@
                         <x-nav-link :href="route('admin.activity-logs.index')" :active="request()->routeIs('admin.activity-logs.*')" icon="history">Activity Logs</x-nav-link>
                     @endcan
                     @can('system_settings.manage')
-                        <x-nav-link :href="route('admin.settings.mail.edit')" :active="request()->routeIs('admin.settings.*')" icon="mail">Mail Settings</x-nav-link>
+                        <x-nav-link :href="route('admin.settings.mail.edit')" :active="request()->routeIs('admin.settings.mail.*')" icon="mail">Mail Settings</x-nav-link>
+                        <x-nav-link :href="route('admin.settings.login-page.edit')" :active="request()->routeIs('admin.settings.login-page.*')" icon="image">Login Page</x-nav-link>
                     @endcan
                 </x-nav-group>
             @endcanany

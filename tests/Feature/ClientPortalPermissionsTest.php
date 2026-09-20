@@ -182,4 +182,45 @@ class ClientPortalPermissionsTest extends TestCase
 
         $this->assertNull($client->fresh()->visible_sections);
     }
+
+    public function test_admin_can_hide_the_overview_section_from_a_client(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'scope' => 'Full house renovation scope',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put("/clients/{$client->id}/portal-permissions", [
+            'visible_sections' => ['tickets'],
+        ])->assertRedirect();
+
+        $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}")
+            ->assertOk()
+            ->assertDontSee('Full house renovation scope')
+            ->assertDontSee('Status Timeline');
+    }
+
+    public function test_admin_can_grant_only_overview_access_to_a_client(): void
+    {
+        $admin = $this->admin();
+        [$client, $clientUser] = $this->clientWithLogin($admin);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'scope' => 'Full house renovation scope',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put("/clients/{$client->id}/portal-permissions", [
+            'visible_sections' => ['overview'],
+        ])->assertRedirect();
+
+        $this->actingAs($clientUser)->get("/portal/work-orders/{$workOrder->id}")
+            ->assertOk()
+            ->assertSee('Full house renovation scope')
+            ->assertSee('Status Timeline')
+            ->assertDontSee('Site Ledger');
+    }
 }

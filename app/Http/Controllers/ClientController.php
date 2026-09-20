@@ -139,6 +139,7 @@ class ClientController extends Controller
             'visible_sections' => ['nullable', 'array'],
             'visible_sections.*' => ['in:'.implode(',', array_keys(\App\Support\ClientPortalSections::SECTIONS))],
             'unrestricted' => ['nullable', 'boolean'],
+            'work_order_discussion_access' => ['nullable', 'boolean'],
         ]);
 
         // "Unrestricted" stores null (every section visible) rather than the
@@ -146,6 +147,7 @@ class ClientController extends Controller
         // visible here too without having to revisit every client.
         $client->update([
             'visible_sections' => $request->boolean('unrestricted') ? null : ($data['visible_sections'] ?? []),
+            'work_order_discussion_access' => $request->boolean('work_order_discussion_access'),
         ]);
 
         return redirect()->route('clients.show', $client)->with('success', 'Portal section permissions updated.');

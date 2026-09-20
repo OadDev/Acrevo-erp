@@ -38,12 +38,14 @@
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $client->assignedSales?->name ?? '—' }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$client->type" /></td>
                                 <td class="px-5 py-3 text-right space-x-3">
-                                    <a href="{{ route('clients.edit', $client) }}" class="text-sm text-indigo-600 hover:underline">Edit</a>
-                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" onsubmit="return confirm('Remove {{ $client->name }}? This cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-sm text-red-600 hover:underline">Remove</button>
-                                    </form>
+                                    @can('clients.manage')
+                                        <a href="{{ route('clients.edit', $client) }}" class="text-sm text-indigo-600 hover:underline">Edit</a>
+                                        <form method="POST" action="{{ route('clients.destroy', $client) }}" class="inline" onsubmit="return confirm('Remove {{ $client->name }}? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-sm text-red-600 hover:underline">Remove</button>
+                                        </form>
+                                    @endcan
                                 </td>
                             </tr>
                         @endforeach

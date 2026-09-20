@@ -25,16 +25,28 @@
                             <th class="px-5 py-3">Inspector</th>
                             <th class="px-5 py-3">Date</th>
                             <th class="px-5 py-3">Status</th>
+                            @if (auth()->user()->hasRole('Admin'))
+                                <th class="px-5 py-3"></th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($inspections as $inspection)
-                            <tr @if ($inspection->workOrder) class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40" onclick="window.location='{{ route('work-orders.show', $inspection->workOrder) }}'" @endif>
-                                <td class="px-5 py-3 font-medium text-gray-900 dark:text-white">{{ $inspection->workOrder->work_order_no ?? 'Deleted work order' }}</td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ Str::title($inspection->inspection_type) }}</td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $inspection->inspectedBy?->name ?? 'Unknown' }}</td>
-                                <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $inspection->inspection_date->format('d M Y') }}</td>
-                                <td class="px-5 py-3"><x-badge :status="$inspection->status" /></td>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                <td class="cursor-pointer px-5 py-3 font-medium text-gray-900 dark:text-white" onclick="window.location='{{ route('qc.show', $inspection) }}'">{{ $inspection->workOrder->work_order_no ?? 'Deleted work order' }}</td>
+                                <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('qc.show', $inspection) }}'">{{ Str::title($inspection->inspection_type) }}</td>
+                                <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('qc.show', $inspection) }}'">{{ $inspection->inspectedBy?->name ?? 'Unknown' }}</td>
+                                <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('qc.show', $inspection) }}'">{{ $inspection->inspection_date->format('d M Y') }}</td>
+                                <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('qc.show', $inspection) }}'"><x-badge :status="$inspection->status" /></td>
+                                @if (auth()->user()->hasRole('Admin'))
+                                    <td class="px-5 py-3 text-right">
+                                        <form method="POST" action="{{ route('qc.destroy', $inspection) }}" onsubmit="return confirm('Permanently remove this QC inspection?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="text-sm text-rose-600 hover:underline">Remove</button>
+                                        </form>
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>

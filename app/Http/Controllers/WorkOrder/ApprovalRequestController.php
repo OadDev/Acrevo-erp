@@ -5,19 +5,37 @@ namespace App\Http\Controllers\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
 use App\Models\WorkOrder;
+use App\Services\WorkOrderZipExporter;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class ApprovalRequestController extends Controller
 {
+    private function attachFiles(ApprovalRequest $approvalRequest, Request $request): ?string
+    {
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $approvalRequest->addMedia($file)->toMediaCollection('attachment');
+            }
+        } catch (FileIsTooBig $e) {
+            return 'One of those files is too large (max 20MB).';
+        }
+
+        return null;
+    }
+
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
         ]);
 
         $approvalRequest = $workOrder->approvalRequests()->create([
@@ -28,12 +46,8 @@ class ApprovalRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        if ($request->hasFile('file')) {
-            try {
-                $approvalRequest->addMediaFromRequest('file')->toMediaCollection('attachment');
-            } catch (FileIsTooBig $e) {
-                return back()->withErrors(['file' => 'That file is too large (max 20MB).']);
-            }
+        if ($error = $this->attachFiles($approvalRequest, $request)) {
+            return back()->withErrors(['files' => $error]);
         }
 
         return back()->with('success', 'Approval request sent to the client.');
@@ -89,11 +103,28 @@ class ApprovalRequestController extends Controller
     {
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
-        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy']);
+        $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy', 'media']);
 
         $pdf = Pdf::loadView('work-orders.approval-requests.pdf', compact('approvalRequest'));
 
         return $pdf->download("{$approvalRequest->approval_no}.pdf");
+    }
+
+    public function zip(WorkOrder $workOrder, ApprovalRequest $approvalRequest, WorkOrderZipExporter $exporter): BinaryFileResponse
+    {
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $zipPath = sys_get_temp_dir().'/approval-zip-'.Str::random(20).'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $exporter->addApprovalRequest($zip, $approvalRequest);
+        $zip->close();
+
+        return response()->download($zipPath, "{$approvalRequest->approval_no}-attachments.zip", [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ])->deleteFileAfterSend();
     }
 
     public function approvedPdf(WorkOrder $workOrder)

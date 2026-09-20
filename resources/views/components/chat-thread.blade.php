@@ -1,8 +1,10 @@
-@props(['conversation', 'messages', 'compact' => false])
+@props(['conversation', 'messages', 'compact' => false, 'storeUrl' => null, 'pollUrl' => null])
 
 @php
     $lastId = optional($messages->last())->id ?? 0;
     $otherParticipants = $conversation->participants->pluck('user')->filter(fn ($u) => $u->id !== auth()->id());
+    $storeUrl ??= route('conversations.messages.store', $conversation);
+    $pollUrl ??= url('conversations').'/'.$conversation->id.'/poll';
 @endphp
 
 <div class="flex flex-col {{ $compact ? 'h-[420px]' : 'h-[65vh]' }} rounded-xl border border-gray-200 dark:border-gray-800">
@@ -12,7 +14,7 @@
 
     @error('files')<p class="border-t border-rose-100 bg-rose-50 px-4 py-2 text-xs text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10">{{ $message }}</p>@enderror
 
-    <form method="POST" action="{{ route('conversations.messages.store', $conversation) }}" enctype="multipart/form-data" class="border-t border-gray-200 p-3 dark:border-gray-800" x-data="{ files: 0 }">
+    <form method="POST" action="{{ $storeUrl }}" enctype="multipart/form-data" class="border-t border-gray-200 p-3 dark:border-gray-800" x-data="{ files: 0 }">
         @csrf
         @if ($otherParticipants->isNotEmpty())
             <div class="mb-2 flex flex-wrap gap-1.5">
@@ -43,9 +45,11 @@
         box.dataset.pollingBound = '1';
         box.scrollTop = box.scrollHeight;
 
+        var pollUrl = @json($pollUrl);
+
         function poll() {
             var after = box.dataset.lastId || 0;
-            fetch('{{ url('conversations') }}/' + conversationId + '/poll?after=' + after, {
+            fetch(pollUrl + '?after=' + after, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             })
                 .then(function (r) { return r.ok ? r.text() : ''; })

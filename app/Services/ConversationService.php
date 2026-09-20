@@ -67,6 +67,31 @@ class ConversationService
     }
 
     /**
+     * Shared by the internal chat/discussion module and the client portal's
+     * Work Order Discussion - same message, attachments, unread tracking,
+     * and mention notifications either way.
+     *
+     * @param  array<int, \Illuminate\Http\UploadedFile>  $files
+     */
+    public function postMessage(Conversation $conversation, User $user, ?string $body, array $files = []): Message
+    {
+        $message = $conversation->messages()->create([
+            'user_id' => $user->id,
+            'body' => $body,
+        ]);
+
+        foreach ($files as $file) {
+            $message->addMedia($file)->toMediaCollection('attachments');
+        }
+
+        $conversation->markReadFor($user);
+        $this->recordMentionsAndNotify($message, $conversation, $user);
+        $conversation->touch();
+
+        return $message;
+    }
+
+    /**
      * Extracts @Full Name mentions from a message body against the
      * conversation's own participant list (kept small, no site-wide user
      * enumeration), tags the mentioned users on the message, and notifies

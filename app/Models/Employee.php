@@ -12,9 +12,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+
 class Employee extends Model implements HasMedia
 {
-    use HasFactory, HasSequenceNumber, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasSequenceNumber, InteractsWithMedia, SoftDeletes, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
+    }
 
     protected $sequencePrefix = 'EMP';
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\Quotation;
 use App\Models\Site;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,9 +33,23 @@ class PortalQuotationController extends Controller
         abort_unless($client && $quotation->client_id === $client->id, 403);
         abort_if($quotation->status === 'draft', 404);
 
-        $quotation->load('items');
+        $quotation->load(['items', 'media']);
 
         return view('portal.quotations.show', compact('quotation'));
+    }
+
+    public function pdf(Request $request, Quotation $quotation)
+    {
+        $client = $request->user()->client();
+
+        abort_unless($client && $quotation->client_id === $client->id, 403);
+        abort_if($quotation->status === 'draft', 404);
+
+        $quotation->load(['items', 'client', 'enquiry', 'media']);
+
+        $pdf = Pdf::loadView('quotations.pdf', compact('quotation'));
+
+        return $pdf->download("{$quotation->quotation_no}.pdf");
     }
 
     public function approve(Request $request, Quotation $quotation): RedirectResponse

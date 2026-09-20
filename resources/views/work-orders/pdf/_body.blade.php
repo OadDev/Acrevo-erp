@@ -191,7 +191,7 @@
         </table>
         @php $checklistProof = $checklist->checklistItems->flatMap(fn ($i) => $i->media); @endphp
         @foreach ($checklistProof as $media)
-            @include('work-orders.pdf._media', ['media' => $media, 'label' => 'Proof'])
+            @include('work-orders.pdf._media', ['media' => $media, 'label' => 'Daily Work — '.($checklist->title ?? 'Daily Work')])
         @endforeach
     @empty
         <p class="empty">No daily work entries yet.</p>
@@ -201,9 +201,9 @@
 @if (in_array('progress', $sections, true))
     <h2 class="section-title">{{ $sectionLabels['progress'] }}</h2>
     @if ($workOrder->media->isNotEmpty())
-        <p><strong>Files Stored on This Work Order</strong> (videos are not included in this PDF)</p>
+        <p><strong>Files Stored on This Work Order</strong></p>
         @foreach ($workOrder->media as $item)
-            @include('work-orders.pdf._media', ['media' => $item, 'label' => Str::title(str_replace('_', ' ', $item->collection_name)).' ('.$item->created_at->timezone('Asia/Kolkata')->format('d M Y').')'])
+            @include('work-orders.pdf._media', ['media' => $item, 'label' => 'Details Upload — '.Str::title(str_replace('_', ' ', $item->collection_name))])
         @endforeach
     @endif
     @forelse ($workOrder->dailyProgressReports as $report)
@@ -211,6 +211,9 @@
         <p>Completed: {{ $report->completed_work }}</p>
         @if ($report->pending_work)<p>Pending: {{ $report->pending_work }}</p>@endif
         @if ($report->problems)<p>Problems: {{ $report->problems }}</p>@endif
+        @foreach ($report->getMedia('attachments') as $media)
+            @include('work-orders.pdf._media', ['media' => $media, 'label' => 'Progress Report — '.Str::limit($report->completed_work, 50)])
+        @endforeach
     @empty
         <p class="empty">No progress reports yet.</p>
     @endforelse
@@ -394,7 +397,7 @@
         @if ($ledgerBills->isNotEmpty())
             <p style="margin-top:8px;"><strong>Bills &amp; Supporting Documents</strong></p>
             @foreach ($ledgerBills as $entry)
-                @include('work-orders.pdf._media', ['media' => $entry->getFirstMedia('bill'), 'label' => $entry->entry_date->format('d M Y').' — '.($entry->category ?? $entry->description ?? 'Bill')])
+                @include('work-orders.pdf._media', ['media' => $entry->getFirstMedia('bill'), 'label' => 'Site Ledger — '.($entry->category ?? $entry->description ?? 'Bill')])
             @endforeach
         @endif
     @else
@@ -424,7 +427,7 @@
         @if ($companyLedgerBills->isNotEmpty())
             <p style="margin-top:8px;"><strong>Bills &amp; Supporting Documents</strong></p>
             @foreach ($companyLedgerBills as $entry)
-                @include('work-orders.pdf._media', ['media' => $entry->getFirstMedia('bill'), 'label' => $entry->entry_date->format('d M Y').' — '.($entry->category ?? $entry->description ?? 'Bill')])
+                @include('work-orders.pdf._media', ['media' => $entry->getFirstMedia('bill'), 'label' => 'Company Ledger — '.($entry->category ?? $entry->description ?? 'Bill')])
             @endforeach
         @endif
     @else
@@ -472,11 +475,26 @@
                 @endforeach
             </tbody>
         </table>
-        @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getFirstMedia('attachment')); @endphp
+        @foreach ($workOrder->approvalRequests as $approval)
+            @if ($approval->description || $approval->response_note)
+                <p style="margin-top:4px;">
+                    <strong>{{ $approval->approval_no }}</strong>
+                    @if ($approval->description)
+                        — {{ $approval->description }}
+                    @endif
+                    @if ($approval->response_note)
+                        <br><span class="muted">Response ({{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }}): {{ $approval->response_note }}</span>
+                    @endif
+                </p>
+            @endif
+        @endforeach
+        @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getMedia('attachment')->isNotEmpty()); @endphp
         @if ($approvalAttachments->isNotEmpty())
             <p style="margin-top:8px;"><strong>Attachments</strong></p>
             @foreach ($approvalAttachments as $approval)
-                @include('work-orders.pdf._media', ['media' => $approval->getFirstMedia('attachment'), 'label' => $approval->approval_no.' — '.$approval->title])
+                @foreach ($approval->getMedia('attachment') as $attachment)
+                    @include('work-orders.pdf._media', ['media' => $attachment, 'label' => 'Approval Requests — '.$approval->approval_no.' — '.$approval->title])
+                @endforeach
             @endforeach
         @endif
     @else
@@ -488,7 +506,7 @@
     <h2 class="section-title">{{ $sectionLabels['tickets'] }}</h2>
     @if ($workOrder->tickets->isNotEmpty())
         <table>
-            <thead><tr><th>Ticket No</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th></tr></thead>
+            <thead><tr><th>Ticket No</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Raised By</th><th>Date</th></tr></thead>
             <tbody>
                 @foreach ($workOrder->tickets as $ticket)
                     <tr>
@@ -497,10 +515,26 @@
                         <td>{{ Str::title($ticket->type) }}</td>
                         <td>{{ Str::title($ticket->priority) }}</td>
                         <td>{{ Str::title($ticket->status) }}</td>
+                        <td>{{ $ticket->raisedByName() }}</td>
+                        <td>{{ $ticket->raisedAtIst() }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+        @foreach ($workOrder->tickets as $ticket)
+            @if ($ticket->description)
+                <p style="margin-top:4px;"><strong>{{ $ticket->ticket_no }}</strong> — {{ $ticket->description }}</p>
+            @endif
+        @endforeach
+        @php $ticketAttachments = $workOrder->tickets->filter(fn ($t) => $t->getMedia('attachments')->isNotEmpty()); @endphp
+        @if ($ticketAttachments->isNotEmpty())
+            <p style="margin-top:8px;"><strong>Attachments</strong></p>
+            @foreach ($ticketAttachments as $ticket)
+                @foreach ($ticket->getMedia('attachments') as $attachment)
+                    @include('work-orders.pdf._media', ['media' => $attachment, 'label' => 'Tickets — '.$ticket->ticket_no.' — '.$ticket->title])
+                @endforeach
+            @endforeach
+        @endif
     @else
         <p class="empty">No tickets raised.</p>
     @endif

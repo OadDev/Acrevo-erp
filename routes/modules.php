@@ -2,11 +2,18 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\LoginPageSettingController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaskScheduleController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\LedgerCategoryController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AssetChangeRequestController;
+use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetMovementController;
+use App\Http\Controllers\AssetRepairController;
+use App\Http\Controllers\AssetVerificationController;
+use App\Http\Controllers\EquipmentRequestController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\MyAttendanceController;
 use App\Http\Controllers\CandidateController;
@@ -30,12 +37,15 @@ use App\Http\Controllers\Portal\PortalInvoiceController;
 use App\Http\Controllers\Portal\PortalQuotationController;
 use App\Http\Controllers\Portal\PortalTicketController;
 use App\Http\Controllers\Portal\PortalWorkOrderController;
+use App\Http\Controllers\Portal\PortalWorkOrderDiscussionController;
 use App\Http\Controllers\QcInspectionController;
 use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\QuotationMediaController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDocumentController;
 use App\Http\Controllers\SiteVisitController;
+use App\Http\Controllers\SiteWorkScheduleController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
@@ -55,6 +65,7 @@ use App\Http\Controllers\WorkOrder\WorkOrderPdfController;
 use App\Http\Controllers\WorkOrder\WorkOrderZipController;
 use App\Http\Controllers\WorkOrder\WorkOrderSummaryController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\WorkOrderEquipmentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -79,10 +90,19 @@ Route::middleware('permission:quotations.view')->group(function () {
     Route::post('quotations/{quotation}/reject', [QuotationController::class, 'reject'])->name('quotations.reject');
     Route::get('quotations/{quotation}/pdf', [QuotationController::class, 'pdf'])->name('quotations.pdf');
     Route::post('quotations/{quotation}/revise', [QuotationController::class, 'revise'])->name('quotations.revise');
+    Route::post('quotations/{quotation}/media', [QuotationMediaController::class, 'store'])->name('quotations.media.store');
+    Route::delete('quotations/{quotation}/media/{media}', [QuotationMediaController::class, 'destroy'])->name('quotations.media.destroy');
 });
 
 Route::middleware('permission:enquiries.view')->group(function () {
-    Route::resource('clients', ClientController::class);
+    Route::resource('clients', ClientController::class)->only(['index', 'create', 'store', 'show']);
+});
+// Edit/remove and portal access/permissions are split out from the plain
+// enquiries.view gate above - Sales and Marketing both need enquiries.view
+// for the Enquiry module and were incidentally getting full Client
+// management through it. clients.manage is Admin-only.
+Route::middleware('permission:clients.manage')->group(function () {
+    Route::resource('clients', ClientController::class)->only(['edit', 'update', 'destroy']);
     Route::post('clients/{client}/portal-access', [ClientController::class, 'generatePortalAccess'])->name('clients.portal-access');
     Route::put('clients/{client}/portal-permissions', [ClientController::class, 'updatePortalPermissions'])->name('clients.portal-permissions');
 });
@@ -100,6 +120,29 @@ Route::middleware('permission:work_orders.view')->group(function () {
     Route::resource('sites', SiteController::class)->only(['index', 'show']);
     Route::get('sites/{site}/pdf', [SiteController::class, 'pdf'])->name('sites.pdf');
     Route::get('sites/{site}/zip', [SiteController::class, 'zip'])->name('sites.zip');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Site Work Schedule Planner
+|--------------------------------------------------------------------------
+| Site-level access (who can see which site's schedule at all) is enforced
+| inside SiteWorkScheduleController via accessibleSiteIds(), not here - the
+| permission middleware below only gates whether the feature is reachable
+| at all for this role, same split used throughout Equipment & Assets.
+*/
+Route::middleware('permission:work_schedules.view_overall')->group(function () {
+    Route::get('work-schedules', [SiteWorkScheduleController::class, 'overall'])->name('work-schedules.overall');
+    Route::get('work-schedules/pdf', [SiteWorkScheduleController::class, 'overallPdf'])->name('work-schedules.overall.pdf');
+});
+Route::middleware('permission:work_schedules.view_site')->group(function () {
+    Route::get('sites/{site}/work-schedule', [SiteWorkScheduleController::class, 'show'])->name('sites.work-schedule.show');
+    Route::get('sites/{site}/work-schedule/pdf', [SiteWorkScheduleController::class, 'pdf'])->name('sites.work-schedule.pdf');
+});
+Route::middleware('permission:work_schedules.manage')->group(function () {
+    Route::post('sites/{site}/work-schedule', [SiteWorkScheduleController::class, 'store'])->name('sites.work-schedule.store');
+    Route::put('sites/{site}/work-schedule/{workSchedule}', [SiteWorkScheduleController::class, 'update'])->name('sites.work-schedule.update');
+    Route::delete('sites/{site}/work-schedule/{workSchedule}', [SiteWorkScheduleController::class, 'destroy'])->name('sites.work-schedule.destroy');
 });
 
 Route::middleware('permission:work_orders.view')->group(function () {
@@ -129,6 +172,7 @@ Route::get('work-orders/{workOrder}', [WorkOrderController::class, 'show'])->nam
 Route::get('work-orders/{workOrder}/pdf', [WorkOrderPdfController::class, 'full'])->name('work-orders.pdf');
 Route::get('work-orders/{workOrder}/pdf/{section}', [WorkOrderPdfController::class, 'section'])->name('work-orders.pdf.section');
 Route::get('work-orders/{workOrder}/zip', WorkOrderZipController::class)->name('work-orders.zip');
+Route::get('work-orders/{workOrder}/zip/{section}', [WorkOrderZipController::class, 'section'])->name('work-orders.zip.section');
 
 Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');
@@ -158,12 +202,14 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::delete('checklists/{checklist}', [DailyChecklistController::class, 'destroy'])->name('checklists.destroy');
         Route::post('checklist-items/{item}/done', [DailyChecklistItemController::class, 'markDone'])->name('checklist-items.done');
         Route::delete('checklist-items/{item}', [DailyChecklistItemController::class, 'destroy'])->name('checklist-items.destroy');
+        Route::delete('checklist-items/{item}/proof', [DailyChecklistItemController::class, 'destroyProof'])->name('checklist-items.proof.destroy');
     });
     Route::middleware('permission:daily_progress.manage')->group(function () {
         Route::get('progress', [DailyProgressController::class, 'index'])->name('progress.index');
         Route::post('progress', [DailyProgressController::class, 'store'])->name('progress.store');
         Route::put('progress/{report}', [DailyProgressController::class, 'update'])->name('progress.update');
         Route::delete('progress/{report}', [DailyProgressController::class, 'destroy'])->name('progress.destroy');
+        Route::delete('progress/{report}/media/{media}', [DailyProgressController::class, 'destroyMedia'])->name('progress.media.destroy');
     });
     Route::middleware('permission:media.upload')->group(function () {
         Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');
@@ -192,8 +238,12 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
         Route::put('ledger/{ledger}', [LedgerController::class, 'update'])->name('ledger.update');
         Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
+        Route::delete('ledger/{ledger}/bill', [LedgerController::class, 'destroyBill'])->name('ledger.bill.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
+        Route::put('attendance/{attendance}', [WorkOrderAttendanceController::class, 'update'])->name('attendance.update');
+        Route::delete('attendance/{attendance}', [WorkOrderAttendanceController::class, 'destroy'])->name('attendance.destroy');
+        Route::get('attendance/pdf', [WorkOrderAttendanceController::class, 'pdf'])->name('attendance.pdf');
     });
     // Company Ledger tracks the company's own expenses against a work order
     // and is restricted to Finance and Admin only (enforced in the
@@ -203,6 +253,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::post('company-ledger', [CompanyLedgerController::class, 'store'])->name('company-ledger.store');
     Route::put('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'update'])->name('company-ledger.update');
     Route::delete('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'destroy'])->name('company-ledger.destroy');
+    Route::delete('company-ledger/{companyLedger}/bill', [CompanyLedgerController::class, 'destroyBill'])->name('company-ledger.bill.destroy');
     Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
     // Monthly Summary is entered by the office (Sales/HR/Admin, enforced in
     // the controller), not the site team, so it also skips the
@@ -215,12 +266,27 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
         Route::get('approval-requests/approved-pdf', [ApprovalRequestController::class, 'approvedPdf'])->name('approval-requests.approved-pdf');
         Route::get('approval-requests/{approvalRequest}/pdf', [ApprovalRequestController::class, 'pdf'])->name('approval-requests.pdf');
+        Route::get('approval-requests/{approvalRequest}/zip', [ApprovalRequestController::class, 'zip'])->name('approval-requests.zip');
     });
     // Editing/removing an existing approval request record stays Admin-only
     // (data-integrity action, not part of the raise/respond entry workflow).
     Route::middleware('permission:work_orders.edit')->group(function () {
         Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
         Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
+    });
+
+    // Work Order-wise Equipment (Phase 6): current equipment at this site,
+    // plus the broader Movement/Repair/Missing history that touched it -
+    // read-only, so it shares the WorkOrderPolicy 'view' check the WO show
+    // page itself uses (authorized inside the controller) on top of these
+    // Asset-module permissions.
+    Route::middleware('permission:assets.view')->group(function () {
+        Route::get('equipment', [WorkOrderEquipmentController::class, 'index'])->name('equipment.index');
+        Route::get('equipment/pdf', [WorkOrderEquipmentController::class, 'pdf'])->name('equipment.pdf');
+    });
+    Route::middleware('permission:assets.view_history')->group(function () {
+        Route::get('equipment/history', [WorkOrderEquipmentController::class, 'history'])->name('equipment.history');
+        Route::get('equipment/history/pdf', [WorkOrderEquipmentController::class, 'historyPdf'])->name('equipment.history.pdf');
     });
 });
 
@@ -315,6 +381,8 @@ Route::middleware('permission:tickets.view')->group(function () {
     Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
     Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
     Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
+    Route::get('tickets/{ticket}/pdf', [TicketController::class, 'pdf'])->name('tickets.pdf');
+    Route::get('tickets/{ticket}/zip', [TicketController::class, 'zip'])->name('tickets.zip');
 });
 Route::middleware('permission:tickets.manage')->group(function () {
     Route::delete('tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
@@ -327,7 +395,14 @@ Route::middleware('permission:tickets.manage')->group(function () {
 */
 Route::middleware('permission:finance.view')->group(function () {
     Route::get('finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('finance/invoices/pdf', [FinanceController::class, 'invoicesPdf'])->name('finance.invoices.pdf');
+    Route::get('finance/invoices/csv', [FinanceController::class, 'invoicesCsv'])->name('finance.invoices.csv');
+    Route::get('finance/payments/pdf', [FinanceController::class, 'paymentsPdf'])->name('finance.payments.pdf');
+    Route::get('finance/payments/csv', [FinanceController::class, 'paymentsCsv'])->name('finance.payments.csv');
+    Route::get('finance/vendor-payments/pdf', [FinanceController::class, 'vendorPaymentsPdf'])->name('finance.vendor-payments.pdf');
+    Route::get('finance/vendor-payments/csv', [FinanceController::class, 'vendorPaymentsCsv'])->name('finance.vendor-payments.csv');
     Route::get('finance/expenses/pdf', [FinanceController::class, 'expensesPdf'])->name('finance.expenses.pdf');
+    Route::get('finance/expenses/csv', [FinanceController::class, 'expensesCsv'])->name('finance.expenses.csv');
 });
 Route::middleware('permission:subcontractor_finance.view')->group(function () {
     Route::get('finance/my-payments', [FinanceController::class, 'myPayments'])->name('finance.my-payments');
@@ -367,8 +442,14 @@ Route::middleware('permission:legal.manage')->group(function () {
 // show route below, or GET /audits/create matches show with "create" as the
 // {audit} id and 404s on binding instead of running the create action.
 Route::middleware('permission:audit.manage')->group(function () {
-    Route::resource('audits', AuditController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+    Route::resource('audits', AuditController::class)->only(['create', 'store', 'edit', 'update']);
     Route::delete('audits/{audit}/media/{media}', [AuditController::class, 'destroyMedia'])->name('audits.media.destroy');
+});
+// Split out from audit.manage so Auditor (who keeps audit.manage for create
+// and edit) does not get delete for free - old audit records must stay
+// protected from removal, Admin-only.
+Route::middleware('permission:audit.delete')->group(function () {
+    Route::resource('audits', AuditController::class)->only(['destroy']);
 });
 Route::middleware('permission:audit.view')->group(function () {
     Route::resource('audits', AuditController::class)->only(['index', 'show']);
@@ -377,6 +458,142 @@ Route::middleware('permission:audit.view')->group(function () {
 Route::middleware('permission:company_records.view')->group(function () {
     Route::resource('company-records', CompanyRecordController::class)->except('show');
     Route::delete('company-records/{companyRecord}/media/{media}', [CompanyRecordController::class, 'destroyMedia'])->name('company-records.media.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Equipment & Asset Management
+|--------------------------------------------------------------------------
+*/
+// The 'create' route must be registered before the wildcard 'assets/{asset}'
+// show route below, or GET /assets/create matches show with "create" as the
+// {asset} id and 404s on binding instead of running the create action.
+Route::middleware('permission:assets.create')->group(function () {
+    Route::get('assets/create', [AssetController::class, 'create'])->name('assets.create');
+    Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+});
+Route::middleware('permission:assets.view')->group(function () {
+    Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
+    Route::get('assets/{asset}', [AssetController::class, 'show'])->name('assets.show');
+});
+Route::middleware('permission:assets.download_pdf')->group(function () {
+    Route::get('assets/{asset}/pdf', [AssetController::class, 'pdf'])->name('assets.pdf');
+    Route::get('assets/{asset}/stock/pdf', [AssetController::class, 'stockPdf'])->name('assets.stock.pdf');
+});
+Route::middleware('permission:assets.edit')->group(function () {
+    Route::get('assets/{asset}/edit', [AssetController::class, 'edit'])->name('assets.edit');
+    // update() checks hasRole('Admin') itself and 403s a non-Admin who
+    // somehow posts here directly; requestUpdate() is the route the edit
+    // form actually submits to for anyone else holding assets.edit.
+    Route::put('assets/{asset}', [AssetController::class, 'update'])->name('assets.update');
+    Route::put('assets/{asset}/request-update', [AssetController::class, 'requestUpdate'])->name('assets.request-update');
+    Route::delete('assets/{asset}/media/{media}', [AssetController::class, 'destroyMedia'])->name('assets.media.destroy');
+});
+Route::middleware('permission:assets.update_status')->group(function () {
+    Route::post('assets/{asset}/status', [AssetController::class, 'updateStatus'])->name('assets.status.update');
+});
+Route::middleware('permission:assets.delete')->group(function () {
+    Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
+});
+Route::middleware('permission:assets.restore')->group(function () {
+    Route::post('assets/{id}/restore', [AssetController::class, 'restore'])->name('assets.restore');
+    Route::delete('assets/{id}/force-delete', [AssetController::class, 'forceDelete'])->name('assets.force-delete');
+});
+Route::middleware('permission:assets.approve')->group(function () {
+    Route::get('asset-change-requests', [AssetChangeRequestController::class, 'index'])->name('asset-change-requests.index');
+    Route::post('asset-change-requests/{changeRequest}/approve', [AssetChangeRequestController::class, 'approve'])->name('asset-change-requests.approve');
+    Route::post('asset-change-requests/{changeRequest}/reject', [AssetChangeRequestController::class, 'reject'])->name('asset-change-requests.reject');
+});
+// Registered as a top-level "missing-equipment" path rather than nested
+// under assets/ so it can't collide with the assets/{asset} wildcard route.
+Route::middleware('permission:assets.view_missing')->group(function () {
+    Route::get('missing-equipment', [AssetController::class, 'missing'])->name('assets.missing');
+    Route::get('missing-equipment/pdf', [AssetController::class, 'missingPdf'])->name('assets.missing.pdf');
+});
+
+Route::middleware('permission:movements.view')->group(function () {
+    Route::get('asset-movements', [AssetMovementController::class, 'index'])->name('asset-movements.index');
+});
+Route::middleware('permission:movements.download_pdf')->group(function () {
+    Route::get('assets/{asset}/movements/pdf', [AssetMovementController::class, 'pdf'])->name('assets.movements.pdf');
+});
+Route::middleware('permission:movements.create')->group(function () {
+    Route::post('assets/{asset}/movements', [AssetMovementController::class, 'store'])->name('assets.movements.store');
+});
+Route::middleware('permission:movements.edit')->group(function () {
+    Route::get('asset-movements/{movement}/edit', [AssetMovementController::class, 'edit'])->name('asset-movements.edit');
+    Route::put('asset-movements/{movement}', [AssetMovementController::class, 'update'])->name('asset-movements.update');
+});
+Route::middleware('permission:movements.approve')->group(function () {
+    Route::post('asset-movements/{movement}/confirm', [AssetMovementController::class, 'confirm'])->name('asset-movements.confirm');
+    Route::post('asset-movements/{movement}/cancel', [AssetMovementController::class, 'cancel'])->name('asset-movements.cancel');
+});
+Route::middleware('permission:movements.delete')->group(function () {
+    Route::delete('asset-movements/{movement}', [AssetMovementController::class, 'destroy'])->name('asset-movements.destroy');
+});
+
+Route::middleware('permission:repairs.view')->group(function () {
+    Route::get('asset-repairs', [AssetRepairController::class, 'index'])->name('asset-repairs.index');
+});
+Route::middleware('permission:repairs.download_pdf')->group(function () {
+    Route::get('assets/{asset}/repairs/pdf', [AssetRepairController::class, 'pdf'])->name('assets.repairs.pdf');
+});
+Route::middleware('permission:repairs.create')->group(function () {
+    Route::post('assets/{asset}/repairs', [AssetRepairController::class, 'store'])->name('assets.repairs.store');
+});
+Route::middleware('permission:repairs.edit')->group(function () {
+    Route::get('asset-repairs/{repair}/edit', [AssetRepairController::class, 'edit'])->name('asset-repairs.edit');
+    Route::put('asset-repairs/{repair}', [AssetRepairController::class, 'update'])->name('asset-repairs.update');
+});
+Route::middleware('permission:repairs.update_status')->group(function () {
+    Route::post('asset-repairs/{repair}/status', [AssetRepairController::class, 'updateStatus'])->name('asset-repairs.status.update');
+});
+Route::middleware('permission:repairs.delete')->group(function () {
+    Route::delete('asset-repairs/{repair}', [AssetRepairController::class, 'destroy'])->name('asset-repairs.destroy');
+});
+
+Route::middleware('permission:verifications.view')->group(function () {
+    Route::get('asset-verifications', [AssetVerificationController::class, 'index'])->name('asset-verifications.index');
+});
+Route::middleware('permission:verifications.download_pdf')->group(function () {
+    Route::get('assets/{asset}/verifications/pdf', [AssetVerificationController::class, 'pdf'])->name('assets.verifications.pdf');
+});
+Route::middleware('permission:verifications.create')->group(function () {
+    Route::post('assets/{asset}/verifications', [AssetVerificationController::class, 'store'])->name('assets.verifications.store');
+});
+Route::middleware('permission:verifications.edit')->group(function () {
+    Route::get('asset-verifications/{verification}/edit', [AssetVerificationController::class, 'edit'])->name('asset-verifications.edit');
+    Route::put('asset-verifications/{verification}', [AssetVerificationController::class, 'update'])->name('asset-verifications.update');
+});
+Route::middleware('permission:verifications.delete')->group(function () {
+    Route::delete('asset-verifications/{verification}', [AssetVerificationController::class, 'destroy'])->name('asset-verifications.destroy');
+});
+
+Route::middleware('permission:equipment_requests.view')->group(function () {
+    Route::get('equipment-requests', [EquipmentRequestController::class, 'index'])->name('equipment-requests.index');
+});
+Route::middleware('permission:equipment_requests.download_pdf')->group(function () {
+    Route::get('equipment-requests/pdf', [EquipmentRequestController::class, 'pdf'])->name('equipment-requests.pdf');
+});
+Route::middleware('permission:equipment_requests.create')->group(function () {
+    Route::post('equipment-requests', [EquipmentRequestController::class, 'store'])->name('equipment-requests.store');
+    Route::post('equipment-requests/{equipmentRequest}/cancel', [EquipmentRequestController::class, 'cancel'])->name('equipment-requests.cancel');
+});
+Route::middleware('permission:equipment_requests.approve')->group(function () {
+    Route::post('equipment-requests/{equipmentRequest}/approve', [EquipmentRequestController::class, 'approve'])->name('equipment-requests.approve');
+    Route::post('equipment-requests/{equipmentRequest}/mark-available', [EquipmentRequestController::class, 'markAvailable'])->name('equipment-requests.mark-available');
+    Route::post('equipment-requests/{equipmentRequest}/dispatch', [EquipmentRequestController::class, 'dispatch'])->name('equipment-requests.dispatch');
+});
+Route::middleware('permission:equipment_requests.receive')->group(function () {
+    Route::post('equipment-requests/{equipmentRequest}/receive', [EquipmentRequestController::class, 'receive'])->name('equipment-requests.receive');
+    Route::post('equipment-requests/{equipmentRequest}/complete', [EquipmentRequestController::class, 'complete'])->name('equipment-requests.complete');
+});
+Route::middleware('permission:equipment_requests.edit')->group(function () {
+    Route::get('equipment-requests/{equipmentRequest}/edit', [EquipmentRequestController::class, 'edit'])->name('equipment-requests.edit');
+    Route::put('equipment-requests/{equipmentRequest}', [EquipmentRequestController::class, 'update'])->name('equipment-requests.update');
+});
+Route::middleware('permission:equipment_requests.delete')->group(function () {
+    Route::delete('equipment-requests/{equipmentRequest}', [EquipmentRequestController::class, 'destroy'])->name('equipment-requests.destroy');
 });
 
 /*
@@ -427,6 +644,9 @@ Route::middleware('permission:chat.access')->group(function () {
     Route::get('conversations/{conversation}/poll', [ChatController::class, 'poll'])->name('conversations.poll');
     Route::delete('conversations/{conversation}/media/{media}', [ChatController::class, 'destroyMedia'])->name('conversations.media.destroy');
 });
+Route::middleware('permission:conversations.clear')->group(function () {
+    Route::post('conversations/{conversation}/clear', [ChatController::class, 'clear'])->name('conversations.clear');
+});
 Route::middleware('permission:tasks.manage')->group(function () {
     Route::resource('admin/task-schedules', TaskScheduleController::class)
         ->except('show')
@@ -465,11 +685,14 @@ Route::middleware('permission:masters.manage')->group(function () {
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
+    Route::get('admin/activity-logs/pdf', [ActivityLogController::class, 'pdf'])->name('admin.activity-logs.pdf');
 });
 Route::middleware('permission:system_settings.manage')->group(function () {
     Route::get('admin/settings/mail', [SettingsController::class, 'editMail'])->name('admin.settings.mail.edit');
     Route::put('admin/settings/mail', [SettingsController::class, 'updateMail'])->name('admin.settings.mail.update');
     Route::post('admin/settings/mail/test', [SettingsController::class, 'sendTest'])->name('admin.settings.mail.test');
+    Route::get('admin/settings/login-page', [LoginPageSettingController::class, 'edit'])->name('admin.settings.login-page.edit');
+    Route::put('admin/settings/login-page', [LoginPageSettingController::class, 'update'])->name('admin.settings.login-page.update');
 });
 
 /*
@@ -480,6 +703,7 @@ Route::middleware('permission:system_settings.manage')->group(function () {
 Route::middleware('permission:client_portal.access')->prefix('portal')->name('portal.')->group(function () {
     Route::get('quotations', [PortalQuotationController::class, 'index'])->name('quotations.index');
     Route::get('quotations/{quotation}', [PortalQuotationController::class, 'show'])->name('quotations.show');
+    Route::get('quotations/{quotation}/pdf', [PortalQuotationController::class, 'pdf'])->name('quotations.pdf');
     Route::post('quotations/{quotation}/approve', [PortalQuotationController::class, 'approve'])->name('quotations.approve');
     Route::post('quotations/{quotation}/reject', [PortalQuotationController::class, 'reject'])->name('quotations.reject');
     Route::get('work-orders', [PortalWorkOrderController::class, 'index'])->name('work-orders.index');
@@ -489,7 +713,12 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::post('work-orders/{workOrder}/approval-requests/{approvalRequest}/respond', [PortalApprovalRequestController::class, 'respond'])->name('work-orders.approval-requests.respond');
     Route::get('work-orders/{workOrder}/approval-requests/approved-pdf', [PortalApprovalRequestController::class, 'approvedPdf'])->name('work-orders.approval-requests.approved-pdf');
     Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/pdf', [PortalApprovalRequestController::class, 'pdf'])->name('work-orders.approval-requests.pdf');
+    Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/zip', [PortalApprovalRequestController::class, 'zip'])->name('work-orders.approval-requests.zip');
+    Route::post('work-orders/{workOrder}/discussion/messages', [PortalWorkOrderDiscussionController::class, 'store'])->name('work-orders.discussion.messages.store');
+    Route::get('work-orders/{workOrder}/discussion/poll', [PortalWorkOrderDiscussionController::class, 'poll'])->name('work-orders.discussion.poll');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
+    Route::get('tickets/{ticket}', [PortalTicketController::class, 'show'])->name('tickets.show');
+    Route::post('tickets/{ticket}/comments', [PortalTicketController::class, 'addComment'])->name('tickets.comments.store');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
 });

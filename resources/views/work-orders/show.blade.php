@@ -4,12 +4,16 @@
     $canSeeLedger = array_key_exists('ledger', $tabs);
     $validTabs = array_keys($tabs);
     $initialTab = in_array(request('tab'), $validTabs, true) ? request('tab') : 'site';
+    $csvExportRoutes = ['ledger' => 'work-orders.ledger.export', 'company-ledger' => 'work-orders.company-ledger.export'];
 @endphp
 <x-app-layout>
     <x-slot name="header">
         <x-page-header :title="($workOrder->site?->site_no ? $workOrder->site->site_no.' — ' : '').$workOrder->work_order_no" :subtitle="$workOrder->title">
             <x-slot name="actions">
                 <x-badge :status="$workOrder->status" class="text-sm" />
+                @can('assets.view')
+                    <x-link-button :href="route('work-orders.equipment.index', $workOrder)" variant="secondary">Equipment</x-link-button>
+                @endcan
                 @can('work_orders.cancel')
                     @if (! in_array($workOrder->status, ['completed', 'cancelled']))
                         <form method="POST" action="{{ route('work-orders.cancel', $workOrder) }}" onsubmit="return confirm('Cancel this work order?')">
@@ -45,7 +49,19 @@
                         <x-dropdown-link href="{{ route('work-orders.pdf', $workOrder) }}" class="font-semibold">Full Work Order</x-dropdown-link>
                         <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
                         @foreach ($tabs as $key => $label)
-                            <x-dropdown-link href="{{ route('work-orders.pdf.section', [$workOrder, $key]) }}">{{ $label }}</x-dropdown-link>
+                            @if ($workOrder->hasAttachmentsForSection($key) || isset($csvExportRoutes[$key]))
+                                <div class="flex items-center justify-between gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                                    <a href="{{ route('work-orders.pdf.section', [$workOrder, $key]) }}" class="flex-1 truncate hover:underline">{{ $label }}</a>
+                                    @if ($workOrder->hasAttachmentsForSection($key))
+                                        <a href="{{ route('work-orders.zip.section', [$workOrder, $key]) }}" class="shrink-0 rounded border border-gray-300 px-1.5 py-0.5 text-xs font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:text-gray-100" title="Download only this section's attachments as a ZIP">ZIP</a>
+                                    @endif
+                                    @if (isset($csvExportRoutes[$key]))
+                                        <a href="{{ route($csvExportRoutes[$key], $workOrder) }}" class="shrink-0 rounded border border-gray-300 px-1.5 py-0.5 text-xs font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:text-gray-100" title="Download this section's entries as a CSV">CSV</a>
+                                    @endif
+                                </div>
+                            @else
+                                <x-dropdown-link href="{{ route('work-orders.pdf.section', [$workOrder, $key]) }}">{{ $label }}</x-dropdown-link>
+                            @endif
                         @endforeach
                         <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
                         <x-dropdown-link href="{{ route('work-orders.zip', $workOrder) }}" class="font-semibold">ZIP — Details + All Attachments</x-dropdown-link>
@@ -118,7 +134,14 @@
             @include('work-orders.tabs.tickets')
         </div>
         <div x-show="tab === 'discussion'" x-cloak>
-            <x-discussion-card :conversation="$discussion" title="Work Order Discussion" />
+            <x-discussion-card
+                :conversation="$discussion"
+                title="Work Order Discussion"
+                :subtitle="$workOrder->client->canAccessWorkOrderDiscussion()
+                    ? 'The client has been granted access - they can view and send messages here too.'
+                    : 'Internal notes and conversation about this record - not visible to the client.'"
+                :clearable="auth()->user()->can('conversations.clear')"
+            />
         </div>
     </div>
 </x-app-layout>

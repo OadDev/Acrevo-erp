@@ -84,7 +84,11 @@ class TicketPermissionTest extends TestCase
 
         $this->actingAs($creator)->get("/tickets/{$ticket->id}/edit")->assertOk();
         $this->actingAs($otherSales)->get("/tickets/{$ticket->id}/edit")->assertForbidden();
-        $this->actingAs($admin)->get("/tickets/{$ticket->id}/edit")->assertForbidden();
+
+        // Admin can always correct a ticket's details, even one raised by
+        // someone else, so incorrect info doesn't stay wrong in front of
+        // the client.
+        $this->actingAs($admin)->get("/tickets/{$ticket->id}/edit")->assertOk();
     }
 
     public function test_locking_a_ticket_is_gated_the_same_as_editing_it(): void

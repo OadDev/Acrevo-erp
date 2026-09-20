@@ -41,6 +41,20 @@ class AuditManagementTest extends TestCase
         return $user;
     }
 
+    private function admin(): User
+    {
+        $this->seed(\Database\Seeders\DepartmentSeeder::class);
+        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+
+        $user = User::create([
+            'name' => 'Admin', 'email' => 'admin+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $user->syncRoles(['Admin']);
+
+        return $user;
+    }
+
     private function workOrder(User $user): WorkOrder
     {
         $client = Client::create(['name' => 'C', 'email' => 'c+'.uniqid().'@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $user->id]);
@@ -93,19 +107,39 @@ class AuditManagementTest extends TestCase
         $this->assertSame(1, $fresh->fresh()->media()->count());
     }
 
-    public function test_an_audit_and_its_files_can_be_deleted(): void
+    public function test_an_audit_and_its_files_can_be_deleted_by_an_admin(): void
     {
-        $user = $this->auditor();
+        $admin = $this->admin();
         $audit = Audit::create([
-            'type' => 'project', 'title' => 'To Delete', 'auditor_id' => $user->id,
+            'type' => 'project', 'title' => 'To Delete', 'auditor_id' => $admin->id,
             'audit_date' => now(), 'status' => 'completed',
         ]);
         $audit->addMedia(UploadedFile::fake()->create('file.pdf', 50))->toMediaCollection('files');
 
-        $this->actingAs($user)->delete("/audits/{$audit->id}")->assertRedirect('/audits');
+        $this->actingAs($admin)->delete("/audits/{$audit->id}")->assertRedirect('/audits');
 
         $this->assertNull(Audit::find($audit->id));
         $this->assertSame(0, \Spatie\MediaLibrary\MediaCollections\Models\Media::where('model_id', $audit->id)->where('model_type', Audit::class)->count());
+    }
+
+    /**
+     * Auditor keeps audit.manage (create/edit, already covered above) but
+     * not audit.delete - old audit records must stay protected from
+     * removal so nothing an Auditor does can wipe historical audit data.
+     * Only Admin (has '*') can remove one.
+     */
+    public function test_an_auditor_can_create_and_edit_but_not_delete_an_audit(): void
+    {
+        $user = $this->auditor();
+        $audit = Audit::create([
+            'type' => 'project', 'title' => 'Protected Record', 'auditor_id' => $user->id,
+            'audit_date' => now(), 'status' => 'completed',
+        ]);
+
+        $this->actingAs($user)->get('/audits')->assertOk()->assertSee('New Audit')->assertDontSee('Delete');
+        $this->actingAs($user)->delete("/audits/{$audit->id}")->assertForbidden();
+
+        $this->assertNotNull(Audit::find($audit->id));
     }
 
     public function test_the_audit_index_can_be_filtered_by_type_status_and_work_order(): void

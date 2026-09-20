@@ -61,7 +61,7 @@
 
     <div class="sm:col-span-2">
         <x-input-label value="{{ isset($ticket) ? 'Add More Files' : 'Attachments (one or more)' }}" />
-        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="mt-1 block w-full text-sm">
+        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="mt-1 block w-full text-sm">
         @error('files')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
     </div>
 

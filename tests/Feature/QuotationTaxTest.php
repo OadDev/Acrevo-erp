@@ -80,7 +80,7 @@ class QuotationTaxTest extends TestCase
         $this->assertNotNull($enquiry->client->fresh());
     }
 
-    public function test_admin_can_remove_a_quotation_without_work_orders(): void
+    public function test_admin_can_remove_an_approved_quotation_from_the_list_page(): void
     {
         $admin = $this->admin();
         $enquiry = $this->enquiry($admin);
@@ -89,11 +89,13 @@ class QuotationTaxTest extends TestCase
             'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
         ]);
 
-        $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertRedirect(route('quotations.index'));
-        $this->assertNull(Quotation::find($quotation->id));
+        $this->actingAs($admin)->get('/quotations')->assertOk()->assertSee('Remove');
+
+        $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertRedirect('/quotations');
+        $this->assertSoftDeleted('quotations', ['id' => $quotation->id]);
     }
 
-    public function test_a_quotation_with_work_orders_cannot_be_removed(): void
+    public function test_a_quotation_with_a_work_order_cannot_be_removed_and_the_list_page_shows_it_blocked(): void
     {
         $admin = $this->admin();
         $enquiry = $this->enquiry($admin);
@@ -106,8 +108,10 @@ class QuotationTaxTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
 
+        $this->actingAs($admin)->get('/quotations')->assertOk()->assertSee('Remove all work orders');
+
         $this->actingAs($admin)->delete("/quotations/{$quotation->id}")->assertStatus(422);
-        $this->assertNotNull(Quotation::find($quotation->id));
+        $this->assertNotSoftDeleted('quotations', ['id' => $quotation->id]);
     }
 
     public function test_non_admin_cannot_remove_a_quotation(): void
@@ -125,7 +129,7 @@ class QuotationTaxTest extends TestCase
         ]);
 
         $this->actingAs($sales)->delete("/quotations/{$quotation->id}")->assertForbidden();
-        $this->assertNotNull(Quotation::find($quotation->id));
+        $this->assertNotSoftDeleted('quotations', ['id' => $quotation->id]);
     }
 
     public function test_a_quotation_can_be_created_with_nil_tax(): void

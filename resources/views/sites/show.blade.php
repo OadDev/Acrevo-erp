@@ -3,6 +3,11 @@
         <x-page-header :title="$site->site_no" :subtitle="$site->client?->name ?? 'Removed client'">
             <x-slot name="actions">
                 <x-badge :status="$site->status" class="text-sm" />
+                @can('work_schedules.view_site')
+                    <a href="{{ route('sites.work-schedule.show', $site) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                        <x-icon name="calendar-check" class="h-4 w-4" /> Work Schedule
+                    </a>
+                @endcan
                 @can('work_orders.edit')
                     @if ($site->status === 'active')
                         <form method="POST" action="{{ route('sites.complete', $site) }}" onsubmit="return confirm('Mark this site as completed and hand it over to the client? This should be the final step once all work here is done.')">

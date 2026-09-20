@@ -63,11 +63,40 @@ class RolePermissionSeeder extends Seeder
             'legal.view', 'legal.manage',
         ],
         'audit' => [
-            'audit.view', 'audit.manage',
+            'audit.view', 'audit.manage', 'audit.delete',
         ],
         'management' => [
             'company_records.view', 'company_records.manage',
             'client_records.view',
+        ],
+        'clients' => [
+            'clients.manage',
+        ],
+        // Verification/Equipment-Request permissions are added as those
+        // features are built, not pre-declared here - a permission
+        // checkbox with nothing behind it yet would just confuse whoever
+        // configures Roles & Permissions.
+        'assets' => [
+            'assets.view', 'assets.create', 'assets.edit', 'assets.approve',
+            'assets.delete', 'assets.restore', 'assets.update_status',
+            'assets.view_history', 'assets.download_pdf', 'assets.view_missing',
+        ],
+        'movements' => [
+            'movements.view', 'movements.create', 'movements.approve',
+            'movements.edit', 'movements.delete', 'movements.download_pdf',
+        ],
+        'repairs' => [
+            'repairs.view', 'repairs.create', 'repairs.edit', 'repairs.delete',
+            'repairs.update_status', 'repairs.download_pdf',
+        ],
+        'verifications' => [
+            'verifications.view', 'verifications.create', 'verifications.edit',
+            'verifications.delete', 'verifications.download_pdf',
+        ],
+        'equipment_requests' => [
+            'equipment_requests.view', 'equipment_requests.create', 'equipment_requests.edit',
+            'equipment_requests.delete', 'equipment_requests.approve',
+            'equipment_requests.receive', 'equipment_requests.download_pdf',
         ],
         'reports' => [
             'reports.view', 'reports.export',
@@ -86,6 +115,11 @@ class RolePermissionSeeder extends Seeder
         ],
         'chat' => [
             'chat.access',
+            'conversations.clear',
+        ],
+        'work_schedules' => [
+            'work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details',
+            'work_schedules.view_dates', 'work_schedules.view_progress', 'work_schedules.manage',
         ],
     ];
 
@@ -101,6 +135,9 @@ class RolePermissionSeeder extends Seeder
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // View-only, scoped in the controller to sites of clients
+            // assigned to this Sales user - no work_schedules.manage.
+            'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
@@ -123,6 +160,28 @@ class RolePermissionSeeder extends Seeder
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // View + update status only, scoped in the controller to assets
+            // currently at a work order this Team Leader leads - no create,
+            // edit, approve, delete, or restore.
+            'assets' => ['assets.view', 'assets.update_status', 'assets.view_history', 'assets.download_pdf', 'assets.view_missing'],
+            // Create/confirm movements, both scoped in the controller to
+            // this Team Leader's own site - dispatching what's at their
+            // site, and confirming receipt of what arrives there.
+            'movements' => ['movements.view', 'movements.create', 'movements.approve', 'movements.download_pdf'],
+            // Report a repair and track it through to completion - both
+            // scoped in the controller to assets at this Team Leader's site.
+            'repairs' => ['repairs.view', 'repairs.create', 'repairs.update_status', 'repairs.download_pdf'],
+            // Physically verify assets at this Team Leader's own site -
+            // scoped in the controller the same way as repairs/movements.
+            'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],
+            // Request equipment for their own site and confirm/complete
+            // receipt of it - no approve, deciding a request (and any
+            // purchase it needs) is Admin's call.
+            'equipment_requests' => ['equipment_requests.view', 'equipment_requests.create', 'equipment_requests.receive', 'equipment_requests.download_pdf'],
+            // View-only, scoped in the controller to sites this Team Leader
+            // leads - no work_schedules.manage, updating progress/dates is
+            // Admin's call for now.
+            'work_schedules' => ['work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
@@ -155,6 +214,29 @@ class RolePermissionSeeder extends Seeder
             'reports' => '*',
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // Create + edit, but no assets.approve - edits go through the
+            // AssetChangeRequest queue instead of applying immediately.
+            // No delete/restore/update_status either.
+            'assets' => ['assets.view', 'assets.create', 'assets.edit', 'assets.view_history', 'assets.download_pdf', 'assets.view_missing'],
+            // No movements.approve - Management can dispatch a movement but
+            // confirming receipt is a site-level action (an Executive Team
+            // Leader) or Admin's to make. No movements.edit/delete either -
+            // editing or removing a movement entry is Admin-only.
+            'movements' => ['movements.view', 'movements.create', 'movements.download_pdf'],
+            // No repairs.update_status - Management can log a repair entry
+            // but tracking it through to completion is a site-level action
+            // (an Executive Team Leader) or Admin's to make. No
+            // repairs.edit/delete either - editing or removing a repair
+            // entry is Admin-only.
+            'repairs' => ['repairs.view', 'repairs.create', 'repairs.download_pdf'],
+            // Management can also record a verification anywhere (not
+            // site-scoped, unlike a Team Leader) as a spot-check.
+            'verifications' => ['verifications.view', 'verifications.create', 'verifications.download_pdf'],
+            // Management can request equipment for any site and confirm
+            // receipt/completion, but not decide (approve/reject) a
+            // request - same reasoning as withholding movements.approve
+            // and repairs.update_status above.
+            'equipment_requests' => ['equipment_requests.view', 'equipment_requests.create', 'equipment_requests.receive', 'equipment_requests.download_pdf'],
         ],
         'Legal' => [
             'legal' => '*',
@@ -164,7 +246,11 @@ class RolePermissionSeeder extends Seeder
             'chat' => ['chat.access'],
         ],
         'Auditor' => [
-            'audit' => '*',
+            // Explicit list, not '*' - Auditor gets to create and edit
+            // audits, but audit.delete (the whole group's '*' would include
+            // it) is deliberately withheld, so old audit records can't be
+            // removed by anyone but Admin.
+            'audit' => ['audit.view', 'audit.manage'],
             'finance' => ['finance.view'],
             'reports' => ['reports.view'],
             'sales' => ['work_orders.view'],
@@ -184,6 +270,13 @@ class RolePermissionSeeder extends Seeder
         ],
         'Client' => [
             'client_portal' => '*',
+            // View-only, scoped in the controller to this Client's own
+            // site(s) - view_overall doubles as "my site(s) list" since it's
+            // scoped the same way, letting the portal nav link straight to
+            // it without a client-specific route. Delay/progress detail is
+            // withheld by default since it can include internal remarks -
+            // Admin can grant it per-client.
+            'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates'],
         ],
     ];
 

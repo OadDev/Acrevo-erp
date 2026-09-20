@@ -18,7 +18,7 @@ class QuotationController extends Controller
     public function index(Request $request): View
     {
         $quotations = Quotation::query()
-            ->with(['client', 'enquiry'])
+            ->with(['client', 'enquiry', 'workOrders'])
             ->when($request->get('status'), fn ($q, $status) => $q->where('status', $status))
             ->latest()
             ->paginate(15)
@@ -63,7 +63,7 @@ class QuotationController extends Controller
 
     public function show(Quotation $quotation): View
     {
-        $quotation->load(['items', 'enquiry', 'client', 'revisions', 'workOrders']);
+        $quotation->load(['items', 'enquiry', 'client', 'revisions', 'workOrders', 'media']);
         $discussion = app(ConversationService::class)->discussionFor($quotation, auth()->user());
 
         return view('quotations.show', compact('quotation', 'discussion'));
@@ -179,7 +179,7 @@ class QuotationController extends Controller
 
     public function pdf(Quotation $quotation)
     {
-        $quotation->load(['items', 'client', 'enquiry']);
+        $quotation->load(['items', 'client', 'enquiry', 'media']);
 
         $pdf = Pdf::loadView('quotations.pdf', compact('quotation'));
 

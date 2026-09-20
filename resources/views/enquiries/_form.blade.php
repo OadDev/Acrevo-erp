@@ -24,10 +24,7 @@
         <x-input-label for="contact_email" value="Contact Email" />
         <x-text-input id="contact_email" type="email" name="contact_email" class="mt-1 block w-full" value="{{ old('contact_email', $enquiry->contact_email ?? '') }}" />
         @isset($enquiry)
-            <label class="mt-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <input type="checkbox" name="sync_to_client" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('sync_to_client'))>
-                Update the client's email/address/city to match, even if they're already set
-            </label>
+            <p class="mt-1 text-xs text-gray-400">Saving updates the linked client's email/address/city to match.</p>
         @endisset
     </div>
 

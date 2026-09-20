@@ -29,9 +29,9 @@
         @if ($approvalRequest->description)
             <tr><th>Details</th><td>{{ $approvalRequest->description }}</td></tr>
         @endif
-        @if ($approvalRequest->getFirstMedia('attachment'))
-            <tr><th>Attachment</th><td>@include('work-orders.pdf._media', ['media' => $approvalRequest->getFirstMedia('attachment'), 'label' => $approvalRequest->getFirstMedia('attachment')->file_name])</td></tr>
-        @endif
+        @foreach ($approvalRequest->getMedia('attachment') as $attachment)
+            <tr><th>Attachment</th><td>@include('work-orders.pdf._media', ['media' => $attachment, 'label' => $attachment->file_name])</td></tr>
+        @endforeach
         @if ($approvalRequest->status !== 'pending')
             <tr><th>Responded By</th><td>{{ $approvalRequest->respondedBy?->name ?? '—' }}</td></tr>
             <tr><th>Response Date</th><td>{{ $approvalRequest->respondedAtIst() ?? '—' }}</td></tr>

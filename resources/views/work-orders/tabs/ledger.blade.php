@@ -111,6 +111,13 @@
                                 <a href="{{ $entry->getFirstMediaUrl('bill') }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
                                     <x-icon name="paperclip" class="h-3.5 w-3.5" /> Bill
                                 </a>
+                                @if (auth()->user()->hasRole('Admin'))
+                                    <form method="POST" action="{{ route('work-orders.ledger.bill.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this bill?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-1 text-xs text-rose-600 hover:underline">✕</button>
+                                    </form>
+                                @endif
                             @endif
                         </td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
@@ -165,6 +172,7 @@
     @can('site_records.manage')
         <form method="POST" action="{{ route('work-orders.ledger.store', $workOrder) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
             @csrf
+            <x-text-input type="date" name="entry_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />
             <x-select-input name="type" class="text-sm">
                 <option value="debit">Debit</option>
                 <option value="credit">Credit</option>

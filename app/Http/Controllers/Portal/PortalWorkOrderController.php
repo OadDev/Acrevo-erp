@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\WorkOrder;
+use App\Services\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -33,11 +34,12 @@ class PortalWorkOrderController extends Controller
         $this->authorize('view', $workOrder);
 
         $workOrder->load([
-            'dailyProgressReports' => fn ($q) => $q->latest(), 'media', 'tickets', 'clientReviews', 'completionCertificates',
-            'dailyChecklists' => fn ($q) => $q->latest(),
+            'dailyProgressReports', 'dailyProgressReports.media', 'media', 'tickets', 'clientReviews', 'completionCertificates',
+            'statusLogs' => fn ($q) => $q->orderBy('changed_at'),
+            'dailyChecklists',
             'dailyChecklists.checklistItems.media',
             'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',
-            'summaries' => fn ($q) => $q->orderBy('entry_date'),
+            'summaries',
             'ledgers' => fn ($q) => $q->orderBy('entry_date'),
             'measurementBooks' => fn ($q) => $q->where('type', 'actual')->orderBy('date'),
             'measurementBooks.items',
@@ -45,11 +47,19 @@ class PortalWorkOrderController extends Controller
             'materialUsageEntries',
             'labourEntries' => fn ($q) => $q->orderBy('entry_date'),
             'companyLedgers' => fn ($q) => $q->orderBy('entry_date'),
-            'qcInspections' => fn ($q) => $q->orderBy('inspection_date'),
+            'qcInspections',
             'qcInspections.inspectedBy',
         ]);
 
-        return view('portal.work-orders.show', compact('workOrder'));
+        // Only creates the discussion thread (and adds the client as a
+        // participant) once Admin has actually turned this on for them -
+        // otherwise the client stays out of a thread staff might already
+        // be using internally.
+        $discussion = $workOrder->client->canAccessWorkOrderDiscussion()
+            ? app(ConversationService::class)->discussionFor($workOrder, auth()->user())
+            : null;
+
+        return view('portal.work-orders.show', compact('workOrder', 'discussion'));
     }
 
     public function accept(WorkOrder $workOrder): RedirectResponse

@@ -35,12 +35,14 @@
                                 <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $visit->assignedTo?->name }}</td>
                                 <td class="px-5 py-3"><x-badge :status="$visit->status" /></td>
                                 <td class="px-5 py-3 text-right">
-                                    @if ($visit->status === 'scheduled')
-                                        <form method="POST" action="{{ route('site-visits.complete', $visit) }}" class="inline">
-                                            @csrf
-                                            <button class="text-sm text-emerald-600 hover:underline">Mark Complete</button>
-                                        </form>
-                                    @endif
+                                    @can('site_visits.create')
+                                        @if ($visit->status === 'scheduled')
+                                            <form method="POST" action="{{ route('site-visits.complete', $visit) }}" class="inline">
+                                                @csrf
+                                                <button class="text-sm text-emerald-600 hover:underline">Mark Complete</button>
+                                            </form>
+                                        @endif
+                                    @endcan
                                     @if ($visit->enquiry)
                                         <a href="{{ route('site-visits.edit', $visit) }}" class="ml-2 text-sm text-indigo-600 hover:underline">Edit</a>
                                     @endif

@@ -41,4 +41,20 @@ class DailyChecklistItemController extends Controller
 
         return back()->with('success', 'Checklist item removed.');
     }
+
+    public function destroyProof(WorkOrder $workOrder, DailyChecklistItem $item): RedirectResponse
+    {
+        $this->authorizeAdminOnly();
+
+        abort_unless($item->dailyChecklist->work_order_id === $workOrder->id, 404);
+
+        $item->clearMediaCollection('proof');
+
+        // "Done" is only meaningful backed by its proof photo - without one
+        // the item goes back to pending rather than showing as done with
+        // nothing to show for it.
+        $item->update(['is_done' => false, 'done_at' => null, 'done_by' => null]);
+
+        return back()->with('success', 'Proof removed.');
+    }
 }

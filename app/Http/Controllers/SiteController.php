@@ -146,7 +146,10 @@ class SiteController extends Controller
 
         $zip->close();
 
-        return response()->download($zipPath, "{$site->site_no}-work-orders.zip")->deleteFileAfterSend();
+        return response()->download($zipPath, "{$site->site_no}-work-orders.zip", [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ])->deleteFileAfterSend();
     }
 
     public function complete(Site $site): RedirectResponse
