@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaskScheduleController;
@@ -49,6 +50,7 @@ use App\Http\Controllers\WorkOrder\MaterialEntryController;
 use App\Http\Controllers\WorkOrder\MaterialUsageEntryController;
 use App\Http\Controllers\WorkOrder\MeasurementBookController;
 use App\Http\Controllers\WorkOrder\MeasurementBookItemController;
+use App\Http\Controllers\WorkOrder\WorkOrderAssetController;
 use App\Http\Controllers\WorkOrder\WorkOrderAttendanceController;
 use App\Http\Controllers\WorkOrder\WorkOrderMediaController;
 use App\Http\Controllers\WorkOrder\WorkOrderPdfController;
@@ -194,6 +196,9 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
+        Route::post('equipment', [WorkOrderAssetController::class, 'store'])->name('equipment.store');
+        Route::put('equipment/{workOrderAsset}', [WorkOrderAssetController::class, 'update'])->name('equipment.update');
+        Route::delete('equipment/{workOrderAsset}', [WorkOrderAssetController::class, 'destroy'])->name('equipment.destroy');
     });
     // Company Ledger tracks the company's own expenses against a work order
     // and is restricted to Finance and Admin only (enforced in the
@@ -462,6 +467,8 @@ Route::middleware('permission:masters.manage')->group(function () {
     Route::resource('admin/departments', DepartmentController::class)->except(['create', 'edit', 'show'])->names('admin.departments');
     Route::post('admin/ledger-categories', [LedgerCategoryController::class, 'store'])->name('admin.ledger-categories.store');
     Route::delete('admin/ledger-categories/{ledgerCategory}', [LedgerCategoryController::class, 'destroy'])->name('admin.ledger-categories.destroy');
+    Route::post('admin/assets', [AssetController::class, 'store'])->name('admin.assets.store');
+    Route::delete('admin/assets/{asset}', [AssetController::class, 'destroy'])->name('admin.assets.destroy');
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');

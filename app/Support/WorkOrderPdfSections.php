@@ -17,6 +17,7 @@ class WorkOrderPdfSections
         'checklist' => 'Daily Work with Checklist',
         'progress' => 'Progress & Media',
         'materials' => 'Material Inward and Daily Material Used Entry',
+        'equipment' => 'Equipment / Assets',
         'manpower' => 'Used Man Power Budget',
         'mb' => 'Measurement Book',
         'summary' => 'Monthly Summary',
