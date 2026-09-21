@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ChecksSiteTeamLeadership;
 use App\Models\Asset;
 use App\Models\AssetChangeRequest;
 use App\Models\AssetMovement;
 use App\Models\AssetStatusLog;
 use App\Models\AssetStock;
+use App\Models\User;
 use App\Models\WorkOrder;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -18,8 +18,6 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AssetController extends Controller
 {
-    use ChecksSiteTeamLeadership;
-
     private const ATTACHMENT_RULES = ['file', 'max:51200', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'];
 
     private const MASTER_DETAIL_FIELDS = [
@@ -157,8 +155,6 @@ class AssetController extends Controller
         ]);
 
         $user = $request->user();
-        $canUpdateStatus = $user->can('assets.update_status')
-            && ($user->hasRole('Admin') || $this->isTeamLeaderOfWorkOrder($asset->current_work_order_id, $user));
 
         // null = unrestricted (Admin); otherwise the exact set of work order
         // IDs this user leads, used to decide both whether they can dispatch
@@ -167,6 +163,8 @@ class AssetController extends Controller
         $ledWorkOrderIds = $user->hasRole('Admin') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
             ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
             ->pluck('id');
+
+        $canUpdateStatus = $this->canUserUpdateAssetStatus($asset, $user, $ledWorkOrderIds);
 
         // The asset's stock can now sit at several work orders at once - a
         // Team Leader may act on it as soon as any of them is a site they
@@ -326,13 +324,39 @@ class AssetController extends Controller
         return back()->with('success', 'File removed.');
     }
 
+    /**
+     * Admin and Management get unrestricted access (matching movements/
+     * repairs/verifications elsewhere in this module); an Executive Team
+     * Leader may update status only for an asset holding stock - any
+     * status, not just Available, since flipping something to/from damaged
+     * or missing is exactly what this is for - at a site they lead. Checked
+     * against the live AssetStock ledger rather than the legacy single
+     * current_work_order_id field, so this reflects an asset's real,
+     * possibly multi-site, locations after any Movement.
+     */
+    private function canUserUpdateAssetStatus(Asset $asset, User $user, $ledWorkOrderIds): bool
+    {
+        if ($ledWorkOrderIds === null || $user->hasRole('Management')) {
+            return true;
+        }
+
+        return $asset->stocks
+            ->pluck('work_order_id')
+            ->filter()
+            ->intersect($ledWorkOrderIds)
+            ->isNotEmpty();
+    }
+
     public function updateStatus(Request $request, Asset $asset): RedirectResponse
     {
         $user = $request->user();
 
-        if (! $user->hasRole('Admin')) {
-            abort_unless($this->isTeamLeaderOfWorkOrder($asset->current_work_order_id, $user), 403, 'You can only update the status of assets assigned to a site you lead.');
-        }
+        $ledWorkOrderIds = $user->hasRole('Admin') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
+            ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
+            ->pluck('id');
+
+        $asset->load(['stocks' => fn ($q) => $q->where('quantity', '>', 0)]);
+        abort_unless($this->canUserUpdateAssetStatus($asset, $user, $ledWorkOrderIds), 403, 'You can only update the status of assets assigned to a site you lead.');
 
         $data = $request->validate([
             'status' => ['required', 'in:'.implode(',', Asset::STATUSES)],

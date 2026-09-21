@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Asset;
 use App\Models\AssetChangeRequest;
+use App\Models\AssetMovement;
 use App\Models\Client;
 use App\Models\Department;
 use App\Models\Enquiry;
@@ -179,6 +180,46 @@ class AssetManagementTest extends TestCase
 
         // No route exists to delete a status log entry at all.
         $this->assertDatabaseCount('asset_status_logs', 1);
+    }
+
+    public function test_update_status_reflects_live_stock_locations_not_the_stale_legacy_field(): void
+    {
+        // Regression test: "Update Status" used to be gated on
+        // Asset::current_work_order_id, a single legacy field a partial
+        // Movement (quantity split across sites) deliberately leaves
+        // untouched. A Team Leader whose site genuinely held some of this
+        // asset's stock - via the real AssetStock ledger - could still be
+        // denied the option simply because the legacy field still pointed
+        // at wherever the rest of the stock stayed.
+        $admin = $this->admin();
+        $leaderA = $this->staffUser($admin, 'Executive Team Leader');
+        $leaderB = $this->staffUser($admin, 'Executive Team Leader');
+        $siteA = $this->workOrderLedBy($admin, $leaderA);
+        $siteB = $this->workOrderLedBy($admin, $leaderB);
+
+        $this->actingAs($admin)->post('/assets', [
+            'name' => 'Steel Sheets', 'current_location' => 'work_order', 'current_work_order_id' => $siteA->id, 'quantity' => 5,
+        ])->assertRedirect();
+        $asset = Asset::where('name', 'Steel Sheets')->firstOrFail();
+
+        // Move only 2 of the 5 units to Site B - 3 remain available at Site
+        // A, so the legacy current_work_order_id stays pinned there even
+        // once this confirms.
+        $this->actingAs($admin)->post("/assets/{$asset->id}/movements", [
+            'type' => 'site_to_site_transfer', 'from_location' => 'work_order', 'from_work_order_id' => $siteA->id,
+            'to_location' => 'work_order', 'to_work_order_id' => $siteB->id, 'quantity' => 2, 'moved_at' => now()->toDateString(),
+        ])->assertRedirect();
+        $movement = AssetMovement::where('asset_id', $asset->id)->where('type', 'site_to_site_transfer')->firstOrFail();
+        $this->actingAs($leaderB)->post("/asset-movements/{$movement->id}/confirm")->assertRedirect();
+
+        $asset->refresh();
+        $this->assertSame($siteA->id, $asset->current_work_order_id, 'A partial movement must not overwrite the legacy field.');
+
+        // Site B's leader genuinely holds 2 units and must still see/use
+        // Update Status for them.
+        $this->actingAs($leaderB)->get("/assets/{$asset->id}")->assertOk()->assertSee('Update Status');
+        $this->actingAs($leaderB)->post("/assets/{$asset->id}/status", ['status' => 'damaged'])->assertRedirect();
+        $this->assertSame('damaged', $asset->fresh()->status);
     }
 
     public function test_status_history_cannot_be_deleted_and_shows_on_the_asset_page(): void

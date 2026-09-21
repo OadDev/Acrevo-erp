@@ -20,7 +20,32 @@ class AssetRepairController extends Controller
 
     public function index(Request $request): View
     {
-        $repairs = AssetRepair::query()
+        $repairs = $this->filtered($request)
+            ->orderByDesc('reported_date')
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
+
+        return view('assets.repairs.index', compact('repairs', 'workOrders'));
+    }
+
+    public function indexPdf(Request $request)
+    {
+        $repairs = $this->filtered($request)
+            ->orderByDesc('reported_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $pdf = Pdf::loadView('assets.repairs.pdf-all', compact('repairs'));
+
+        return $pdf->download('repair-history.pdf');
+    }
+
+    private function filtered(Request $request)
+    {
+        return AssetRepair::query()
             ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'createdBy'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
@@ -34,15 +59,7 @@ class AssetRepairController extends Controller
             ->when($request->get('from'), fn ($q, $v) => $q->whereDate('reported_date', '>=', $v))
             ->when($request->get('to'), fn ($q, $v) => $q->whereDate('reported_date', '<=', $v))
             ->when($request->get('cost_min'), fn ($q, $v) => $q->where('cost', '>=', $v))
-            ->when($request->get('cost_max'), fn ($q, $v) => $q->where('cost', '<=', $v))
-            ->orderByDesc('reported_date')
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
-
-        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
-
-        return view('assets.repairs.index', compact('repairs', 'workOrders'));
+            ->when($request->get('cost_max'), fn ($q, $v) => $q->where('cost', '<=', $v));
     }
 
     public function store(Request $request, Asset $asset): RedirectResponse
