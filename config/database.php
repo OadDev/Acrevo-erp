@@ -99,7 +99,7 @@ return [
             'url' => env('DEMO_DB_URL'),
             'host' => env('DEMO_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('DEMO_DB_PORT', env('DB_PORT', '3306')),
-            'database' => env('DEMO_DB_DATABASE', database_path('demo.sqlite')),
+            'database' => env('DEMO_DB_DATABASE', env('DB_CONNECTION', 'mysql') === 'sqlite' ? database_path('demo.sqlite') : env('DB_DATABASE', 'laravel').'_demo'),
             'username' => env('DEMO_DB_USERNAME', env('DB_USERNAME', 'root')),
             'password' => env('DEMO_DB_PASSWORD', env('DB_PASSWORD', '')),
             'unix_socket' => env('DB_SOCKET', ''),

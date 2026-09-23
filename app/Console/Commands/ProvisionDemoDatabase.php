@@ -38,7 +38,7 @@ class ProvisionDemoDatabase extends Command
                 $this->info("Demo database `{$demoDatabase}` ready.");
             } catch (Throwable $e) {
                 $this->warn("Could not auto-create the demo database: {$e->getMessage()}");
-                $this->warn('Create it manually via your hosting panel (grant the same DB user access to it), then re-run: php artisan demo:provision');
+                $this->warn("Create a database named exactly \"{$demoDatabase}\" via your hosting panel, grant the same DB user access to it, then re-run: php artisan demo:provision");
 
                 return self::FAILURE;
             }
