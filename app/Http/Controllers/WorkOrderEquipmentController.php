@@ -6,8 +6,8 @@ use App\Models\Asset;
 use App\Models\AssetMovement;
 use App\Models\AssetRepair;
 use App\Models\AssetStatusLog;
-use App\Models\AssetStock;
 use App\Models\WorkOrder;
+use App\Support\AssetStockSummary;
 use App\Support\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -26,8 +26,8 @@ class WorkOrderEquipmentController extends Controller
         $this->authorize('view', $workOrder);
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
-        $stockSummary = $this->stockSummary($workOrder);
-        $assetWiseSummary = $this->assetWiseSummary($workOrder);
+        $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
 
         $pendingMovements = AssetMovement::query()
             ->where('to_work_order_id', $workOrder->id)
@@ -52,7 +52,7 @@ class WorkOrderEquipmentController extends Controller
         $this->authorize('view', $workOrder);
 
         $assets = $this->currentEquipment($request, $workOrder)->get();
-        $stockSummary = $this->stockSummary($workOrder);
+        $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
 
         $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets', 'stockSummary'));
 
@@ -70,7 +70,7 @@ class WorkOrderEquipmentController extends Controller
     {
         $this->authorize('view', $workOrder);
 
-        $assetWiseSummary = $this->assetWiseSummary($workOrder);
+        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
 
         $pdf = Pdf::loadView('work-orders.equipment.summary-pdf', compact('workOrder', 'assetWiseSummary'));
 
@@ -133,58 +133,6 @@ class WorkOrderEquipmentController extends Controller
                 ->orWhere('category', 'like', "%{$search}%")))
             ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
             ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc');
-    }
-
-    /**
-     * Total/Available/Damaged/Missing quantity across every asset ever
-     * allocated to this work order, straight from the AssetStock ledger -
-     * lets a Team Leader see losses at a glance instead of having to open
-     * each asset's own Stock by Location card one at a time.
-     */
-    private function stockSummary(WorkOrder $workOrder): array
-    {
-        $byStatus = AssetStock::where('location', 'work_order')
-            ->where('work_order_id', $workOrder->id)
-            ->selectRaw('status, sum(quantity) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        return [
-            'total' => $byStatus->sum(),
-            'available' => (int) ($byStatus['available'] ?? 0),
-            'damaged' => (int) ($byStatus['damaged'] ?? 0),
-            'missing' => (int) ($byStatus['missing'] ?? 0),
-        ];
-    }
-
-    /**
-     * The same ledger as stockSummary(), but broken down per asset instead
-     * of totalled across all of them - one row per Asset with its Total
-     * Allocated/In Use (Available)/Damaged/Missing quantities at this work
-     * order, so a damaged or missing quantity can be traced back to exactly
-     * which asset it belongs to and its cost recovered accordingly.
-     */
-    private function assetWiseSummary(WorkOrder $workOrder)
-    {
-        return AssetStock::where('location', 'work_order')
-            ->where('work_order_id', $workOrder->id)
-            ->where('quantity', '>', 0)
-            ->with(['asset' => fn ($q) => $q->withTrashed()])
-            ->get()
-            ->groupBy('asset_id')
-            ->map(function ($stocks) {
-                $byStatus = $stocks->groupBy('status')->map(fn ($group) => $group->sum('quantity'));
-
-                return (object) [
-                    'asset' => $stocks->first()->asset,
-                    'total' => $stocks->sum('quantity'),
-                    'in_use' => (int) ($byStatus['available'] ?? 0),
-                    'damaged' => (int) ($byStatus['damaged'] ?? 0),
-                    'missing' => (int) ($byStatus['missing'] ?? 0),
-                ];
-            })
-            ->sortBy(fn ($row) => $row->asset?->name ?? '')
-            ->values();
     }
 
     private function movementsQuery(Request $request, WorkOrder $workOrder)

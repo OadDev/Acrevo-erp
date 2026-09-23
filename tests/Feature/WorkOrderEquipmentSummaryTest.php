@@ -100,7 +100,50 @@ class WorkOrderEquipmentSummaryTest extends TestCase
         $this->assertSame(2, $summary->missing);
     }
 
-    public function test_removing_an_asset_from_the_master_list_still_shows_its_historical_quantities(): void
+    /**
+     * "Total" must always reconcile to exactly Available + Damaged +
+     * Missing - the only three states either page breaks out. Creating a
+     * movement into this work order only reserves the quantity as
+     * in_transit; it must not inflate Total here until the destination
+     * actually confirms receipt.
+     */
+    public function test_creating_a_pending_movement_does_not_inflate_total_until_confirmed(): void
+    {
+        $admin = $this->admin();
+        $source = $this->workOrder($admin);
+        $destination = $this->workOrder($admin);
+        $asset = $this->allocate($source, $admin, 'Concrete Mixer', 10);
+
+        $this->actingAs($admin)->get("/work-orders/{$destination->id}/equipment")
+            ->assertOk()
+            ->assertViewHas('stockSummary', fn ($summary) => $summary['total'] === 0);
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/movements", [
+            'type' => 'site_to_site_transfer',
+            'from_location' => 'work_order', 'from_work_order_id' => $source->id,
+            'to_location' => 'work_order', 'to_work_order_id' => $destination->id,
+            'quantity' => 4, 'moved_at' => now()->toDateString(),
+        ])->assertRedirect();
+
+        // Reserved immediately at the source - Total there drops right
+        // away, since those 4 units have genuinely left the usable pool.
+        $sourceResponse = $this->actingAs($admin)->get("/work-orders/{$source->id}/equipment");
+        $sourceResponse->assertOk()->assertViewHas('stockSummary', fn ($summary) => $summary['total'] === 6);
+
+        // Still only in_transit at the destination - not landed yet, so
+        // Total there must stay at 0 until the movement is confirmed.
+        $destinationResponse = $this->actingAs($admin)->get("/work-orders/{$destination->id}/equipment");
+        $destinationResponse->assertOk()->assertViewHas('stockSummary', fn ($summary) => $summary['total'] === 0);
+
+        $movement = \App\Models\AssetMovement::where('asset_id', $asset->id)->where('to_work_order_id', $destination->id)->firstOrFail();
+        $this->actingAs($admin)->post("/asset-movements/{$movement->id}/confirm")->assertRedirect();
+
+        $this->actingAs($admin)->get("/work-orders/{$destination->id}/equipment")
+            ->assertOk()
+            ->assertViewHas('stockSummary', fn ($summary) => $summary['total'] === 4);
+    }
+
+    public function test_removing_an_asset_drops_it_and_its_damaged_missing_quantities_from_the_summary(): void
     {
         $admin = $this->admin();
         $workOrder = $this->workOrder($admin);
@@ -109,7 +152,15 @@ class WorkOrderEquipmentSummaryTest extends TestCase
         $asset->delete();
 
         $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment");
-        $response->assertOk()->assertSee('Safety Helmet');
+        $response->assertOk()->assertDontSee('Safety Helmet');
+
+        $summary = $response->viewData('assetWiseSummary');
+        $this->assertNull($summary->firstWhere('asset.name', 'Safety Helmet'));
+
+        $stockSummary = $response->viewData('stockSummary');
+        $this->assertSame(0, $stockSummary['total']);
+        $this->assertSame(0, $stockSummary['damaged']);
+        $this->assertSame(0, $stockSummary['missing']);
     }
 
     public function test_the_asset_wise_report_can_be_downloaded_as_a_pdf(): void

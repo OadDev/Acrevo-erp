@@ -9,6 +9,7 @@ use App\Models\AssetStatusLog;
 use App\Models\AssetStock;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Support\AssetStockSummary;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,7 +84,32 @@ class AssetController extends Controller
         $brands = Asset::whereNotNull('brand')->distinct()->orderBy('brand')->pluck('brand');
         $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
 
-        return view('assets.index', compact('assets', 'categories', 'brands', 'workOrders', 'showRemoved'));
+        $companyStoreSummary = AssetStockSummary::totals('company_store');
+        $companyStoreAssetSummary = AssetStockSummary::byAsset('company_store');
+
+        // Every movement still awaiting confirmation into the Company
+        // Store - the same "Waiting for Confirmation" list WO Equipment
+        // already has for a site, so Admin can confirm or cancel a pending
+        // return/transfer right here instead of hunting for it in the
+        // wider Movement History list.
+        $pendingMovements = AssetMovement::query()
+            ->where('to_location', 'company_store')
+            ->where('status', 'pending')
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'fromWorkOrder', 'createdBy'])
+            ->orderByDesc('moved_at')
+            ->orderByDesc('id')
+            ->get();
+
+        // Confirming a Company Store arrival is Admin-only - mirrors
+        // AssetMovementController::confirm(), which only lets a Team
+        // Leader confirm receipt at a site they lead and otherwise
+        // requires Admin.
+        $canConfirmHere = $request->user()->can('movements.approve') && $request->user()->hasRole('Admin');
+
+        return view('assets.index', compact(
+            'assets', 'categories', 'brands', 'workOrders', 'showRemoved',
+            'companyStoreSummary', 'companyStoreAssetSummary', 'pendingMovements', 'canConfirmHere'
+        ));
     }
 
     public function create(): View
