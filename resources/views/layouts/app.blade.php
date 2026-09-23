@@ -75,6 +75,10 @@
 
                     {{ $slot }}
                 </main>
+
+                <footer class="border-t border-gray-200 px-4 py-4 text-center text-xs text-gray-400 dark:border-gray-800 sm:px-6">
+                    Developed by <a href="https://orbitxmedia.com" target="_blank" rel="noopener noreferrer" class="font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400">Orbit X Media Pvt. Ltd.</a>
+                </footer>
             </div>
         </div>
 
