@@ -21,6 +21,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Main Connection Name
+    |--------------------------------------------------------------------------
+    |
+    | The real connection name, captured once so it stays correct even after
+    | SwitchDemoDatabaseConnection changes 'default' above for the duration
+    | of a Demo-role request. Users, Roles, and Permissions pin themselves
+    | to this value rather than 'default', so they're never accidentally
+    | resolved against the isolated demo database.
+    |
+    */
+
+    'main_connection' => env('DB_CONNECTION', 'sqlite'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |
@@ -62,6 +77,42 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Demo Database Connection
+        |----------------------------------------------------------------------
+        |
+        | A wholly separate database the Demo role's requests are switched
+        | onto (see App\Http\Middleware\SwitchDemoDatabaseConnection), so a
+        | shared demo login can freely create/edit/delete sample data with
+        | no way to reach this app's real production database. Defaults to
+        | the same driver/host/credentials as the main connection above,
+        | pointed at a different database name - override with the DEMO_DB_*
+        | variables only if the demo database needs its own user.
+        |
+        */
+
+        'demo' => [
+            'driver' => env('DEMO_DB_CONNECTION', env('DB_CONNECTION', 'mysql')),
+            'url' => env('DEMO_DB_URL'),
+            'host' => env('DEMO_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DEMO_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('DEMO_DB_DATABASE', database_path('demo.sqlite')),
+            'username' => env('DEMO_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DEMO_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            'busy_timeout' => null,
+            'journal_mode' => null,
+            'synchronous' => null,
+            'strict' => true,
+            'engine' => null,
         ],
 
         'mariadb' => [

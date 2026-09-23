@@ -38,6 +38,12 @@
             @include('layouts.partials.sidebar')
 
             <div class="flex min-w-0 flex-1 flex-col">
+                @if (auth()->user()->hasRole('Demo'))
+                    <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                        You're in Demo Mode - feel free to add, edit, or delete anything here. This is a separate sample database and never touches real client data.
+                    </div>
+                @endif
+
                 @include('layouts.partials.topbar')
 
                 @isset($header)

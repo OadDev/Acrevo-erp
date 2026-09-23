@@ -3,8 +3,8 @@
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use App\Models\Permission;
+use App\Models\Role;
 
 return new class extends Migration
 {

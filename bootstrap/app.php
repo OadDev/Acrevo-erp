@@ -19,8 +19,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
-            \App\Http\Middleware\BlockDemoWrites::class,
+            \App\Http\Middleware\SwitchDemoDatabaseConnection::class,
+            \App\Http\Middleware\RestrictDemoOwnAccount::class,
         ]);
+
+        // SubstituteBindings (route model binding, e.g. {client}) is one of
+        // Laravel's own priority-sorted middleware, so it runs before any
+        // appended 'web' group middleware regardless of array order unless
+        // explicitly told otherwise. It has to run AFTER the database
+        // switch above, or binding a Demo request's own {client} etc.
+        // would look it up on the wrong (main) connection and 404.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: \App\Http\Middleware\SwitchDemoDatabaseConnection::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

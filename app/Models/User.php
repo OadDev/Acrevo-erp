@@ -21,6 +21,17 @@ class User extends Authenticatable
 
     protected $guard_name = 'web';
 
+    /**
+     * Pinned to database.main_connection (the real default, captured before
+     * any switch) so authentication and permission checks stay correct even
+     * during a Demo-role request, where SwitchDemoDatabaseConnection has
+     * moved the app's default connection to the isolated demo database.
+     */
+    public function getConnectionName(): ?string
+    {
+        return config('database.main_connection');
+    }
+
     protected $fillable = [
         'employee_code',
         'name',
