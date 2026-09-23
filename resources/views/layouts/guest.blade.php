@@ -68,6 +68,10 @@
                             <div class="rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 sm:p-8">
                                 {{ $slot }}
                             </div>
+
+                            <p class="mt-6 text-center text-xs text-white/70">
+                                Developed by <a href="https://orbitxmedia.com" target="_blank" rel="noopener noreferrer" class="font-medium text-white hover:underline">Orbit X Media Pvt. Ltd.</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -105,6 +109,10 @@
                         <x-login-offer :setting="$loginSetting" variant="plain" class="mb-6 lg:hidden" />
 
                         {{ $slot }}
+
+                        <p class="mt-6 text-center text-xs text-gray-400">
+                            Developed by <a href="https://orbitxmedia.com" target="_blank" rel="noopener noreferrer" class="font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400">Orbit X Media Pvt. Ltd.</a>
+                        </p>
                     </div>
                 </div>
             </div>

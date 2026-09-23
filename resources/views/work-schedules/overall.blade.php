@@ -35,10 +35,23 @@
                     .filter(w => w.start <= this.selectedDate && this.selectedDate <= w.end)
                     .sort((a, b) => a.site_no.localeCompare(b.site_no));
             },
+            // toISOString() converts to UTC, which silently shifts the date
+            // backward a day in any timezone ahead of UTC (e.g. IST) -
+            // building the string from local date parts instead keeps the
+            // arrows and Today button landing on the actual local date.
+            toLocalDateString(d) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            },
             shiftDate(days) {
                 const d = new Date(this.selectedDate + 'T00:00:00');
                 d.setDate(d.getDate() + days);
-                this.selectedDate = d.toISOString().slice(0, 10);
+                this.selectedDate = this.toLocalDateString(d);
+            },
+            goToToday() {
+                this.selectedDate = this.toLocalDateString(new Date());
             },
             statusLabel(status) {
                 return status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -128,7 +141,7 @@
                     <button type="button" @click="shiftDate(1)" class="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
                         <x-icon name="arrow-left" class="h-4 w-4 rotate-180" />
                     </button>
-                    <button type="button" @click="selectedDate = new Date().toISOString().slice(0, 10)" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Today</button>
+                    <button type="button" @click="goToToday()" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Today</button>
                     <span class="text-xs text-gray-400" x-text="worksOnSelectedDate.length + ' site(s) with work scheduled on this date'"></span>
                 </div>
             </x-card>
