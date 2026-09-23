@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ExecutiveTeam;
 use App\Models\Site;
 use App\Models\SiteWorkSchedule;
 use App\Models\User;
@@ -24,7 +25,31 @@ class SiteWorkScheduleController extends Controller
     {
         $sites = $this->overallQuery($request)->paginate(20)->withQueryString();
 
-        return view('work-schedules.overall', compact('sites'));
+        // For the "All Works" and "Calendar" tabs, which need every
+        // accessible work item at once (site/team filtering and the
+        // calendar's date lookup both happen client-side against this one
+        // payload) rather than the per-site-row summary $sites paginates.
+        $allSites = Site::query()
+            ->with(['client', 'workSchedules.executiveTeam'])
+            ->whereHas('workSchedules')
+            ->when($this->accessibleSiteIds($request->user()), fn ($q, $ids) => $q->whereIn('id', $ids))
+            ->orderBy('site_no')
+            ->get();
+
+        $allWorks = $allSites->flatMap(fn ($site) => $site->workSchedules->map(fn ($schedule) => [
+            'site_id' => $site->id,
+            'site_no' => $site->site_no,
+            'client_name' => $site->client?->name ?? 'Removed client',
+            'work_name' => $schedule->work_name,
+            'team' => $schedule->executiveTeam?->name,
+            'start' => $schedule->revised_start_date->format('Y-m-d'),
+            'end' => $schedule->revised_end_date->format('Y-m-d'),
+            'status' => $schedule->status,
+            'is_delayed' => $schedule->isDelayed(),
+            'show_url' => route('sites.work-schedule.show', $site),
+        ]))->values();
+
+        return view('work-schedules.overall', compact('sites', 'allWorks'));
     }
 
     public function overallPdf(Request $request)
@@ -44,13 +69,14 @@ class SiteWorkScheduleController extends Controller
     {
         $this->authorizeSite($request->user(), $site);
 
-        $site->load(['workSchedules.createdBy', 'client']);
+        $site->load(['workSchedules.createdBy', 'workSchedules.executiveTeam', 'client']);
 
         return view('sites.work-schedule.show', [
             'site' => $site,
             'schedules' => $site->workSchedules,
             'projectStart' => WorkScheduleRecalculator::projectStartDate($site),
             'projectedCompletion' => WorkScheduleRecalculator::projectedCompletionDate($site),
+            'teams' => ExecutiveTeam::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -79,6 +105,7 @@ class SiteWorkScheduleController extends Controller
         $data = $request->validate([
             'work_name' => ['required', 'string', 'max:255'],
             'work_details' => ['nullable', 'string', 'max:2000'],
+            'executive_team_id' => ['nullable', 'integer', 'exists:executive_teams,id'],
             'duration_days' => ['required', 'integer', 'min:1'],
             'schedule_mode' => [$hasExisting ? 'required' : 'nullable', 'in:'.implode(',', SiteWorkSchedule::MODES)],
             'depends_on_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
@@ -102,6 +129,7 @@ class SiteWorkScheduleController extends Controller
             'sequence_order' => $sequenceOrder,
             'work_name' => $data['work_name'],
             'work_details' => $data['work_details'] ?? null,
+            'executive_team_id' => $data['executive_team_id'] ?? null,
             'schedule_mode' => $mode,
             'depends_on_schedule_id' => $mode === 'depends_on' ? $data['depends_on_schedule_id'] : null,
             'lag_days' => $data['lag_days'] ?? 0,
@@ -134,6 +162,7 @@ class SiteWorkScheduleController extends Controller
         $data = $request->validate([
             'work_name' => ['required', 'string', 'max:255'],
             'work_details' => ['nullable', 'string', 'max:2000'],
+            'executive_team_id' => ['nullable', 'integer', 'exists:executive_teams,id'],
             'duration_days' => ['required', 'integer', 'min:1'],
             'revised_end_date' => ['nullable', 'date'],
             'schedule_mode' => ['required', 'in:'.implode(',', SiteWorkSchedule::MODES)],
@@ -191,6 +220,7 @@ class SiteWorkScheduleController extends Controller
         $workSchedule->fill([
             'work_name' => $data['work_name'],
             'work_details' => $data['work_details'] ?? null,
+            'executive_team_id' => $data['executive_team_id'] ?? null,
             'schedule_mode' => $data['schedule_mode'],
             'depends_on_schedule_id' => $dependsOnId,
             'lag_days' => $data['lag_days'] ?? 0,

@@ -16,7 +16,7 @@ class SiteWorkSchedule extends Model
     public const MODES = ['independent', 'depends_on'];
 
     protected $fillable = [
-        'site_id', 'sequence_order', 'work_name', 'work_details', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
+        'site_id', 'sequence_order', 'work_name', 'work_details', 'executive_team_id', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
         'original_start_date', 'original_duration_days', 'original_end_date',
         'revised_start_date', 'revised_duration_days', 'revised_end_date',
         'actual_start_date', 'actual_end_date', 'actual_progress_percent',
@@ -45,7 +45,7 @@ class SiteWorkSchedule extends Model
         return LogOptions::defaults()
             ->useLogName('work_schedules')
             ->logOnly([
-                'work_name', 'work_details', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
+                'work_name', 'work_details', 'executive_team_id', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
                 'revised_start_date', 'revised_duration_days', 'revised_end_date',
                 'actual_start_date', 'actual_end_date', 'actual_progress_percent',
                 'status', 'delay_reason',
@@ -67,6 +67,11 @@ class SiteWorkSchedule extends Model
     public function dependsOn(): BelongsTo
     {
         return $this->belongsTo(self::class, 'depends_on_schedule_id');
+    }
+
+    public function executiveTeam(): BelongsTo
+    {
+        return $this->belongsTo(ExecutiveTeam::class);
     }
 
     /**

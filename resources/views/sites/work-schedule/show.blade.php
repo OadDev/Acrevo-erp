@@ -48,6 +48,15 @@
                     <x-input-label for="duration_days" value="Duration (days)" />
                     <x-text-input id="duration_days" type="number" min="1" name="duration_days" class="mt-1 block w-full" required />
                 </div>
+                <div>
+                    <x-input-label for="executive_team_id" value="Work Team" />
+                    <x-select-input id="executive_team_id" name="executive_team_id" class="mt-1 block w-full">
+                        <option value="">Unassigned</option>
+                        @foreach ($teams as $team)
+                            <option value="{{ $team->id }}">{{ $team->team_number }} — {{ $team->name }}</option>
+                        @endforeach
+                    </x-select-input>
+                </div>
                 @if ($schedules->isEmpty())
                     <div>
                         <x-input-label for="start_date" value="Start Date (Day 1)" />
@@ -102,6 +111,7 @@
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             <th class="px-4 py-3">S.No</th>
                             <th class="px-4 py-3">Work</th>
+                            <th class="px-4 py-3">Team</th>
                             @can('work_schedules.view_dates')
                                 <th class="px-4 py-3">Day</th>
                                 <th class="px-4 py-3">Date</th>
@@ -149,6 +159,7 @@
                                         @endif
                                     @endcan
                                 </td>
+                                <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->executiveTeam?->name ?? '—' }}</td>
                                 @can('work_schedules.view_dates')
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">Day {{ $dayStart }}{{ $dayEnd !== $dayStart ? '–'.$dayEnd : '' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $schedule->revised_start_date->format('d/m') }}–{{ $schedule->revised_end_date->format('d/m/y') }}</td>
@@ -215,6 +226,15 @@
                         <div>
                             <x-input-label value="Duration (days)" />
                             <x-text-input type="number" min="1" name="duration_days" class="mt-1 block w-full" required value="{{ $schedule->revised_duration_days }}" />
+                        </div>
+                        <div>
+                            <x-input-label value="Work Team" />
+                            <x-select-input name="executive_team_id" class="mt-1 block w-full">
+                                <option value="">Unassigned</option>
+                                @foreach ($teams as $team)
+                                    <option value="{{ $team->id }}" @selected($schedule->executive_team_id === $team->id)>{{ $team->team_number }} — {{ $team->name }}</option>
+                                @endforeach
+                            </x-select-input>
                         </div>
                         <div>
                             <x-input-label value="Revised End Date" />

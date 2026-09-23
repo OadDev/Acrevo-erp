@@ -39,7 +39,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>S.No</th><th>Work</th><th>Day</th><th>Date</th>
+                    <th>S.No</th><th>Work</th><th>Team</th><th>Day</th><th>Date</th>
                     <th class="text-right">Original Days</th><th class="text-right">Revised Days</th>
                     <th>Original End</th><th>Revised End</th>
                     <th>Actual Start</th><th>Actual End</th><th class="text-right">Actual Duration</th>
@@ -58,6 +58,7 @@
                     <tr>
                         <td>{{ $loop->iteration }}</td>
                         <td>{{ $schedule->work_name }}{{ $schedule->schedule_mode === 'depends_on' && $schedule->dependsOn ? ' (after '.$schedule->dependsOn->work_name.')' : '' }}</td>
+                        <td>{{ $schedule->executiveTeam?->name ?? '—' }}</td>
                         <td>Day {{ $dayStart }}{{ $dayEnd !== $dayStart ? '–'.$dayEnd : '' }}</td>
                         <td>{{ $schedule->revised_start_date->format('d/m') }}–{{ $schedule->revised_end_date->format('d/m/y') }}</td>
                         <td class="text-right">{{ $schedule->original_duration_days }}d</td>
