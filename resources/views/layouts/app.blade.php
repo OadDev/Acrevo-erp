@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#4f46e5">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
 
         <title>{{ isset($title) ? $title.' · ' : '' }}{{ config('app.name', 'Geethan Works ERP') }}</title>
 
@@ -11,6 +14,18 @@
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
+        </script>
+
+        <script>
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                window.__pwaInstallEvent = e;
+                window.dispatchEvent(new CustomEvent('pwa-install-available'));
+            });
+            window.addEventListener('appinstalled', function () {
+                window.__pwaInstallEvent = null;
+                window.dispatchEvent(new CustomEvent('pwa-installed'));
+            });
         </script>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -87,6 +102,14 @@
                 })();
             </script>
         @endcan
+
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js').catch(function () {});
+                });
+            }
+        </script>
 
         @stack('scripts')
     </body>

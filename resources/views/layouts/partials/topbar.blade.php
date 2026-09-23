@@ -16,6 +16,48 @@
     </form>
 
     <div class="ml-auto flex items-center gap-2">
+        <div
+            x-data="{
+                canInstall: false,
+                isIos: false,
+                showIosHelp: false,
+                init() {
+                    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+                        return;
+                    }
+                    this.canInstall = !!window.__pwaInstallEvent;
+                    window.addEventListener('pwa-install-available', () => { this.canInstall = true; this.showIosHelp = false; });
+                    window.addEventListener('pwa-installed', () => { this.canInstall = false; });
+                    this.isIos = !this.canInstall && /iphone|ipad|ipod/i.test(navigator.userAgent);
+                },
+                install() {
+                    if (this.canInstall && window.__pwaInstallEvent) {
+                        window.__pwaInstallEvent.prompt();
+                        window.__pwaInstallEvent.userChoice.finally(() => {
+                            window.__pwaInstallEvent = null;
+                            this.canInstall = false;
+                        });
+                    } else if (this.isIos) {
+                        this.showIosHelp = !this.showIosHelp;
+                    }
+                },
+            }"
+            x-show="canInstall || isIos"
+            x-cloak
+            class="relative"
+        >
+            <button
+                @click="install()"
+                class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                title="Install App"
+            >
+                <x-icon name="download" class="h-5 w-5" />
+            </button>
+            <div x-show="showIosHelp" x-cloak @click.outside="showIosHelp = false" x-transition class="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-600 shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                Tap the Share icon in Safari, then choose <strong>Add to Home Screen</strong> to install Geethan Works.
+            </div>
+        </div>
+
         <button
             x-data
             @click="
