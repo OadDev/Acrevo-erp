@@ -43,6 +43,8 @@ class PortalWorkOrderController extends Controller
             'ledgers' => fn ($q) => $q->orderBy('entry_date'),
             'measurementBooks' => fn ($q) => $q->where('type', 'actual')->orderBy('date'),
             'measurementBooks.items',
+            'attendances' => fn ($q) => $q->orderBy('date'),
+            'attendances.employee',
             'materialEntries' => fn ($q) => $q->orderBy('entry_date'),
             'materialUsageEntries',
             'labourEntries' => fn ($q) => $q->orderBy('entry_date'),

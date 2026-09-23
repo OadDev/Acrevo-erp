@@ -19,6 +19,7 @@ class WorkOrderPdfSections
         'materials' => 'Material Inward and Daily Material Used Entry',
         'manpower' => 'Used Man Power Budget',
         'mb' => 'Measurement Book',
+        'attendance' => 'Worker Attendance',
         'summary' => 'Monthly Summary',
         'ledger' => 'Site Ledger',
         'company-ledger' => 'Company Ledger',

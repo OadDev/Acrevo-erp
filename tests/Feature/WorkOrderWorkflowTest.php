@@ -2159,7 +2159,7 @@ class WorkOrderWorkflowTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
 
-        foreach (['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'summary', 'ledger', 'company-ledger', 'qc', 'approvals', 'tickets'] as $section) {
+        foreach (['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'attendance', 'summary', 'ledger', 'company-ledger', 'qc', 'approvals', 'tickets'] as $section) {
             $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/{$section}")
                 ->assertOk()->assertHeader('content-type', 'application/pdf');
         }
