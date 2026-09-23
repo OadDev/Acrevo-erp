@@ -278,6 +278,26 @@ class RolePermissionSeeder extends Seeder
             // Admin can grant it per-client.
             'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates'],
         ],
+        // For prospective-client demos sharing this same database. View-only
+        // across the operational modules a demo needs to show off; nothing
+        // from HR/payroll, finance, legal, audit, company records, or
+        // user/role administration, since those can carry real staff or
+        // company-confidential data. The BlockDemoWrites middleware backs
+        // this up by rejecting every non-GET request for this role
+        // regardless of which permissions it holds.
+        'Demo' => [
+            'admin' => ['admin.dashboard.view', 'global_search.use'],
+            'sales' => ['enquiries.view', 'site_visits.view', 'quotations.view', 'work_orders.view', 'ongoing_sites.view', 'completed_sites.view'],
+            'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
+            'qc' => ['qc.view', 'qc.reports.view'],
+            'tickets' => ['tickets.view'],
+            'assets' => ['assets.view', 'assets.view_history', 'assets.download_pdf', 'assets.view_missing'],
+            'movements' => ['movements.view', 'movements.download_pdf'],
+            'repairs' => ['repairs.view', 'repairs.download_pdf'],
+            'verifications' => ['verifications.view', 'verifications.download_pdf'],
+            'equipment_requests' => ['equipment_requests.view', 'equipment_requests.download_pdf'],
+            'reports' => ['reports.view', 'reports.export'],
+        ],
     ];
 
     public function run(): void
