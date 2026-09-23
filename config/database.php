@@ -3,6 +3,127 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$mainConnectionName = env('DB_CONNECTION', 'sqlite');
+
+$connections = [
+
+    'sqlite' => [
+        'driver' => 'sqlite',
+        'url' => env('DB_URL'),
+        'database' => env('DB_DATABASE', database_path('database.sqlite')),
+        'prefix' => '',
+        'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+        'busy_timeout' => null,
+        'journal_mode' => null,
+        'synchronous' => null,
+        'transaction_mode' => 'DEFERRED',
+    ],
+
+    'mysql' => [
+        'driver' => 'mysql',
+        'url' => env('DB_URL'),
+        'host' => env('DB_HOST', '127.0.0.1'),
+        'port' => env('DB_PORT', '3306'),
+        'database' => env('DB_DATABASE', 'laravel'),
+        'username' => env('DB_USERNAME', 'root'),
+        'password' => env('DB_PASSWORD', ''),
+        'unix_socket' => env('DB_SOCKET', ''),
+        'charset' => env('DB_CHARSET', 'utf8mb4'),
+        'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+        'prefix' => '',
+        'prefix_indexes' => true,
+        'strict' => true,
+        'engine' => null,
+        'options' => extension_loaded('pdo_mysql') ? array_filter([
+            (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+        ]) : [],
+    ],
+
+    'mariadb' => [
+        'driver' => 'mariadb',
+        'url' => env('DB_URL'),
+        'host' => env('DB_HOST', '127.0.0.1'),
+        'port' => env('DB_PORT', '3306'),
+        'database' => env('DB_DATABASE', 'laravel'),
+        'username' => env('DB_USERNAME', 'root'),
+        'password' => env('DB_PASSWORD', ''),
+        'unix_socket' => env('DB_SOCKET', ''),
+        'charset' => env('DB_CHARSET', 'utf8mb4'),
+        'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+        'prefix' => '',
+        'prefix_indexes' => true,
+        'strict' => true,
+        'engine' => null,
+        'options' => extension_loaded('pdo_mysql') ? array_filter([
+            (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+        ]) : [],
+    ],
+
+    'pgsql' => [
+        'driver' => 'pgsql',
+        'url' => env('DB_URL'),
+        'host' => env('DB_HOST', '127.0.0.1'),
+        'port' => env('DB_PORT', '5432'),
+        'database' => env('DB_DATABASE', 'laravel'),
+        'username' => env('DB_USERNAME', 'root'),
+        'password' => env('DB_PASSWORD', ''),
+        'charset' => env('DB_CHARSET', 'utf8'),
+        'prefix' => '',
+        'prefix_indexes' => true,
+        'search_path' => 'public',
+        'sslmode' => env('DB_SSLMODE', 'prefer'),
+    ],
+
+    'sqlsrv' => [
+        'driver' => 'sqlsrv',
+        'url' => env('DB_URL'),
+        'host' => env('DB_HOST', 'localhost'),
+        'port' => env('DB_PORT', '1433'),
+        'database' => env('DB_DATABASE', 'laravel'),
+        'username' => env('DB_USERNAME', 'root'),
+        'password' => env('DB_PASSWORD', ''),
+        'charset' => env('DB_CHARSET', 'utf8'),
+        'prefix' => '',
+        'prefix_indexes' => true,
+        // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+        // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+    ],
+
+];
+
+/*
+|--------------------------------------------------------------------------
+| Demo Connection (same database, prefixed tables)
+|--------------------------------------------------------------------------
+|
+| Not a separate database - a clone of the main connection above with a
+| "demo_" table prefix, so it needs no hosting-panel setup at all. The
+| Demo role's requests are switched onto this connection (see
+| App\Http\Middleware\SwitchDemoDatabaseConnection), so every table it
+| reads/writes lives fully alongside, but separate from, the real ones.
+|
+| Because it's the same database, never run a schema-wide "drop all
+| tables" operation (migrate:fresh, db:wipe) against this connection -
+| MySQL's DROP has no concept of this prefix and would take the real
+| tables with it. Only ever additive migrate, plus DELETE FROM scoped to
+| tables actually named "demo_*" (see ResetDemoDatabase).
+|
+*/
+
+$connections['demo'] = array_merge(
+    $connections[$mainConnectionName] ?? $connections['mysql'],
+    [
+        'prefix' => 'demo_',
+        // The sqlite connection above doesn't set this (index names are
+        // scoped per-table in production's MySQL, so it never needed to),
+        // but SQLite requires index names to be unique across the whole
+        // database - without this, a demo_-prefixed table's auto-named
+        // index (e.g. users_email_unique) collides with the real table's
+        // identically-named one under local/testing sqlite.
+        'prefix_indexes' => true,
+    ]
+);
+
 return [
 
     /*
@@ -17,7 +138,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => $mainConnectionName,
 
     /*
     |--------------------------------------------------------------------------
@@ -32,7 +153,7 @@ return [
     |
     */
 
-    'main_connection' => env('DB_CONNECTION', 'sqlite'),
+    'main_connection' => $mainConnectionName,
 
     /*
     |--------------------------------------------------------------------------
@@ -45,127 +166,7 @@ return [
     |
     */
 
-    'connections' => [
-
-        'sqlite' => [
-            'driver' => 'sqlite',
-            'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
-            'prefix' => '',
-            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
-        ],
-
-        'mysql' => [
-            'driver' => 'mysql',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
-            'unix_socket' => env('DB_SOCKET', ''),
-            'charset' => env('DB_CHARSET', 'utf8mb4'),
-            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'strict' => true,
-            'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
-        ],
-
-        /*
-        |----------------------------------------------------------------------
-        | Demo Database Connection
-        |----------------------------------------------------------------------
-        |
-        | A wholly separate database the Demo role's requests are switched
-        | onto (see App\Http\Middleware\SwitchDemoDatabaseConnection), so a
-        | shared demo login can freely create/edit/delete sample data with
-        | no way to reach this app's real production database. Defaults to
-        | the same driver/host/credentials as the main connection above,
-        | pointed at a different database name - override with the DEMO_DB_*
-        | variables only if the demo database needs its own user.
-        |
-        */
-
-        'demo' => [
-            'driver' => env('DEMO_DB_CONNECTION', env('DB_CONNECTION', 'mysql')),
-            'url' => env('DEMO_DB_URL'),
-            'host' => env('DEMO_DB_HOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('DEMO_DB_PORT', env('DB_PORT', '3306')),
-            'database' => env('DEMO_DB_DATABASE', env('DB_CONNECTION', 'mysql') === 'sqlite' ? database_path('demo.sqlite') : env('DB_DATABASE', 'laravel').'_demo'),
-            'username' => env('DEMO_DB_USERNAME', env('DB_USERNAME', 'root')),
-            'password' => env('DEMO_DB_PASSWORD', env('DB_PASSWORD', '')),
-            'unix_socket' => env('DB_SOCKET', ''),
-            'charset' => env('DB_CHARSET', 'utf8mb4'),
-            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'strict' => true,
-            'engine' => null,
-        ],
-
-        'mariadb' => [
-            'driver' => 'mariadb',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
-            'unix_socket' => env('DB_SOCKET', ''),
-            'charset' => env('DB_CHARSET', 'utf8mb4'),
-            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'strict' => true,
-            'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
-        ],
-
-        'pgsql' => [
-            'driver' => 'pgsql',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
-            'charset' => env('DB_CHARSET', 'utf8'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
-        ],
-
-        'sqlsrv' => [
-            'driver' => 'sqlsrv',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', 'localhost'),
-            'port' => env('DB_PORT', '1433'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
-            'charset' => env('DB_CHARSET', 'utf8'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
-            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
-        ],
-
-    ],
+    'connections' => $connections,
 
     /*
     |--------------------------------------------------------------------------
