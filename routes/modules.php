@@ -5,7 +5,9 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\LoginPageSettingController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TaskScheduleController;
+use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\ItemController;
 use App\Http\Controllers\Admin\LedgerCategoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssetChangeRequestController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\SubcontractorController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CompanyRecordController;
+use App\Http\Controllers\DeliveryChallanController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EnquiryController;
 use App\Http\Controllers\EnquiryFollowUpController;
@@ -32,6 +35,7 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\MyPayrollController;
 use App\Http\Controllers\MyWorkOrderController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\ProformaInvoiceController;
 use App\Http\Controllers\Portal\PortalApprovalRequestController;
 use App\Http\Controllers\Portal\PortalInvoiceController;
 use App\Http\Controllers\Portal\PortalQuotationController;
@@ -47,6 +51,7 @@ use App\Http\Controllers\SiteDocumentController;
 use App\Http\Controllers\SiteVisitController;
 use App\Http\Controllers\SiteWorkScheduleController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaxInvoiceController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrder\ApprovalRequestController;
 use App\Http\Controllers\WorkOrder\CompanyLedgerController;
@@ -92,6 +97,75 @@ Route::middleware('permission:quotations.view')->group(function () {
     Route::post('quotations/{quotation}/revise', [QuotationController::class, 'revise'])->name('quotations.revise');
     Route::post('quotations/{quotation}/media', [QuotationMediaController::class, 'store'])->name('quotations.media.store');
     Route::delete('quotations/{quotation}/media/{media}', [QuotationMediaController::class, 'destroy'])->name('quotations.media.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Proforma Invoice / Tax Invoice / Delivery Challan
+|--------------------------------------------------------------------------
+*/
+// The literal /create path must be registered before the /{model}
+// wildcard below, or Laravel's route matching binds "create" to the
+// model parameter first (see the /sites/create note earlier in this
+// file for the same pitfall).
+Route::middleware('permission:proforma_invoices.view')->group(function () {
+    Route::get('proforma-invoices', [ProformaInvoiceController::class, 'index'])->name('proforma-invoices.index');
+});
+Route::middleware('permission:proforma_invoices.create')->group(function () {
+    Route::get('proforma-invoices/create', [ProformaInvoiceController::class, 'create'])->name('proforma-invoices.create');
+    Route::post('proforma-invoices', [ProformaInvoiceController::class, 'store'])->name('proforma-invoices.store');
+});
+Route::middleware('permission:proforma_invoices.edit')->group(function () {
+    Route::get('proforma-invoices/{proformaInvoice}/edit', [ProformaInvoiceController::class, 'edit'])->name('proforma-invoices.edit');
+    Route::put('proforma-invoices/{proformaInvoice}', [ProformaInvoiceController::class, 'update'])->name('proforma-invoices.update');
+});
+Route::middleware('permission:proforma_invoices.convert')->group(function () {
+    Route::post('proforma-invoices/{proformaInvoice}/convert', [ProformaInvoiceController::class, 'convert'])->name('proforma-invoices.convert');
+});
+Route::middleware('permission:proforma_invoices.delete')->group(function () {
+    Route::delete('proforma-invoices/{proformaInvoice}', [ProformaInvoiceController::class, 'destroy'])->name('proforma-invoices.destroy');
+});
+Route::middleware('permission:proforma_invoices.view')->group(function () {
+    Route::get('proforma-invoices/{proformaInvoice}', [ProformaInvoiceController::class, 'show'])->name('proforma-invoices.show');
+    Route::get('proforma-invoices/{proformaInvoice}/pdf', [ProformaInvoiceController::class, 'pdf'])->name('proforma-invoices.pdf');
+});
+
+Route::middleware('permission:tax_invoices.view')->group(function () {
+    Route::get('tax-invoices', [TaxInvoiceController::class, 'index'])->name('tax-invoices.index');
+});
+Route::middleware('permission:tax_invoices.create')->group(function () {
+    Route::get('tax-invoices/create', [TaxInvoiceController::class, 'create'])->name('tax-invoices.create');
+    Route::post('tax-invoices', [TaxInvoiceController::class, 'store'])->name('tax-invoices.store');
+});
+Route::middleware('permission:tax_invoices.edit')->group(function () {
+    Route::get('tax-invoices/{taxInvoice}/edit', [TaxInvoiceController::class, 'edit'])->name('tax-invoices.edit');
+    Route::put('tax-invoices/{taxInvoice}', [TaxInvoiceController::class, 'update'])->name('tax-invoices.update');
+});
+Route::middleware('permission:tax_invoices.delete')->group(function () {
+    Route::delete('tax-invoices/{taxInvoice}', [TaxInvoiceController::class, 'destroy'])->name('tax-invoices.destroy');
+});
+Route::middleware('permission:tax_invoices.view')->group(function () {
+    Route::get('tax-invoices/{taxInvoice}', [TaxInvoiceController::class, 'show'])->name('tax-invoices.show');
+    Route::get('tax-invoices/{taxInvoice}/pdf', [TaxInvoiceController::class, 'pdf'])->name('tax-invoices.pdf');
+});
+
+Route::middleware('permission:delivery_challans.view')->group(function () {
+    Route::get('delivery-challans', [DeliveryChallanController::class, 'index'])->name('delivery-challans.index');
+});
+Route::middleware('permission:delivery_challans.create')->group(function () {
+    Route::get('delivery-challans/create', [DeliveryChallanController::class, 'create'])->name('delivery-challans.create');
+    Route::post('delivery-challans', [DeliveryChallanController::class, 'store'])->name('delivery-challans.store');
+});
+Route::middleware('permission:delivery_challans.edit')->group(function () {
+    Route::get('delivery-challans/{deliveryChallan}/edit', [DeliveryChallanController::class, 'edit'])->name('delivery-challans.edit');
+    Route::put('delivery-challans/{deliveryChallan}', [DeliveryChallanController::class, 'update'])->name('delivery-challans.update');
+});
+Route::middleware('permission:delivery_challans.delete')->group(function () {
+    Route::delete('delivery-challans/{deliveryChallan}', [DeliveryChallanController::class, 'destroy'])->name('delivery-challans.destroy');
+});
+Route::middleware('permission:delivery_challans.view')->group(function () {
+    Route::get('delivery-challans/{deliveryChallan}', [DeliveryChallanController::class, 'show'])->name('delivery-challans.show');
+    Route::get('delivery-challans/{deliveryChallan}/pdf', [DeliveryChallanController::class, 'pdf'])->name('delivery-challans.pdf');
 });
 
 Route::middleware('permission:enquiries.view')->group(function () {
@@ -682,6 +756,12 @@ Route::middleware('permission:masters.manage')->group(function () {
     Route::resource('admin/departments', DepartmentController::class)->except(['create', 'edit', 'show'])->names('admin.departments');
     Route::post('admin/ledger-categories', [LedgerCategoryController::class, 'store'])->name('admin.ledger-categories.store');
     Route::delete('admin/ledger-categories/{ledgerCategory}', [LedgerCategoryController::class, 'destroy'])->name('admin.ledger-categories.destroy');
+});
+Route::middleware('permission:companies.manage')->group(function () {
+    Route::resource('admin/companies', CompanyController::class)->except(['create', 'edit', 'show'])->names('admin.companies');
+});
+Route::middleware('permission:items.manage')->group(function () {
+    Route::resource('admin/items', ItemController::class)->except(['create', 'edit', 'show'])->names('admin.items');
 });
 Route::middleware('permission:activity_logs.view')->group(function () {
     Route::get('admin/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
