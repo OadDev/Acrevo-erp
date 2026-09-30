@@ -121,6 +121,24 @@ class RolePermissionSeeder extends Seeder
             'work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details',
             'work_schedules.view_dates', 'work_schedules.view_progress', 'work_schedules.manage',
         ],
+        'companies' => [
+            'companies.manage',
+        ],
+        'items' => [
+            'items.manage',
+        ],
+        'proforma_invoices' => [
+            'proforma_invoices.view', 'proforma_invoices.create', 'proforma_invoices.edit',
+            'proforma_invoices.delete', 'proforma_invoices.convert', 'proforma_invoices.download_pdf',
+        ],
+        'tax_invoices' => [
+            'tax_invoices.view', 'tax_invoices.create', 'tax_invoices.edit',
+            'tax_invoices.delete', 'tax_invoices.download_pdf',
+        ],
+        'delivery_challans' => [
+            'delivery_challans.view', 'delivery_challans.create', 'delivery_challans.edit',
+            'delivery_challans.delete', 'delivery_challans.download_pdf',
+        ],
     ];
 
     /**
@@ -138,6 +156,12 @@ class RolePermissionSeeder extends Seeder
             // View-only, scoped in the controller to sites of clients
             // assigned to this Sales user - no work_schedules.manage.
             'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
+            // Sales issues these day to day - full lifecycle including
+            // converting a Proforma to a Tax Invoice, but no delete (a
+            // wrong document gets corrected via edit, not removed).
+            'proforma_invoices' => ['proforma_invoices.view', 'proforma_invoices.create', 'proforma_invoices.edit', 'proforma_invoices.convert', 'proforma_invoices.download_pdf'],
+            'tax_invoices' => ['tax_invoices.view', 'tax_invoices.create', 'tax_invoices.edit', 'tax_invoices.download_pdf'],
+            'delivery_challans' => ['delivery_challans.view', 'delivery_challans.create', 'delivery_challans.edit', 'delivery_challans.download_pdf'],
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
@@ -203,6 +227,14 @@ class RolePermissionSeeder extends Seeder
             'sales' => ['work_orders.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // Finance owns billing documents end to end, including delete
+            // (correcting a wrongly-issued Tax Invoice) and the Item price
+            // catalog - but not Company Profile setup, which stays
+            // Admin-only (legal/bank details).
+            'items' => '*',
+            'proforma_invoices' => ['proforma_invoices.view', 'proforma_invoices.download_pdf'],
+            'tax_invoices' => '*',
+            'delivery_challans' => ['delivery_challans.view', 'delivery_challans.download_pdf'],
         ],
         'Management' => [
             'finance' => ['finance.view'],
@@ -237,6 +269,9 @@ class RolePermissionSeeder extends Seeder
             // request - same reasoning as withholding movements.approve
             // and repairs.update_status above.
             'equipment_requests' => ['equipment_requests.view', 'equipment_requests.create', 'equipment_requests.receive', 'equipment_requests.download_pdf'],
+            'proforma_invoices' => ['proforma_invoices.view', 'proforma_invoices.create', 'proforma_invoices.edit', 'proforma_invoices.convert', 'proforma_invoices.download_pdf'],
+            'tax_invoices' => ['tax_invoices.view', 'tax_invoices.create', 'tax_invoices.edit', 'tax_invoices.download_pdf'],
+            'delivery_challans' => ['delivery_challans.view', 'delivery_challans.create', 'delivery_challans.edit', 'delivery_challans.download_pdf'],
         ],
         'Legal' => [
             'legal' => '*',

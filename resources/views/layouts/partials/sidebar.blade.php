@@ -64,6 +64,20 @@
                 </x-nav-group>
             @endcan
 
+            @canany(['proforma_invoices.view', 'tax_invoices.view', 'delivery_challans.view'])
+                <x-nav-group label="Billing">
+                    @can('proforma_invoices.view')
+                        <x-nav-link :href="route('proforma-invoices.index')" :active="request()->routeIs('proforma-invoices.*')" icon="file-text">Proforma Invoices</x-nav-link>
+                    @endcan
+                    @can('tax_invoices.view')
+                        <x-nav-link :href="route('tax-invoices.index')" :active="request()->routeIs('tax-invoices.*')" icon="receipt">Tax Invoices</x-nav-link>
+                    @endcan
+                    @can('delivery_challans.view')
+                        <x-nav-link :href="route('delivery-challans.index')" :active="request()->routeIs('delivery-challans.*')" icon="truck">Delivery Challans</x-nav-link>
+                    @endcan
+                </x-nav-group>
+            @endcanany
+
             @if (auth()->user()->can('assigned_work.view') || (auth()->user()->can('tasks.view') && auth()->user()->employee) || auth()->user()->can('subcontractor_finance.view'))
                 <x-nav-group label="Executive Team">
                     @can('assigned_work.view')
@@ -173,7 +187,7 @@
                 </x-nav-group>
             @endcan
 
-            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage', 'masters.manage', 'system_settings.manage'])
+            @canany(['users.view', 'roles.view', 'activity_logs.view', 'tasks.manage', 'masters.manage', 'system_settings.manage', 'companies.manage', 'items.manage'])
                 <x-nav-group label="Administration">
                     @can('users.view')
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')" icon="user-cog">Users</x-nav-link>
@@ -183,6 +197,12 @@
                     @endcan
                     @can('masters.manage')
                         <x-nav-link :href="route('admin.departments.index')" :active="request()->routeIs('admin.departments.*')" icon="building">Departments</x-nav-link>
+                    @endcan
+                    @can('companies.manage')
+                        <x-nav-link :href="route('admin.companies.index')" :active="request()->routeIs('admin.companies.*')" icon="building">Companies</x-nav-link>
+                    @endcan
+                    @can('items.manage')
+                        <x-nav-link :href="route('admin.items.index')" :active="request()->routeIs('admin.items.*')" icon="package">Items</x-nav-link>
                     @endcan
                     @can('tasks.manage')
                         <x-nav-link :href="route('admin.task-schedules.index')" :active="request()->routeIs('admin.task-schedules.*')" icon="calendar-check">Calendar Task Management</x-nav-link>
