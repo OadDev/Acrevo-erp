@@ -11,7 +11,7 @@
         </x-page-header>
     </x-slot>
 
-    <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-5">
         <x-card class="flex items-start justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Total Allocated</p>
@@ -46,6 +46,15 @@
             </div>
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
                 <x-icon name="search" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Ready for Return</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['ready_for_return'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
+                <x-icon name="rotate-ccw" class="h-5 w-5" />
             </div>
         </x-card>
     </div>

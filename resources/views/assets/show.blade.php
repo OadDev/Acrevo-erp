@@ -65,16 +65,20 @@
                 @if ($asset->stocks->isEmpty())
                     <p class="px-4 pb-4 text-sm text-gray-400">No stock recorded yet.</p>
                 @else
+                    @php
+                        $statusColumns = collect(array_merge(\App\Models\AssetStock::STATUSES, \App\Models\Asset::STATUSES))
+                            ->unique()
+                            ->filter(fn ($status) => $asset->stocks->contains('status', $status))
+                            ->values();
+                    @endphp
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                             <thead class="bg-gray-50 dark:bg-gray-800/50">
                                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                     <th class="px-4 py-2">Location</th>
-                                    <th class="px-4 py-2 text-right">Available</th>
-                                    <th class="px-4 py-2 text-right">In Transit</th>
-                                    <th class="px-4 py-2 text-right">Missing</th>
-                                    <th class="px-4 py-2 text-right">Damaged</th>
-                                    <th class="px-4 py-2 text-right">Under Repair</th>
+                                    @foreach ($statusColumns as $status)
+                                        <th class="px-4 py-2 text-right">{{ ucwords(str_replace('_', ' ', $status)) }}</th>
+                                    @endforeach
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -88,7 +92,7 @@
                                                 {{ ucwords(str_replace('_', ' ', $first->location)) }}
                                             @endif
                                         </td>
-                                        @foreach (\App\Models\AssetStock::STATUSES as $status)
+                                        @foreach ($statusColumns as $status)
                                             <td class="px-4 py-2 text-right text-gray-500">{{ $group->firstWhere('status', $status)->quantity ?? 0 }}</td>
                                         @endforeach
                                     </tr>
@@ -371,6 +375,7 @@
                                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         <th class="px-4 py-2">Date</th>
                                         <th class="px-4 py-2">Change</th>
+                                        <th class="px-4 py-2 text-right">Qty</th>
                                         <th class="px-4 py-2">Updated By</th>
                                         <th class="px-4 py-2">Site / Work Order</th>
                                         <th class="px-4 py-2">Reason / Remarks</th>
@@ -382,8 +387,17 @@
                                         <tr>
                                             <td class="px-4 py-2 text-gray-500">{{ $log->created_at->format('d M Y, h:i A') }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$log->previous_status" /> &rarr; <x-badge :status="$log->new_status" /></td>
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $log->quantity ?? '—' }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $log->updatedBy?->name }} @if($log->role)<span class="text-xs text-gray-400">({{ $log->role }})</span>@endif</td>
-                                            <td class="px-4 py-2 text-gray-500">{{ $log->workOrder?->work_order_no ?? '—' }}</td>
+                                            <td class="px-4 py-2 text-gray-500">
+                                                @if ($log->workOrder)
+                                                    {{ $log->workOrder->work_order_no }}
+                                                @elseif ($log->location)
+                                                    {{ ucwords(str_replace('_', ' ', $log->location)) }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
                                             <td class="px-4 py-2 text-gray-500">{{ $log->reason ?: '—' }}</td>
                                             <td class="px-4 py-2">
                                                 @foreach ($log->getMedia('proof') as $proof)
@@ -436,20 +450,47 @@
             @if ($canUpdateStatus)
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">Update Status</h3>
-                    <form method="POST" action="{{ route('assets.status.update', $asset) }}" enctype="multipart/form-data" class="space-y-3">
-                        @csrf
-                        <x-select-input name="status" class="w-full text-sm" required>
-                            @foreach (\App\Models\Asset::STATUSES as $status)
-                                <option value="{{ $status }}" @selected($status === $asset->status)>{{ ucwords(str_replace('_', ' ', $status)) }}</option>
-                            @endforeach
-                        </x-select-input>
-                        <x-textarea-input name="reason" rows="2" class="w-full text-sm" placeholder="Reason / remarks"></x-textarea-input>
-                        <div>
-                            <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
-                            <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
-                        </div>
-                        <x-primary-button class="w-full justify-center">Save Status</x-primary-button>
-                    </form>
+                    @if ($statusUpdateStocks->isEmpty())
+                        <p class="text-sm text-gray-400">No stock available to update.</p>
+                    @else
+                        <form method="POST" action="{{ route('assets.status.update', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ from: '', fromAvailable: null, fromStatus: '' }">
+                            @csrf
+                            <div>
+                                <x-input-label value="Location / Work Order & Current Status" />
+                                <x-select-input class="w-full text-sm" required
+                                    x-on:change="const o = $event.target.selectedOptions[0]; from = o.value; fromAvailable = o.dataset.available; fromStatus = o.dataset.status">
+                                    <option value="">Select bucket</option>
+                                    @foreach ($statusUpdateStocks as $stock)
+                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}|{{ $stock->status }}" data-available="{{ $stock->quantity }}" data-status="{{ $stock->status }}">
+                                            {{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} — {{ ucwords(str_replace('_', ' ', $stock->status)) }} — {{ $stock->quantity }} units
+                                        </option>
+                                    @endforeach
+                                </x-select-input>
+                                <input type="hidden" name="location" :value="from.split('|')[0]">
+                                <input type="hidden" name="work_order_id" :value="from.split('|')[1] || ''">
+                                <input type="hidden" name="from_status" :value="from.split('|')[2]">
+                            </div>
+                            <div>
+                                <x-input-label value="Quantity" />
+                                <x-text-input type="number" name="quantity" min="1" x-bind:max="fromAvailable" class="w-full text-sm" required />
+                                <p class="mt-1 text-xs text-gray-400" x-show="fromAvailable" x-text="'Max ' + fromAvailable + ' units.'"></p>
+                            </div>
+                            <div>
+                                <x-input-label value="New Status" />
+                                <x-select-input name="status" class="w-full text-sm" required>
+                                    @foreach (\App\Models\Asset::STATUSES as $status)
+                                        <option value="{{ $status }}">{{ ucwords(str_replace('_', ' ', $status)) }}</option>
+                                    @endforeach
+                                </x-select-input>
+                            </div>
+                            <x-textarea-input name="reason" rows="2" class="w-full text-sm" placeholder="Reason / remarks"></x-textarea-input>
+                            <div>
+                                <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
+                                <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
+                            </div>
+                            <x-primary-button class="w-full justify-center">Save Status</x-primary-button>
+                        </form>
+                    @endif
                 </x-card>
             @endif
 

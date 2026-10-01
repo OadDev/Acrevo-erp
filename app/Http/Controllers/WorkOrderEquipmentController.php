@@ -135,6 +135,7 @@ class WorkOrderEquipmentController extends Controller
             'available' => (int) ($byStatus['available'] ?? 0),
             'damaged' => (int) ($byStatus['damaged'] ?? 0),
             'missing' => (int) ($byStatus['missing'] ?? 0),
+            'ready_for_return' => (int) ($byStatus['ready_for_return'] ?? 0),
         ];
     }
 

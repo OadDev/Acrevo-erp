@@ -162,10 +162,13 @@ class AssetManagementTest extends TestCase
         $asset = Asset::where('name', 'Wall Cutter')->firstOrFail();
 
         // The other Team Leader (not assigned to this WO) cannot update it.
-        $this->actingAs($otherLeader)->post("/assets/{$asset->id}/status", ['status' => 'in_use'])->assertForbidden();
+        $this->actingAs($otherLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1, 'status' => 'in_use',
+        ])->assertForbidden();
 
         // The assigned Team Leader can.
         $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1,
             'status' => 'in_use', 'reason' => 'Started work today.',
         ])->assertRedirect();
 
@@ -192,7 +195,10 @@ class AssetManagementTest extends TestCase
         ])->assertRedirect();
         $asset = Asset::where('name', 'Trolley')->firstOrFail();
 
-        $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", ['status' => 'damaged', 'reason' => 'Wheel broke'])->assertRedirect();
+        $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1,
+            'status' => 'damaged', 'reason' => 'Wheel broke',
+        ])->assertRedirect();
 
         $this->actingAs($admin)->get("/assets/{$asset->id}")->assertOk()->assertSee('Wheel broke');
     }
