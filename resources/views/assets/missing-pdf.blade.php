@@ -21,7 +21,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>S.No</th><th>Asset ID</th><th>Name</th><th>Category</th><th>Last Known Site / WO</th>
+                    <th>S.No</th><th>Asset ID</th><th>Name</th><th>Category</th><th>Missing At</th><th>Qty Missing</th>
                     <th>Reported By</th><th>Reported Date</th><th>Days Missing</th>
                 </tr>
             </thead>
@@ -32,7 +32,12 @@
                         <td>{{ $asset->asset_code }}</td>
                         <td>{{ $asset->name }}</td>
                         <td>{{ $asset->category ?: '—' }}</td>
-                        <td>{{ $asset->currentWorkOrder?->work_order_no ?? ucwords(str_replace('_', ' ', $asset->current_location)) }}</td>
+                        <td>
+                            @foreach ($asset->missingStocks as $stock)
+                                <div>{{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} ({{ $stock->quantity }})</div>
+                            @endforeach
+                        </td>
+                        <td>{{ $asset->missingQuantity }}</td>
                         <td>{{ $asset->missingSince?->updatedBy?->name ?? '—' }}</td>
                         <td>{{ $asset->missingSince?->created_at?->format('d M Y') ?? '—' }}</td>
                         <td>{{ $asset->missingSince ? $asset->missingSince->created_at->diffInDays(now()) : '—' }}</td>

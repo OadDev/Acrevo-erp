@@ -27,6 +27,7 @@ class WorkOrderEquipmentController extends Controller
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
         $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
         $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
 
         $pendingMovements = AssetMovement::query()
@@ -53,6 +54,7 @@ class WorkOrderEquipmentController extends Controller
 
         $assets = $this->currentEquipment($request, $workOrder)->get();
         $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
 
         $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets', 'stockSummary'));
 

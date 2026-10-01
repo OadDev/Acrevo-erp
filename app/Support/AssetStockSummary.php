@@ -45,6 +45,22 @@ class AssetStockSummary
     }
 
     /**
+     * Ready for Return quantity for one location bucket, tracked as its
+     * own call rather than folded into totals() - that return shape is
+     * relied on elsewhere (e.g. the Company Store summary) as exactly
+     * Total/Available/Damaged/Missing, so adding a status there would
+     * silently change what "Total" means for every existing caller.
+     */
+    public static function readyForReturn(string $location, ?string $workOrderId = null): int
+    {
+        return (int) AssetStock::where('location', $location)
+            ->where('work_order_id', $workOrderId)
+            ->where('status', 'ready_for_return')
+            ->whereHas('asset')
+            ->sum('quantity');
+    }
+
+    /**
      * The same ledger as totals(), broken down per asset instead of
      * totalled across all of them - one row per Asset with its Total/In
      * Use (Available)/Damaged/Missing quantities in this bucket, so a

@@ -27,7 +27,7 @@
 
     <table>
         <thead>
-            <tr><th>Total Allocated</th><th>Available</th><th>Damaged</th><th>Missing</th></tr>
+            <tr><th>Total Allocated</th><th>Available</th><th>Damaged</th><th>Missing</th><th>Ready for Return</th></tr>
         </thead>
         <tbody>
             <tr>
@@ -35,6 +35,7 @@
                 <td>{{ $stockSummary['available'] }}</td>
                 <td>{{ $stockSummary['damaged'] }}</td>
                 <td>{{ $stockSummary['missing'] }}</td>
+                <td>{{ $stockSummary['ready_for_return'] }}</td>
             </tr>
         </tbody>
     </table>

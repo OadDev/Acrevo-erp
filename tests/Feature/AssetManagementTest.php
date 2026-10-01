@@ -163,10 +163,13 @@ class AssetManagementTest extends TestCase
         $asset = Asset::where('name', 'Wall Cutter')->firstOrFail();
 
         // The other Team Leader (not assigned to this WO) cannot update it.
-        $this->actingAs($otherLeader)->post("/assets/{$asset->id}/status", ['status' => 'in_use'])->assertForbidden();
+        $this->actingAs($otherLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1, 'status' => 'in_use',
+        ])->assertForbidden();
 
         // The assigned Team Leader can.
         $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1,
             'status' => 'in_use', 'reason' => 'Started work today.',
         ])->assertRedirect();
 
@@ -218,8 +221,17 @@ class AssetManagementTest extends TestCase
         // Site B's leader genuinely holds 2 units and must still see/use
         // Update Status for them.
         $this->actingAs($leaderB)->get("/assets/{$asset->id}")->assertOk()->assertSee('Update Status');
-        $this->actingAs($leaderB)->post("/assets/{$asset->id}/status", ['status' => 'damaged'])->assertRedirect();
-        $this->assertSame('damaged', $asset->fresh()->status);
+        $this->actingAs($leaderB)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $siteB->id, 'from_status' => 'available', 'quantity' => 2, 'status' => 'damaged',
+        ])->assertRedirect();
+
+        // Only Site B's 2 units moved - Site A's 3 units, and the legacy
+        // status field (which still describes the bulk of the asset), are
+        // untouched.
+        $this->assertSame(2, \App\Models\AssetStock::quantityAt($asset, 'work_order', $siteB->id, 'damaged'));
+        $this->assertSame(0, \App\Models\AssetStock::quantityAt($asset, 'work_order', $siteB->id, 'available'));
+        $this->assertSame(3, \App\Models\AssetStock::quantityAt($asset, 'work_order', $siteA->id, 'available'));
+        $this->assertSame('available', $asset->fresh()->status);
     }
 
     public function test_status_history_cannot_be_deleted_and_shows_on_the_asset_page(): void
@@ -233,7 +245,10 @@ class AssetManagementTest extends TestCase
         ])->assertRedirect();
         $asset = Asset::where('name', 'Trolley')->firstOrFail();
 
-        $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", ['status' => 'damaged', 'reason' => 'Wheel broke'])->assertRedirect();
+        $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1,
+            'status' => 'damaged', 'reason' => 'Wheel broke',
+        ])->assertRedirect();
 
         $this->actingAs($admin)->get("/assets/{$asset->id}")->assertOk()->assertSee('Wheel broke');
     }

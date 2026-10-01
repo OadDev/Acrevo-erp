@@ -46,7 +46,8 @@
                             <th class="px-4 py-3">S.No</th>
                             <th class="px-4 py-3">Asset</th>
                             <th class="px-4 py-3">Category</th>
-                            <th class="px-4 py-3">Last Known Site / WO</th>
+                            <th class="px-4 py-3">Missing At</th>
+                            <th class="px-4 py-3 text-right">Qty Missing</th>
                             <th class="px-4 py-3">Reported By</th>
                             <th class="px-4 py-3">Reported Date</th>
                             <th class="px-4 py-3">Days Missing</th>
@@ -61,7 +62,12 @@
                                     <p class="text-xs text-gray-400">{{ $asset->asset_code }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->category ?: '—' }}</td>
-                                <td class="px-4 py-3 text-gray-500">{{ $asset->currentWorkOrder?->work_order_no ?? ucwords(str_replace('_', ' ', $asset->current_location)) }}</td>
+                                <td class="px-4 py-3 text-gray-500">
+                                    @foreach ($asset->missingStocks as $stock)
+                                        <div>{{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} ({{ $stock->quantity }})</div>
+                                    @endforeach
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-500">{{ $asset->missingQuantity }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->missingSince?->updatedBy?->name ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->missingSince?->created_at?->format('d M Y') ?? '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->missingSince ? $asset->missingSince->created_at->diffInDays(now()) : '—' }}</td>

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ChecksSiteTeamLeadership;
 use App\Models\Asset;
 use App\Models\AssetChangeRequest;
 use App\Models\AssetMovement;
 use App\Models\AssetStatusLog;
 use App\Models\AssetStock;
-use App\Models\User;
 use App\Models\WorkOrder;
 use App\Support\AssetStockSummary;
 use App\Support\Pdf;
@@ -19,6 +19,8 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AssetController extends Controller
 {
+    use ChecksSiteTeamLeadership;
+
     private const ATTACHMENT_RULES = ['file', 'max:51200', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'];
 
     private const MASTER_DETAIL_FIELDS = [
@@ -156,10 +158,12 @@ class AssetController extends Controller
             'confirmed_at' => now(),
         ]);
 
-        // Seeds the ledger with the asset's full quantity, Available, at
-        // wherever it landed - every later Movement/Repair/Verification
-        // moves quantity between buckets from here.
-        AssetStock::adjust($asset, $asset->current_location, $asset->current_work_order_id, 'available', $quantity);
+        // Seeds the ledger with the asset's full quantity, at wherever it
+        // landed, under whatever status it was entered as (usually
+        // Available, but an asset can be registered already damaged or
+        // missing) - every later Movement/Repair/Verification/Status
+        // Update moves quantity between buckets from here.
+        AssetStock::adjust($asset, $asset->current_location, $asset->current_work_order_id, $asset->status, $quantity);
 
         if ($error = $this->attachFiles($asset, $request)) {
             return back()->withErrors(['attachments' => $error]);
@@ -181,6 +185,11 @@ class AssetController extends Controller
         ]);
 
         $user = $request->user();
+        // Scoped below (once $ledWorkOrderIds/$statusUpdateStocks are known)
+        // to "does this user have at least one bucket - any status except
+        // in_transit - they're allowed to change the status of", not the
+        // stale current_work_order_id single-value field.
+        $canUpdateStatus = $user->can('assets.update_status');
 
         // null = unrestricted (Admin); otherwise the exact set of work order
         // IDs this user leads, used to decide both whether they can dispatch
@@ -189,8 +198,6 @@ class AssetController extends Controller
         $ledWorkOrderIds = $user->hasRole('Admin') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
             ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
             ->pluck('id');
-
-        $canUpdateStatus = $this->canUserUpdateAssetStatus($asset, $user, $ledWorkOrderIds);
 
         // The asset's stock can now sit at several work orders at once - a
         // Team Leader may act on it as soon as any of them is a site they
@@ -221,7 +228,17 @@ class AssetController extends Controller
         $availableStocks = $asset->stocks->where('status', 'available')->where('quantity', '>', 0)
             ->when($ledWorkOrderIds !== null && ! $user->hasRole('Management'), fn ($stocks) => $stocks->filter(fn ($stock) => $stock->work_order_id && $ledWorkOrderIds->contains($stock->work_order_id)));
 
-        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair', 'canCreateVerification', 'availableStocks'));
+        // Every bucket (any status except in_transit, which is mid-flight
+        // under an in-progress Movement and shouldn't be manually flipped)
+        // this user may change the status of, quantity-wise - a TL only
+        // gets buckets sitting at a work order they lead; Admin/Management
+        // get every bucket the asset has stock in, wherever it is.
+        $statusUpdateStocks = $asset->stocks->where('quantity', '>', 0)->where('status', '!=', 'in_transit')
+            ->when($ledWorkOrderIds !== null && ! $user->hasRole('Management'), fn ($stocks) => $stocks->filter(fn ($stock) => $stock->work_order_id && $ledWorkOrderIds->contains($stock->work_order_id)));
+
+        $canUpdateStatus = $canUpdateStatus && $statusUpdateStocks->isNotEmpty();
+
+        return view('assets.show', compact('asset', 'canUpdateStatus', 'ledWorkOrderIds', 'canCreateMovement', 'canCreateRepair', 'canCreateVerification', 'availableStocks', 'statusUpdateStocks'));
     }
 
     public function edit(Asset $asset): View
@@ -351,54 +368,69 @@ class AssetController extends Controller
     }
 
     /**
-     * Admin and Management get unrestricted access (matching movements/
-     * repairs/verifications elsewhere in this module); an Executive Team
-     * Leader may update status only for an asset holding stock - any
-     * status, not just Available, since flipping something to/from damaged
-     * or missing is exactly what this is for - at a site they lead. Checked
-     * against the live AssetStock ledger rather than the legacy single
-     * current_work_order_id field, so this reflects an asset's real,
-     * possibly multi-site, locations after any Movement.
+     * Quantity-wise, work-order-wise status update: moves a specific
+     * amount of stock from one AssetStock bucket's current status to a
+     * new one, via AssetStock::adjust() - exactly like AssetMovementController
+     * moves quantity between locations. If the same asset also has stock
+     * at other work orders, those buckets are never touched; only the
+     * (location, work_order_id) bucket the caller picked moves.
+     *
+     * Authorization is checked against the specific bucket's work order
+     * (Admin/Management unrestricted; an Executive Team Leader must lead
+     * that bucket's site), not just "does this asset have some stock
+     * somewhere this user leads" - a Team Leader of WO-002 should not be
+     * able to move WO-001's units just because they also hold this asset.
+     *
+     * Asset::status/current_location/current_work_order_id (the legacy
+     * single-value fields driving the page's badge and other list views)
+     * are only synced when this change now accounts for the asset's
+     * entire remaining quantity - otherwise they're left alone rather
+     * than misrepresenting the bulk of the asset that didn't change, the
+     * same staleness-avoidance rule AssetMovementController::confirm()
+     * already follows.
      */
-    private function canUserUpdateAssetStatus(Asset $asset, User $user, $ledWorkOrderIds): bool
-    {
-        if ($ledWorkOrderIds === null || $user->hasRole('Management')) {
-            return true;
-        }
-
-        return $asset->stocks
-            ->pluck('work_order_id')
-            ->filter()
-            ->intersect($ledWorkOrderIds)
-            ->isNotEmpty();
-    }
-
     public function updateStatus(Request $request, Asset $asset): RedirectResponse
     {
         $user = $request->user();
 
-        $ledWorkOrderIds = $user->hasRole('Admin') ? null : WorkOrder::whereHas('executiveTeams', fn ($q) => $q->whereNull('unassigned_at')
-            ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
-            ->pluck('id');
-
-        $asset->load(['stocks' => fn ($q) => $q->where('quantity', '>', 0)]);
-        abort_unless($this->canUserUpdateAssetStatus($asset, $user, $ledWorkOrderIds), 403, 'You can only update the status of assets assigned to a site you lead.');
-
         $data = $request->validate([
+            'location' => ['required', 'in:'.implode(',', Asset::LOCATIONS)],
+            'work_order_id' => ['nullable', 'exists:work_orders,id'],
+            'from_status' => ['required', 'in:'.implode(',', AssetStock::STATUSES)],
+            'quantity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:'.implode(',', Asset::STATUSES)],
             'reason' => ['nullable', 'string'],
             'proof' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
-        $previousStatus = $asset->status;
+        $workOrderId = $data['work_order_id'] ?? null;
+
+        if (! $user->hasRole('Admin') && ! $user->hasRole('Management')) {
+            abort_unless($this->isTeamLeaderOfWorkOrder($workOrderId, $user), 403, 'You can only update the status of assets assigned to a site you lead.');
+        }
+
+        if ($data['from_status'] === $data['status']) {
+            return back()->withErrors(['status' => 'Pick a different status to change these units to.'])->withInput();
+        }
+
+        $bucketQuantity = AssetStock::quantityAt($asset, $data['location'], $workOrderId, $data['from_status']);
+
+        if ($data['quantity'] > $bucketQuantity) {
+            return back()->withErrors(['quantity' => "Only {$bucketQuantity} unit(s) are currently \"{$data['from_status']}\" there - adjust the quantity."])->withInput();
+        }
+
+        AssetStock::adjust($asset, $data['location'], $workOrderId, $data['from_status'], -$data['quantity']);
+        AssetStock::adjust($asset, $data['location'], $workOrderId, $data['status'], $data['quantity']);
 
         $log = AssetStatusLog::create([
             'asset_id' => $asset->id,
-            'previous_status' => $previousStatus,
+            'previous_status' => $data['from_status'],
             'new_status' => $data['status'],
             'updated_by' => $user->id,
             'role' => $user->roles->pluck('name')->join(', ') ?: null,
-            'work_order_id' => $asset->current_work_order_id,
+            'work_order_id' => $workOrderId,
+            'location' => $data['location'],
+            'quantity' => $data['quantity'],
             'reason' => $data['reason'] ?? null,
         ]);
 
@@ -410,9 +442,22 @@ class AssetController extends Controller
             }
         }
 
-        $asset->update(['status' => $data['status']]);
+        $asset->refresh();
+        $elsewhere = $asset->stocks()->where('status', '!=', $data['status'])->sum('quantity');
 
-        return back()->with('success', "Status updated to \"{$data['status']}\".");
+        if ($elsewhere === 0) {
+            $asset->update([
+                'status' => $data['status'],
+                'current_location' => $data['location'],
+                'current_work_order_id' => $workOrderId,
+            ]);
+        }
+
+        $where = $data['location'] === 'work_order' && $workOrderId
+            ? (WorkOrder::find($workOrderId)?->work_order_no ?? 'that work order')
+            : ucwords(str_replace('_', ' ', $data['location']));
+
+        return back()->with('success', "Marked {$data['quantity']} unit(s) at {$where} as \"{$data['status']}\".");
     }
 
     public function destroy(Asset $asset): RedirectResponse
@@ -484,21 +529,21 @@ class AssetController extends Controller
             ->whereHas('executiveTeam', fn ($q2) => $q2->where('team_leader_id', $user->id)))
             ->pluck('id');
 
+        // Asset::status only reflects "missing" when the ENTIRE asset was
+        // marked missing in one go - a Verification or Status Update can
+        // now put just part of an asset's quantity into the "missing"
+        // bucket at one work order while the rest stays available
+        // elsewhere, which the legacy status field never captures. The
+        // AssetStock ledger's "missing" buckets are what's authoritative.
         $assets = Asset::query()
-            ->where('status', 'missing')
-            ->when($ledWorkOrderIds !== null, fn ($q) => $q->whereIn('current_work_order_id', $ledWorkOrderIds))
-            ->with(['currentWorkOrder.site', 'statusLogs.updatedBy'])
+            ->whereHas('stocks', fn ($q) => $q->where('status', 'missing')->where('quantity', '>', 0)
+                ->when($ledWorkOrderIds !== null, fn ($q2) => $q2->whereIn('work_order_id', $ledWorkOrderIds)))
+            ->with(['currentWorkOrder.site', 'statusLogs.updatedBy', 'stocks.workOrder'])
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('serial_number', 'like', "%{$search}%")
                 ->orWhere('category', 'like', "%{$search}%")))
-            // current_work_order_id only tracks wherever the last Movement
-            // sent the asset's whole remaining balance - it's not updated
-            // when a Verification finds a specific bucket missing, so it
-            // can easily point somewhere other than the work order this
-            // asset is actually reported missing at. The AssetStock
-            // ledger's own "missing" bucket is what's authoritative here.
             ->when($request->get('work_order_id'), fn ($q, $v) => $q->whereHas('stocks', fn ($q2) => $q2
                 ->where('work_order_id', $v)
                 ->where('status', 'missing')
@@ -512,8 +557,13 @@ class AssetController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $assets->getCollection()->each(function (Asset $asset) {
+        $assets->getCollection()->each(function (Asset $asset) use ($ledWorkOrderIds) {
             $asset->missingSince = $asset->statusLogs->firstWhere('new_status', 'missing');
+            $asset->missingStocks = $asset->stocks
+                ->where('status', 'missing')
+                ->where('quantity', '>', 0)
+                ->when($ledWorkOrderIds !== null, fn ($stocks) => $stocks->filter(fn ($stock) => $stock->work_order_id && $ledWorkOrderIds->contains($stock->work_order_id)));
+            $asset->missingQuantity = $asset->missingStocks->sum('quantity');
         });
 
         $workOrders = $ledWorkOrderIds === null
@@ -531,9 +581,9 @@ class AssetController extends Controller
             ->pluck('id');
 
         $assets = Asset::query()
-            ->where('status', 'missing')
-            ->when($ledWorkOrderIds !== null, fn ($q) => $q->whereIn('current_work_order_id', $ledWorkOrderIds))
-            ->with(['currentWorkOrder.site', 'statusLogs.updatedBy'])
+            ->whereHas('stocks', fn ($q) => $q->where('status', 'missing')->where('quantity', '>', 0)
+                ->when($ledWorkOrderIds !== null, fn ($q2) => $q2->whereIn('work_order_id', $ledWorkOrderIds)))
+            ->with(['currentWorkOrder.site', 'statusLogs.updatedBy', 'stocks.workOrder'])
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
@@ -550,8 +600,13 @@ class AssetController extends Controller
             }))
             ->orderBy('name')
             ->get()
-            ->each(function (Asset $asset) {
+            ->each(function (Asset $asset) use ($ledWorkOrderIds) {
                 $asset->missingSince = $asset->statusLogs->firstWhere('new_status', 'missing');
+                $asset->missingStocks = $asset->stocks
+                    ->where('status', 'missing')
+                    ->where('quantity', '>', 0)
+                    ->when($ledWorkOrderIds !== null, fn ($stocks) => $stocks->filter(fn ($stock) => $stock->work_order_id && $ledWorkOrderIds->contains($stock->work_order_id)));
+                $asset->missingQuantity = $asset->missingStocks->sum('quantity');
             });
 
         $pdf = Pdf::loadView('assets.missing-pdf', compact('assets'));
