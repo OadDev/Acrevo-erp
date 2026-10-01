@@ -335,8 +335,11 @@
     @empty
         <p class="empty">No work done recorded yet.</p>
     @endforelse
+@endif
+
+@if (in_array('attendance', $sections, true))
+    <h2 class="section-title">{{ $sectionLabels['attendance'] }}</h2>
     @if ($workOrder->attendances->isNotEmpty())
-        <p style="margin-top:8px;"><strong>Worker Attendance</strong></p>
         <table>
             <thead><tr><th>Worker</th><th>Date</th><th>In</th><th>Out</th><th>Hours</th><th class="text-right">Salary</th></tr></thead>
             <tbody>
@@ -349,6 +352,8 @@
                 @endforeach
             </tbody>
         </table>
+    @else
+        <p class="empty">No attendance recorded yet.</p>
     @endif
 @endif
 

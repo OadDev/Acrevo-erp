@@ -109,7 +109,10 @@
             @include('work-orders.tabs.manpower')
         </div>
         <div x-show="tab === 'mb'" x-cloak>
-            @include('work-orders.tabs.measurement-ledger')
+            @include('work-orders.tabs.measurement-book')
+        </div>
+        <div x-show="tab === 'attendance'" x-cloak>
+            @include('work-orders.tabs.attendance')
         </div>
         <div x-show="tab === 'summary'" x-cloak>
             @include('work-orders.tabs.summary')

@@ -18,7 +18,32 @@ class AssetMovementController extends Controller
 
     public function index(Request $request): View
     {
-        $movements = AssetMovement::query()
+        $movements = $this->filtered($request)
+            ->orderByDesc('moved_at')
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
+
+        return view('assets.movements.index', compact('movements', 'workOrders'));
+    }
+
+    public function indexPdf(Request $request)
+    {
+        $movements = $this->filtered($request)
+            ->orderByDesc('moved_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $pdf = Pdf::loadView('assets.movements.pdf-all', compact('movements'));
+
+        return $pdf->download('movement-history.pdf');
+    }
+
+    private function filtered(Request $request)
+    {
+        return AssetMovement::query()
             // withTrashed() - a movement stays in the history even after the
             // asset it refers to has been removed, so the relation must
             // still resolve or route('assets.show', ...) below throws.
@@ -37,15 +62,7 @@ class AssetMovementController extends Controller
                 ->where('from_work_order_id', $v)->orWhere('to_work_order_id', $v)))
             ->when($request->get('created_by'), fn ($q, $v) => $q->where('created_by', $v))
             ->when($request->get('from'), fn ($q, $v) => $q->whereDate('moved_at', '>=', $v))
-            ->when($request->get('to'), fn ($q, $v) => $q->whereDate('moved_at', '<=', $v))
-            ->orderByDesc('moved_at')
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
-
-        $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
-
-        return view('assets.movements.index', compact('movements', 'workOrders'));
+            ->when($request->get('to'), fn ($q, $v) => $q->whereDate('moved_at', '<=', $v));
     }
 
     public function store(Request $request, Asset $asset): RedirectResponse

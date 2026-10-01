@@ -9,6 +9,7 @@ use App\Models\AssetMovement;
 use App\Models\AssetStatusLog;
 use App\Models\AssetStock;
 use App\Models\WorkOrder;
+use App\Support\AssetStockSummary;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -85,7 +86,32 @@ class AssetController extends Controller
         $brands = Asset::whereNotNull('brand')->distinct()->orderBy('brand')->pluck('brand');
         $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
 
-        return view('assets.index', compact('assets', 'categories', 'brands', 'workOrders', 'showRemoved'));
+        $companyStoreSummary = AssetStockSummary::totals('company_store');
+        $companyStoreAssetSummary = AssetStockSummary::byAsset('company_store');
+
+        // Every movement still awaiting confirmation into the Company
+        // Store - the same "Waiting for Confirmation" list WO Equipment
+        // already has for a site, so Admin can confirm or cancel a pending
+        // return/transfer right here instead of hunting for it in the
+        // wider Movement History list.
+        $pendingMovements = AssetMovement::query()
+            ->where('to_location', 'company_store')
+            ->where('status', 'pending')
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'fromWorkOrder', 'createdBy'])
+            ->orderByDesc('moved_at')
+            ->orderByDesc('id')
+            ->get();
+
+        // Confirming a Company Store arrival is Admin-only - mirrors
+        // AssetMovementController::confirm(), which only lets a Team
+        // Leader confirm receipt at a site they lead and otherwise
+        // requires Admin.
+        $canConfirmHere = $request->user()->can('movements.approve') && $request->user()->hasRole('Admin');
+
+        return view('assets.index', compact(
+            'assets', 'categories', 'brands', 'workOrders', 'showRemoved',
+            'companyStoreSummary', 'companyStoreAssetSummary', 'pendingMovements', 'canConfirmHere'
+        ));
     }
 
     public function create(): View
@@ -348,6 +374,12 @@ class AssetController extends Controller
      * moves quantity between locations. If the same asset also has stock
      * at other work orders, those buckets are never touched; only the
      * (location, work_order_id) bucket the caller picked moves.
+     *
+     * Authorization is checked against the specific bucket's work order
+     * (Admin/Management unrestricted; an Executive Team Leader must lead
+     * that bucket's site), not just "does this asset have some stock
+     * somewhere this user leads" - a Team Leader of WO-002 should not be
+     * able to move WO-001's units just because they also hold this asset.
      *
      * Asset::status/current_location/current_work_order_id (the legacy
      * single-value fields driving the page's badge and other list views)

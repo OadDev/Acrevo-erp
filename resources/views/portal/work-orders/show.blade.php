@@ -222,6 +222,40 @@
                 </x-card>
             @endif
 
+            @if ($workOrder->client->canViewSection('attendance'))
+                <x-card :padded="false">
+                    <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Worker Attendance</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                    <th class="px-4 py-2">Worker</th>
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Status</th>
+                                    <th class="px-4 py-2">In</th>
+                                    <th class="px-4 py-2">Out</th>
+                                    <th class="px-4 py-2">Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @forelse ($workOrder->attendances as $attendance)
+                                    <tr>
+                                        <td class="px-4 py-2">{{ $attendance->employee?->name }}</td>
+                                        <td class="px-4 py-2">{{ $attendance->date->format('d M Y') }}</td>
+                                        <td class="px-4 py-2"><x-badge :status="$attendance->status" /></td>
+                                        <td class="px-4 py-2">{{ $attendance->check_in ?? '—' }}</td>
+                                        <td class="px-4 py-2">{{ $attendance->check_out ?? '—' }}</td>
+                                        <td class="px-4 py-2">{{ $attendance->hours_worked ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No attendance recorded yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            @endif
+
             @if ($workOrder->client->canViewSection('materials'))
                 <x-card :padded="false">
                     <h3 class="p-4 pb-0 text-sm font-semibold text-gray-500">Material Inward</h3>

@@ -12,6 +12,123 @@
         </x-page-header>
     </x-slot>
 
+    @unless (request()->hasAny(['q', 'category', 'status', 'current_location', 'work_order_id', 'brand', 'warranty_status', 'purchase_from', 'purchase_to']))
+    <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Total at Company Store</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $companyStoreSummary['total'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                <x-icon name="layers" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Available</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $companyStoreSummary['available'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                <x-icon name="check-circle" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Damaged</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $companyStoreSummary['damaged'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                <x-icon name="alert-triangle" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Missing</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $companyStoreSummary['missing'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+                <x-icon name="search" class="h-5 w-5" />
+            </div>
+        </x-card>
+    </div>
+
+    <x-card :padded="false" class="mb-4">
+        <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Company Store — Asset-wise Summary</h3></div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th class="px-4 py-2">Asset Name</th>
+                        <th class="px-4 py-2 text-right">Total</th>
+                        <th class="px-4 py-2 text-right">Available</th>
+                        <th class="px-4 py-2 text-right">Damaged</th>
+                        <th class="px-4 py-2 text-right">Missing</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse ($companyStoreAssetSummary as $row)
+                        <tr>
+                            <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $row->asset?->name ?? 'Removed Asset' }}</td>
+                            <td class="px-4 py-2 text-right text-gray-500">{{ $row->total }}</td>
+                            <td class="px-4 py-2 text-right text-emerald-600">{{ $row->in_use }}</td>
+                            <td class="px-4 py-2 text-right text-amber-600">{{ $row->damaged }}</td>
+                            <td class="px-4 py-2 text-right text-rose-600">{{ $row->missing }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">No stock currently at the Company Store.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </x-card>
+
+    @if ($pendingMovements->isNotEmpty())
+        <x-card :padded="false" class="mb-4">
+            <div class="p-4"><h3 class="text-sm font-semibold text-gray-500">Waiting for Confirmation</h3></div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
+                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-2">Asset</th>
+                            <th class="px-4 py-2">From</th>
+                            <th class="px-4 py-2 text-right">Qty</th>
+                            <th class="px-4 py-2">Sent</th>
+                            <th class="px-4 py-2">Status</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($pendingMovements as $movement)
+                            <tr>
+                                <td class="px-4 py-2">
+                                    <p class="font-medium text-gray-800 dark:text-gray-200">{{ $movement->asset->name ?? 'Removed Asset' }}</p>
+                                    <p class="text-xs text-gray-400">{{ $movement->asset->asset_code ?? '—' }}</p>
+                                </td>
+                                <td class="px-4 py-2 text-gray-500">{{ $movement->locationLabel($movement->from_location, $movement->fromWorkOrder) }}</td>
+                                <td class="px-4 py-2 text-right text-gray-500">{{ $movement->quantity }}</td>
+                                <td class="px-4 py-2 text-gray-500">{{ $movement->moved_at->format('d M Y') }}</td>
+                                <td class="px-4 py-2"><x-badge status="waiting_for_confirmation" /></td>
+                                <td class="px-4 py-2 text-right whitespace-nowrap">
+                                    @if ($canConfirmHere)
+                                        <form method="POST" action="{{ route('asset-movements.confirm', $movement) }}" class="inline">
+                                            @csrf
+                                            <button class="text-xs font-medium text-emerald-600 hover:underline">Confirm</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('asset-movements.cancel', $movement) }}" class="inline" onsubmit="return confirm('Cancel this movement?')">
+                                            @csrf
+                                            <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Cancel</button>
+                                        </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-card>
+    @endif
+    @endunless
+
     <x-card class="mb-4">
         <form method="GET" action="{{ route('assets.index') }}" class="space-y-3">
             <input type="search" name="q" value="{{ request('q') }}" placeholder="Search by Asset ID, name, serial number, brand, model, category, supplier, or work order..." class="w-full rounded-lg border-gray-200 text-sm dark:border-gray-700 dark:bg-gray-800">

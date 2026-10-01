@@ -16,7 +16,7 @@ class SiteWorkSchedule extends Model
     public const MODES = ['independent', 'depends_on'];
 
     protected $fillable = [
-        'site_id', 'sequence_order', 'work_name', 'work_details', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
+        'site_id', 'sequence_order', 'work_name', 'work_details', 'executive_team_id', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
         'original_start_date', 'original_duration_days', 'original_end_date',
         'revised_start_date', 'revised_duration_days', 'revised_end_date',
         'actual_start_date', 'actual_end_date', 'actual_progress_percent',
@@ -45,7 +45,7 @@ class SiteWorkSchedule extends Model
         return LogOptions::defaults()
             ->useLogName('work_schedules')
             ->logOnly([
-                'work_name', 'work_details', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
+                'work_name', 'work_details', 'executive_team_id', 'schedule_mode', 'depends_on_schedule_id', 'lag_days',
                 'revised_start_date', 'revised_duration_days', 'revised_end_date',
                 'actual_start_date', 'actual_end_date', 'actual_progress_percent',
                 'status', 'delay_reason',
@@ -67,6 +67,11 @@ class SiteWorkSchedule extends Model
     public function dependsOn(): BelongsTo
     {
         return $this->belongsTo(self::class, 'depends_on_schedule_id');
+    }
+
+    public function executiveTeam(): BelongsTo
+    {
+        return $this->belongsTo(ExecutiveTeam::class);
     }
 
     /**
@@ -105,6 +110,10 @@ class SiteWorkSchedule extends Model
      * the current planned (revised) end date - so recording an Actual End
      * Date immediately updates the variance shown, without needing to
      * separately touch duration or the dependency gap.
+     *
+     * This is the work's TOTAL variance - it doesn't distinguish how much
+     * of it is this work's own doing versus inherited from a delayed
+     * dependency. See previousWorkDelayDays()/ownDelayDays() for that split.
      */
     public function varianceDays(): int
     {
@@ -113,10 +122,75 @@ class SiteWorkSchedule extends Model
         return $this->original_end_date->diffInDays($comparisonEnd, false);
     }
 
+    /**
+     * How many days the work actually took, from its real start to its
+     * real completion - independent of the original/revised duration
+     * fields, which are never touched by recording these dates. Null
+     * while either date is still missing (e.g. work not yet started, or
+     * still in progress with no completion date recorded yet).
+     */
+    public function actualDurationDays(): ?int
+    {
+        if (! $this->actual_start_date || ! $this->actual_end_date) {
+            return null;
+        }
+
+        return $this->actual_start_date->diffInDays($this->actual_end_date) + 1;
+    }
+
+    /**
+     * Positive = started that many days later than currently planned,
+     * negative = started early, 0 = started exactly on plan, null = not
+     * started yet. Compares against revised_start_date (this work's own,
+     * already dependency-adjusted plan), not the original start date, so
+     * this reflects whether the work itself started on time against what
+     * it was actually supposed to start on - not whatever the schedule
+     * looked like before an earlier work's delay shifted it.
+     */
+    public function startVarianceDays(): ?int
+    {
+        if (! $this->actual_start_date) {
+            return null;
+        }
+
+        return $this->revised_start_date->diffInDays($this->actual_start_date, false);
+    }
+
+    /**
+     * The portion of this work's total variance that it inherited from its
+     * dependency running late (or early) - i.e. the dependency's own total
+     * variance, carried forward. Zero for an independent work, since
+     * nothing upstream can push its start date around.
+     */
+    public function previousWorkDelayDays(): int
+    {
+        if ($this->schedule_mode !== 'depends_on' || ! $this->dependsOn) {
+            return 0;
+        }
+
+        return $this->dependsOn->varianceDays();
+    }
+
+    /**
+     * This work's own contribution to its total variance, with whatever it
+     * inherited from a delayed dependency subtracted out - so a work that's
+     * exactly on its own (already-shifted) schedule shows 0 here even if
+     * the site overall is running late because of an earlier work.
+     */
+    public function ownDelayDays(): int
+    {
+        return $this->varianceDays() - $this->previousWorkDelayDays();
+    }
+
+    /**
+     * True only when this work's OWN execution has overrun its own
+     * (already dependency-adjusted) schedule - never true just because an
+     * earlier, unrelated work pushed this one's start date out.
+     */
     public function isDelayed(): bool
     {
-        if ($this->status === 'completed') {
-            return $this->actual_end_date && $this->actual_end_date->gt($this->original_end_date);
+        if ($this->actual_end_date) {
+            return $this->actual_end_date->gt($this->revised_end_date);
         }
 
         return now()->startOfDay()->gt($this->revised_end_date);

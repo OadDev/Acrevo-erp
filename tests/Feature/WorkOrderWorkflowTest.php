@@ -129,6 +129,28 @@ class WorkOrderWorkflowTest extends TestCase
         $response->assertSee($site->site_no);
     }
 
+    public function test_generate_work_order_survives_a_site_numbering_gap_from_a_deleted_site(): void
+    {
+        // Regression test: a Site deleted earlier in the month left a gap
+        // that the old COUNT-based sequence numbering would reissue,
+        // colliding with an existing site_no and permanently 500ing
+        // "Generate Work Order" for whichever quotation triggered the
+        // auto-create next (see HasSequenceNumber).
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'address' => 'Addr', 'city' => 'City', 'is_active' => true, 'created_by' => $admin->id]);
+
+        $siteA = Site::create(['client_id' => $client->id, 'address' => 'A', 'created_by' => $admin->id]);
+        $siteB = Site::create(['client_id' => $client->id, 'address' => 'B', 'created_by' => $admin->id]);
+        $this->actingAs($admin)->delete("/sites/{$siteA->id}")->assertRedirect();
+
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'sent', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $this->actingAs($admin)->post("/quotations/{$quotation->id}/approve")->assertRedirect();
+
+        $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}")->assertOk();
+        $this->assertNotSame($siteB->site_no, $quotation->fresh()->site->site_no);
+    }
+
     public function test_work_order_show_renders_with_and_without_a_linked_site(): void
     {
         $admin = $this->admin();
@@ -2137,7 +2159,7 @@ class WorkOrderWorkflowTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
 
-        foreach (['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'summary', 'ledger', 'company-ledger', 'qc', 'approvals', 'tickets'] as $section) {
+        foreach (['site', 'overview', 'team', 'checklist', 'progress', 'materials', 'manpower', 'mb', 'attendance', 'summary', 'ledger', 'company-ledger', 'qc', 'approvals', 'tickets'] as $section) {
             $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/{$section}")
                 ->assertOk()->assertHeader('content-type', 'application/pdf');
         }

@@ -357,6 +357,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:assets.view')->group(function () {
         Route::get('equipment', [WorkOrderEquipmentController::class, 'index'])->name('equipment.index');
         Route::get('equipment/pdf', [WorkOrderEquipmentController::class, 'pdf'])->name('equipment.pdf');
+        Route::get('equipment/summary/pdf', [WorkOrderEquipmentController::class, 'summaryPdf'])->name('equipment.summary.pdf');
     });
     Route::middleware('permission:assets.view_history')->group(function () {
         Route::get('equipment/history', [WorkOrderEquipmentController::class, 'history'])->name('equipment.history');
@@ -589,6 +590,7 @@ Route::middleware('permission:movements.view')->group(function () {
     Route::get('asset-movements', [AssetMovementController::class, 'index'])->name('asset-movements.index');
 });
 Route::middleware('permission:movements.download_pdf')->group(function () {
+    Route::get('asset-movements/pdf', [AssetMovementController::class, 'indexPdf'])->name('asset-movements.pdf');
     Route::get('assets/{asset}/movements/pdf', [AssetMovementController::class, 'pdf'])->name('assets.movements.pdf');
 });
 Route::middleware('permission:movements.create')->group(function () {
@@ -610,6 +612,7 @@ Route::middleware('permission:repairs.view')->group(function () {
     Route::get('asset-repairs', [AssetRepairController::class, 'index'])->name('asset-repairs.index');
 });
 Route::middleware('permission:repairs.download_pdf')->group(function () {
+    Route::get('asset-repairs/pdf', [AssetRepairController::class, 'indexPdf'])->name('asset-repairs.pdf');
     Route::get('assets/{asset}/repairs/pdf', [AssetRepairController::class, 'pdf'])->name('assets.repairs.pdf');
 });
 Route::middleware('permission:repairs.create')->group(function () {
@@ -630,6 +633,7 @@ Route::middleware('permission:verifications.view')->group(function () {
     Route::get('asset-verifications', [AssetVerificationController::class, 'index'])->name('asset-verifications.index');
 });
 Route::middleware('permission:verifications.download_pdf')->group(function () {
+    Route::get('asset-verifications/pdf', [AssetVerificationController::class, 'indexPdf'])->name('asset-verifications.pdf');
     Route::get('assets/{asset}/verifications/pdf', [AssetVerificationController::class, 'pdf'])->name('assets.verifications.pdf');
 });
 Route::middleware('permission:verifications.create')->group(function () {

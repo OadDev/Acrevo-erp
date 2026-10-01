@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#4f46e5">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
 
         <title>{{ isset($title) ? $title.' · ' : '' }}{{ config('app.name', 'Geethan Works ERP') }}</title>
 
@@ -11,6 +14,18 @@
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
+        </script>
+
+        <script>
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                window.__pwaInstallEvent = e;
+                window.dispatchEvent(new CustomEvent('pwa-install-available'));
+            });
+            window.addEventListener('appinstalled', function () {
+                window.__pwaInstallEvent = null;
+                window.dispatchEvent(new CustomEvent('pwa-installed'));
+            });
         </script>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -23,6 +38,12 @@
             @include('layouts.partials.sidebar')
 
             <div class="flex min-w-0 flex-1 flex-col">
+                @if (auth()->user()->hasRole('Demo'))
+                    <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                        You're in Demo Mode - feel free to add, edit, or delete anything here. This is a separate sample database and never touches real client data.
+                    </div>
+                @endif
+
                 @include('layouts.partials.topbar')
 
                 @isset($header)
@@ -54,6 +75,10 @@
 
                     {{ $slot }}
                 </main>
+
+                <footer class="border-t border-gray-200 px-4 py-4 text-center text-xs text-gray-400 dark:border-gray-800 sm:px-6">
+                    Developed by <a href="https://orbitxmedia.com" target="_blank" rel="noopener noreferrer" class="font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400">Orbit X Media Pvt. Ltd.</a>
+                </footer>
             </div>
         </div>
 
@@ -87,6 +112,14 @@
                 })();
             </script>
         @endcan
+
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js').catch(function () {});
+                });
+            }
+        </script>
 
         @stack('scripts')
     </body>

@@ -1,6 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Movement History" subtitle="Every asset movement across the company store and every site." />
+        <x-page-header title="Movement History" subtitle="Every asset movement across the company store and every site.">
+            <x-slot name="actions">
+                @can('movements.download_pdf')
+                    <x-link-button :href="route('asset-movements.pdf', request()->query())" variant="secondary">Download PDF</x-link-button>
+                @endcan
+            </x-slot>
+        </x-page-header>
     </x-slot>
 
     <x-card class="mb-4">

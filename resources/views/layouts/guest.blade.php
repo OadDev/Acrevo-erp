@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#4f46e5">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
 
         <title>{{ config('app.name', 'Geethan Works ERP') }}</title>
 
@@ -65,6 +68,10 @@
                             <div class="rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 sm:p-8">
                                 {{ $slot }}
                             </div>
+
+                            <p class="mt-6 text-center text-xs text-white/70">
+                                Developed by <a href="https://orbitxmedia.com" target="_blank" rel="noopener noreferrer" class="font-medium text-white hover:underline">Orbit X Media Pvt. Ltd.</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -102,9 +109,21 @@
                         <x-login-offer :setting="$loginSetting" variant="plain" class="mb-6 lg:hidden" />
 
                         {{ $slot }}
+
+                        <p class="mt-6 text-center text-xs text-gray-400">
+                            Developed by <a href="https://orbitxmedia.com" target="_blank" rel="noopener noreferrer" class="font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400">Orbit X Media Pvt. Ltd.</a>
+                        </p>
                     </div>
                 </div>
             </div>
         @endif
+
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js').catch(function () {});
+                });
+            }
+        </script>
     </body>
 </html>

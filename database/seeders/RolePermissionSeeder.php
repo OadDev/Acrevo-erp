@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -312,6 +312,39 @@ class RolePermissionSeeder extends Seeder
             // withheld by default since it can include internal remarks -
             // Admin can grant it per-client.
             'work_schedules' => ['work_schedules.view_overall', 'work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates'],
+        ],
+        // For prospective-client demos. SwitchDemoDatabaseConnection moves
+        // every business-model query for this role onto a wholly separate
+        // "demo" database, so it's safe to grant full create/edit/delete
+        // access here - none of it can ever reach production. The one
+        // exception is 'admin': users.*, roles.*, and permissions.manage
+        // are withheld because User/Role/Permission are deliberately pinned
+        // to the main connection (auth has to keep working while the
+        // switch is active) - granting those would let a demo session
+        // edit real staff accounts and roles.
+        'Demo' => [
+            'admin' => ['admin.dashboard.view', 'company_settings.manage', 'masters.manage', 'audit_logs.view', 'activity_logs.view', 'notifications.manage', 'global_search.use', 'system_settings.manage'],
+            'sales' => '*',
+            'hr' => '*',
+            'executive' => '*',
+            'qc' => '*',
+            'tickets' => '*',
+            'finance' => '*',
+            'legal' => '*',
+            'audit' => '*',
+            'management' => '*',
+            'clients' => '*',
+            'assets' => '*',
+            'movements' => '*',
+            'repairs' => '*',
+            'verifications' => '*',
+            'equipment_requests' => '*',
+            'reports' => '*',
+            'tasks' => '*',
+            'subcontractors' => '*',
+            'subcontractor_portal' => '*',
+            'chat' => '*',
+            'work_schedules' => '*',
         ],
     ];
 

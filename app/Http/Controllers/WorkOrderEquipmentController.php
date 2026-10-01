@@ -6,8 +6,8 @@ use App\Models\Asset;
 use App\Models\AssetMovement;
 use App\Models\AssetRepair;
 use App\Models\AssetStatusLog;
-use App\Models\AssetStock;
 use App\Models\WorkOrder;
+use App\Support\AssetStockSummary;
 use App\Support\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -26,7 +26,9 @@ class WorkOrderEquipmentController extends Controller
         $this->authorize('view', $workOrder);
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
-        $stockSummary = $this->stockSummary($workOrder);
+        $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
+        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
 
         $pendingMovements = AssetMovement::query()
             ->where('to_work_order_id', $workOrder->id)
@@ -43,7 +45,7 @@ class WorkOrderEquipmentController extends Controller
 
         $canConfirmHere = $user->can('movements.approve') && ($ledWorkOrderIds === null || $ledWorkOrderIds->contains($workOrder->id));
 
-        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere', 'stockSummary'));
+        return view('work-orders.equipment.index', compact('workOrder', 'assets', 'pendingMovements', 'canConfirmHere', 'stockSummary', 'assetWiseSummary'));
     }
 
     public function pdf(Request $request, WorkOrder $workOrder)
@@ -51,11 +53,30 @@ class WorkOrderEquipmentController extends Controller
         $this->authorize('view', $workOrder);
 
         $assets = $this->currentEquipment($request, $workOrder)->get();
-        $stockSummary = $this->stockSummary($workOrder);
+        $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
 
         $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets', 'stockSummary'));
 
         return $pdf->download("{$workOrder->work_order_no}-equipment.pdf");
+    }
+
+    /**
+     * The asset-wise breakdown behind the "recover the cost from whoever's
+     * responsible" workflow: one row per asset name allocated to this work
+     * order, with how much of it is Available (in use), Damaged, or Missing,
+     * so Admin doesn't have to open each asset's own Stock by Location card
+     * to add it up by hand.
+     */
+    public function summaryPdf(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorize('view', $workOrder);
+
+        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
+
+        $pdf = Pdf::loadView('work-orders.equipment.summary-pdf', compact('workOrder', 'assetWiseSummary'));
+
+        return $pdf->download("{$workOrder->work_order_no}-equipment-summary.pdf");
     }
 
     /**
@@ -114,29 +135,6 @@ class WorkOrderEquipmentController extends Controller
                 ->orWhere('category', 'like', "%{$search}%")))
             ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
             ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc');
-    }
-
-    /**
-     * Total/Available/Damaged/Missing quantity across every asset ever
-     * allocated to this work order, straight from the AssetStock ledger -
-     * lets a Team Leader see losses at a glance instead of having to open
-     * each asset's own Stock by Location card one at a time.
-     */
-    private function stockSummary(WorkOrder $workOrder): array
-    {
-        $byStatus = AssetStock::where('location', 'work_order')
-            ->where('work_order_id', $workOrder->id)
-            ->selectRaw('status, sum(quantity) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        return [
-            'total' => $byStatus->sum(),
-            'available' => (int) ($byStatus['available'] ?? 0),
-            'damaged' => (int) ($byStatus['damaged'] ?? 0),
-            'missing' => (int) ($byStatus['missing'] ?? 0),
-            'ready_for_return' => (int) ($byStatus['ready_for_return'] ?? 0),
-        ];
     }
 
     private function movementsQuery(Request $request, WorkOrder $workOrder)

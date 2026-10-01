@@ -114,6 +114,24 @@ class QuotationTaxTest extends TestCase
         $this->assertNotSoftDeleted('quotations', ['id' => $quotation->id]);
     }
 
+    public function test_non_admin_cannot_remove_a_quotation(): void
+    {
+        $admin = $this->admin();
+        $sales = User::create([
+            'name' => 'Sales', 'email' => 'sales+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $sales->syncRoles(['Sales']);
+        $enquiry = $this->enquiry($admin);
+        $quotation = Quotation::create([
+            'enquiry_id' => $enquiry->id, 'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat', 'status' => 'approved', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($sales)->delete("/quotations/{$quotation->id}")->assertForbidden();
+        $this->assertNotSoftDeleted('quotations', ['id' => $quotation->id]);
+    }
+
     public function test_a_quotation_can_be_created_with_nil_tax(): void
     {
         $admin = $this->admin();
@@ -183,6 +201,54 @@ class QuotationTaxTest extends TestCase
         $this->assertEqualsWithDelta(199056.00, (float) $quotation->subtotal, 0.01);
         $this->assertEqualsWithDelta(35830.08, (float) $quotation->tax_amount, 0.01);
         $this->assertEqualsWithDelta(234886.08, (float) $quotation->total_amount, 0.01);
+    }
+
+    public function test_a_quotation_can_be_edited_without_resubmitting_enquiry_or_client_id(): void
+    {
+        // Regression test: the Edit Quotation form never included
+        // enquiry_id/client_id (editing doesn't change which enquiry/client
+        // a quotation belongs to, and update() never reads those fields),
+        // but QuotationRequest required them unconditionally - so every
+        // real edit submission failed with "The enquiry id field is
+        // required." / "The client id field is required.".
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+
+        $this->actingAs($admin)->post('/quotations', [
+            'enquiry_id' => $enquiry->id,
+            'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat',
+            'discount_value' => 0,
+            'items' => [
+                ['item_type' => 'service', 'name' => 'Tiling', 'unit' => 'Sqft', 'quantity' => 100, 'unit_price' => 100, 'discount' => 0],
+            ],
+        ])->assertRedirect();
+        $quotation = Quotation::firstOrFail();
+
+        $response = $this->actingAs($admin)->put("/quotations/{$quotation->id}", [
+            'discount_type' => 'flat',
+            'discount_value' => 0,
+            'items' => [
+                ['item_type' => 'service', 'name' => 'Tiling', 'unit' => 'Sqft', 'quantity' => 150, 'unit_price' => 100, 'discount' => 0],
+            ],
+        ]);
+        $response->assertSessionDoesntHaveErrors();
+        $response->assertRedirect();
+
+        $this->assertEqualsWithDelta(15000.00, (float) $quotation->fresh()->subtotal, 0.01);
+    }
+
+    public function test_creating_a_quotation_without_enquiry_or_client_id_is_still_rejected(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/quotations', [
+            'discount_type' => 'flat',
+            'discount_value' => 0,
+            'items' => [
+                ['item_type' => 'service', 'name' => 'Tiling', 'unit' => 'Sqft', 'quantity' => 100, 'unit_price' => 100, 'discount' => 0],
+            ],
+        ])->assertSessionHasErrors(['enquiry_id', 'client_id']);
     }
 
     public function test_updating_a_quotation_still_applies_tax_only_once(): void

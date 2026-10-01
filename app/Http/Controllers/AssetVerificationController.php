@@ -20,16 +20,7 @@ class AssetVerificationController extends Controller
 
     public function index(Request $request): View
     {
-        $verifications = AssetVerification::query()
-            ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'verifiedBy'])
-            ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
-                ->where('asset_code', 'like', "%{$search}%")
-                ->orWhere('name', 'like', "%{$search}%")
-                ->orWhere('serial_number', 'like', "%{$search}%")))
-            ->when($request->get('result'), fn ($q, $v) => $q->where('result', $v))
-            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('work_order_id', $v))
-            ->when($request->get('from'), fn ($q, $v) => $q->whereDate('verified_at', '>=', $v))
-            ->when($request->get('to'), fn ($q, $v) => $q->whereDate('verified_at', '<=', $v))
+        $verifications = $this->filtered($request)
             ->orderByDesc('verified_at')
             ->orderByDesc('id')
             ->paginate(20)
@@ -38,6 +29,32 @@ class AssetVerificationController extends Controller
         $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
 
         return view('assets.verifications.index', compact('verifications', 'workOrders'));
+    }
+
+    public function indexPdf(Request $request)
+    {
+        $verifications = $this->filtered($request)
+            ->orderByDesc('verified_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $pdf = Pdf::loadView('assets.verifications.pdf-all', compact('verifications'));
+
+        return $pdf->download('verification-history.pdf');
+    }
+
+    private function filtered(Request $request)
+    {
+        return AssetVerification::query()
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'verifiedBy'])
+            ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
+                ->where('asset_code', 'like', "%{$search}%")
+                ->orWhere('name', 'like', "%{$search}%")
+                ->orWhere('serial_number', 'like', "%{$search}%")))
+            ->when($request->get('result'), fn ($q, $v) => $q->where('result', $v))
+            ->when($request->get('work_order_id'), fn ($q, $v) => $q->where('work_order_id', $v))
+            ->when($request->get('from'), fn ($q, $v) => $q->whereDate('verified_at', '>=', $v))
+            ->when($request->get('to'), fn ($q, $v) => $q->whereDate('verified_at', '<=', $v));
     }
 
     /**

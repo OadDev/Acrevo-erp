@@ -1,6 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Verification History" subtitle="Every physical check logged against equipment and tools." />
+        <x-page-header title="Verification History" subtitle="Every physical check logged against equipment and tools.">
+            <x-slot name="actions">
+                @can('verifications.download_pdf')
+                    <x-link-button :href="route('asset-verifications.pdf', request()->query())" variant="secondary">Download PDF</x-link-button>
+                @endcan
+            </x-slot>
+        </x-page-header>
     </x-slot>
 
     <x-card class="mb-4">

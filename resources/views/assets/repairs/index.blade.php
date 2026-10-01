@@ -1,6 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-page-header title="Repair History" subtitle="Every repair logged against equipment and tools." />
+        <x-page-header title="Repair History" subtitle="Every repair logged against equipment and tools.">
+            <x-slot name="actions">
+                @can('repairs.download_pdf')
+                    <x-link-button :href="route('asset-repairs.pdf', request()->query())" variant="secondary">Download PDF</x-link-button>
+                @endcan
+            </x-slot>
+        </x-page-header>
     </x-slot>
 
     <x-card class="mb-4">

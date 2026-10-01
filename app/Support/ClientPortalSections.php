@@ -16,6 +16,7 @@ class ClientPortalSections
         'summary' => 'Monthly Summary',
         'ledger' => 'Site Ledger',
         'mb' => 'Measurement Book',
+        'attendance' => 'Worker Attendance',
         'materials' => 'Material Inward',
         'material_usage' => 'Used Material',
         'manpower' => 'Used Manpower',

@@ -13,7 +13,11 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <span class="mr-1 text-xs text-gray-400">#{{ $changeRequests->firstItem() + $loop->index }}</span>
-                                <a href="{{ route('assets.show', $changeRequest->asset) }}" class="font-medium text-indigo-600 hover:underline">{{ $changeRequest->asset->asset_code }} — {{ $changeRequest->asset->name }}</a>
+                                @if ($changeRequest->asset && ! $changeRequest->asset->trashed())
+                                    <a href="{{ route('assets.show', $changeRequest->asset) }}" class="font-medium text-indigo-600 hover:underline">{{ $changeRequest->asset->asset_code }} — {{ $changeRequest->asset->name }}</a>
+                                @else
+                                    <span class="font-medium text-gray-400">{{ $changeRequest->asset?->asset_code ?? 'Removed Asset' }} — {{ $changeRequest->asset?->name ?? 'This asset has been removed' }}</span>
+                                @endif
                                 <p class="text-xs text-gray-400">Requested by {{ $changeRequest->requestedBy?->name }} &middot; {{ $changeRequest->created_at->format('d M Y, h:i A') }}</p>
                             </div>
                             <button type="button" @click="open = !open" class="text-xs font-medium text-indigo-600 hover:underline">Review changes</button>
@@ -44,11 +48,15 @@
                         </div>
 
                         <div class="mt-3 flex items-center gap-2">
-                            <form method="POST" action="{{ route('asset-change-requests.approve', $changeRequest) }}" class="flex items-center gap-2">
-                                @csrf
-                                <input type="text" name="remarks" placeholder="Approval remarks (optional)" class="rounded-lg border-gray-200 text-xs dark:border-gray-700 dark:bg-gray-800">
-                                <button class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500">Approve</button>
-                            </form>
+                            @if ($changeRequest->asset && ! $changeRequest->asset->trashed())
+                                <form method="POST" action="{{ route('asset-change-requests.approve', $changeRequest) }}" class="flex items-center gap-2">
+                                    @csrf
+                                    <input type="text" name="remarks" placeholder="Approval remarks (optional)" class="rounded-lg border-gray-200 text-xs dark:border-gray-700 dark:bg-gray-800">
+                                    <button class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500">Approve</button>
+                                </form>
+                            @else
+                                <span class="text-xs text-gray-400" title="This asset has been removed and this change can no longer be applied">Approve unavailable</span>
+                            @endif
                             <form method="POST" action="{{ route('asset-change-requests.reject', $changeRequest) }}" class="flex items-center gap-2" onsubmit="return confirm('Reject this change request?')">
                                 @csrf
                                 <input type="text" name="remarks" placeholder="Rejection remarks (optional)" class="rounded-lg border-gray-200 text-xs dark:border-gray-700 dark:bg-gray-800">

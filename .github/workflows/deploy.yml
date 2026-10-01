@@ -68,6 +68,7 @@ jobs:
              if [ -f .env ] && grep -q '^APP_NAME=\"Acrevo ERP\"' .env; then sed -i 's/^APP_NAME=.*/APP_NAME=\"Geethan Works ERP\"/' .env; fi && \
              \$PHP_BIN artisan storage:link --force && \
              \$PHP_BIN artisan migrate --force && \
+             (\$PHP_BIN artisan demo:provision || echo 'Demo database provisioning needs attention - see the warning above (likely needs the database created manually on the hosting panel).') && \
              \$PHP_BIN artisan optimize:clear && \
              \$PHP_BIN artisan config:cache && \
              \$PHP_BIN artisan route:cache && \
