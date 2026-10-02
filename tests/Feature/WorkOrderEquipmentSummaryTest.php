@@ -83,6 +83,44 @@ class WorkOrderEquipmentSummaryTest extends TestCase
             ->assertSee('Asset-wise Summary');
     }
 
+    /**
+     * Regression test: the Asset-wise Summary used to be built by grouping
+     * AssetStock rows and sorting the resulting Collection in PHP, which
+     * could land in a different order than the asset list below it (built
+     * from a separate, database-level ORDER BY name query) - most visibly
+     * after editing/adjusting an asset's stock, when the summary's PHP-side
+     * order could drift out of step entirely. Both are now driven by the
+     * same ORDER BY name query, so they can never disagree.
+     */
+    public function test_the_asset_wise_summary_matches_the_asset_list_order(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        $this->allocate($workOrder, $admin, 'Zebra Winch', 2);
+        $this->allocate($workOrder, $admin, 'Apple Peeler', 1);
+        $asset = $this->allocate($workOrder, $admin, 'Banana Slicer', 1);
+
+        // Simulate editing/making a change to an asset already in the
+        // summary - it must stay in its alphabetical place, not jump to
+        // the bottom.
+        $this->actingAs($admin)->put("/assets/{$asset->id}", [
+            'name' => 'Banana Slicer', 'remarks' => 'Edited.',
+        ])->assertRedirect();
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment");
+        $response->assertOk();
+
+        $summaryOrder = $response->viewData('assetWiseSummary')->pluck('asset.name')->all();
+        $listOrder = $response->viewData('assets')->pluck('name')->all();
+
+        $this->assertSame(['Apple Peeler', 'Banana Slicer', 'Zebra Winch'], $summaryOrder);
+        $this->assertSame($listOrder, $summaryOrder, 'Asset Summary order must match the Asset List order below it.');
+
+        // S.No column: 1, 2, 3 in sequence.
+        $response->assertSeeInOrder(['1', 'Apple Peeler', '2', 'Banana Slicer', '3', 'Zebra Winch']);
+    }
+
     public function test_totals_and_statuses_are_aggregated_correctly_per_asset(): void
     {
         $admin = $this->admin();

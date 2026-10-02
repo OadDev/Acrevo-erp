@@ -87,7 +87,9 @@ class AssetController extends Controller
         $workOrders = WorkOrder::orderByDesc('created_at')->limit(200)->get();
 
         $companyStoreSummary = AssetStockSummary::totals('company_store');
-        $companyStoreAssetSummary = AssetStockSummary::byAsset('company_store');
+        // Same name ordering/direction as the asset list below, so the
+        // summary above it never shows a different order than the list.
+        $companyStoreAssetSummary = AssetStockSummary::byAsset('company_store', null, $request->get('direction') === 'desc' ? 'desc' : 'asc');
 
         // Every movement still awaiting confirmation into the Company
         // Store - the same "Waiting for Confirmation" list WO Equipment
