@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Asset;
 use App\Models\AssetStock;
+use Illuminate\Support\Collection;
 
 /**
  * Available/Damaged/Missing/Total for one location bucket (Company Store,
@@ -21,14 +22,27 @@ use App\Models\AssetStock;
  * Both queries filter out any asset that's been removed (soft-deleted) -
  * a removed asset's historical stock no longer counts toward either the
  * stat cards or the asset-wise breakdown.
+ *
+ * Both queries also only count an asset here at all while it still holds
+ * Available quantity at this exact location - once that reaches zero (a
+ * Movement took the available portion elsewhere, or the last available
+ * unit itself was marked damaged/missing), the asset is no longer really
+ * "at" this location in any live sense, so any Damaged/Missing quantity
+ * it left behind here stops counting too. That history doesn't disappear -
+ * Verification History, Movement History, and the asset's own Stock by
+ * Location card still show it - it just no longer clutters a location's
+ * live equipment summary once nothing of that asset is actually still
+ * there to act on.
  */
 class AssetStockSummary
 {
     public static function totals(string $location, ?string $workOrderId = null): array
     {
+        $assetIdsStillHere = self::assetIdsWithAvailableStock($location, $workOrderId);
+
         $byStatus = AssetStock::where('location', $location)
             ->where('work_order_id', $workOrderId)
-            ->whereHas('asset')
+            ->whereIn('asset_id', $assetIdsStillHere)
             ->selectRaw('status, sum(quantity) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -43,6 +57,22 @@ class AssetStockSummary
             'damaged' => $damaged,
             'missing' => $missing,
         ];
+    }
+
+    /**
+     * Every asset_id currently holding Available quantity at this exact
+     * location - the one inclusion test totals() and byAsset() both apply,
+     * kept in one place so they can never drift onto two different rules
+     * for "is this asset still here".
+     */
+    private static function assetIdsWithAvailableStock(string $location, ?string $workOrderId): Collection
+    {
+        return AssetStock::where('location', $location)
+            ->where('work_order_id', $workOrderId)
+            ->where('status', 'available')
+            ->where('quantity', '>', 0)
+            ->whereHas('asset')
+            ->pluck('asset_id');
     }
 
     /**
@@ -81,9 +111,7 @@ class AssetStockSummary
         $direction = $direction === 'desc' ? 'desc' : 'asc';
 
         return Asset::query()
-            ->whereHas('stocks', fn ($q) => $q->where('location', $location)
-                ->where('work_order_id', $workOrderId)
-                ->where('quantity', '>', 0))
+            ->whereIn('id', self::assetIdsWithAvailableStock($location, $workOrderId))
             ->with(['stocks' => fn ($q) => $q->where('location', $location)->where('work_order_id', $workOrderId)])
             ->orderBy('name', $direction)
             ->get()
