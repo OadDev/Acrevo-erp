@@ -181,6 +181,68 @@ class WorkOrderEquipmentSummaryTest extends TestCase
             ->assertViewHas('stockSummary', fn ($summary) => $summary['total'] === 4);
     }
 
+    /**
+     * Regression test for the "Waller" scenario reported directly: 9 units
+     * at WO9 (7 available, 1 damaged, 1 missing). Moving the 7 available
+     * units out to WO5 used to leave the 1 damaged + 1 missing still
+     * counted in WO9's stat cards and still listed in its asset-wise
+     * summary, even though nothing of that asset was actually still
+     * actionable at WO9 any more. Once an asset's available quantity at a
+     * location hits zero, it - and whatever damaged/missing quantity it
+     * left behind there - must drop out of that location's live summary
+     * entirely (Verification History and the asset's own Stock by Location
+     * card remain the place to look it up), while the destination correctly
+     * shows the moved quantity and Movement History keeps the full record.
+     */
+    public function test_an_asset_fully_moved_out_drops_its_leftover_damaged_missing_from_the_source_summary(): void
+    {
+        $admin = $this->admin();
+        $wo9 = $this->workOrder($admin);
+        $wo5 = $this->workOrder($admin);
+        $asset = $this->allocate($wo9, $admin, 'Waller', 7, 1, 1);
+
+        // Before the movement: fully visible at WO9, damaged/missing and
+        // all, since 7 available units are still genuinely there.
+        $before = $this->actingAs($admin)->get("/work-orders/{$wo9->id}/equipment");
+        $before->assertOk()
+            ->assertSee('Waller')
+            ->assertViewHas('stockSummary', fn ($s) => $s['total'] === 9 && $s['available'] === 7 && $s['damaged'] === 1 && $s['missing'] === 1);
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/movements", [
+            'type' => 'site_to_site_transfer',
+            'from_location' => 'work_order', 'from_work_order_id' => $wo9->id,
+            'to_location' => 'work_order', 'to_work_order_id' => $wo5->id,
+            'quantity' => 7, 'moved_at' => now()->toDateString(),
+        ])->assertRedirect();
+        $movement = \App\Models\AssetMovement::where('asset_id', $asset->id)->where('to_work_order_id', $wo5->id)->firstOrFail();
+        $this->actingAs($admin)->post("/asset-movements/{$movement->id}/confirm")->assertRedirect();
+
+        // After: WO9 has 0 available for this asset now - the leftover 1
+        // damaged + 1 missing must no longer show anywhere on WO9's page.
+        $after = $this->actingAs($admin)->get("/work-orders/{$wo9->id}/equipment");
+        $after->assertOk()
+            ->assertDontSee('Waller')
+            ->assertViewHas('stockSummary', fn ($s) => $s['total'] === 0 && $s['available'] === 0 && $s['damaged'] === 0 && $s['missing'] === 0);
+        $this->assertNull($after->viewData('assetWiseSummary')->firstWhere('asset.name', 'Waller'));
+
+        // The ledger itself still has the 1 damaged + 1 missing at WO9 -
+        // only the live summary stops showing it.
+        $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $wo9->id, 'damaged'));
+        $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $wo9->id, 'missing'));
+
+        // WO5 correctly shows the 7 units that actually landed there.
+        $wo5Response = $this->actingAs($admin)->get("/work-orders/{$wo5->id}/equipment");
+        $wo5Response->assertOk()
+            ->assertSee('Waller')
+            ->assertViewHas('stockSummary', fn ($s) => $s['total'] === 7 && $s['available'] === 7);
+
+        // Movement History retains the complete record regardless.
+        $this->assertDatabaseHas('asset_movements', [
+            'asset_id' => $asset->id, 'from_work_order_id' => $wo9->id, 'to_work_order_id' => $wo5->id,
+            'quantity' => 7, 'status' => 'confirmed',
+        ]);
+    }
+
     public function test_removing_an_asset_drops_it_and_its_damaged_missing_quantities_from_the_summary(): void
     {
         $admin = $this->admin();
