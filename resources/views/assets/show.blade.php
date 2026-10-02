@@ -380,6 +380,9 @@
                                         <th class="px-4 py-2">Site / Work Order</th>
                                         <th class="px-4 py-2">Reason / Remarks</th>
                                         <th class="px-4 py-2">Proof</th>
+                                        @can('assets.delete_status_log')
+                                            <th class="px-4 py-2">Action</th>
+                                        @endcan
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -404,6 +407,15 @@
                                                     <a href="{{ $proof->getUrl() }}" target="_blank" class="text-xs text-indigo-600 hover:underline">View</a>
                                                 @endforeach
                                             </td>
+                                            @can('assets.delete_status_log')
+                                                <td class="px-4 py-2">
+                                                    <form method="POST" action="{{ route('asset-status-logs.destroy', $log) }}" onsubmit="return confirm('Delete this status change? The {{ $log->quantity ?? '' }} unit(s) will be moved back from \'{{ ucwords(str_replace('_', ' ', $log->new_status)) }}\' to \'{{ ucwords(str_replace('_', ' ', $log->previous_status)) }}\'.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                                                    </form>
+                                                </td>
+                                            @endcan
                                         </tr>
                                     @endforeach
                                 </tbody>

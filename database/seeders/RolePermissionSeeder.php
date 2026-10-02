@@ -79,6 +79,7 @@ class RolePermissionSeeder extends Seeder
         'assets' => [
             'assets.view', 'assets.create', 'assets.edit', 'assets.approve',
             'assets.delete', 'assets.restore', 'assets.update_status',
+            'assets.delete_status_log',
             'assets.view_history', 'assets.download_pdf', 'assets.view_missing',
         ],
         'movements' => [

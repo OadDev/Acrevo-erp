@@ -19,8 +19,9 @@ use Tests\TestCase;
 /**
  * Phase 1 of the Equipment & Asset Management module: Asset create/edit
  * /remove/restore, the Management-edit-requires-Admin-approval workflow,
- * Executive Team Leader site-scoped status updates with an undeletable
- * status log, attachments/reports, and the Asset Details PDF.
+ * Executive Team Leader site-scoped status updates, an Admin-only route to
+ * delete a mistaken status log entry and reverse the quantity it moved,
+ * attachments/reports, and the Asset Details PDF.
  */
 class AssetManagementTest extends TestCase
 {
@@ -181,7 +182,9 @@ class AssetManagementTest extends TestCase
             'updated_by' => $teamLeader->id, 'work_order_id' => $workOrder->id, 'reason' => 'Started work today.',
         ]);
 
-        // No route exists to delete a status log entry at all.
+        // Nothing in this test deletes it - see
+        // test_admin_can_delete_a_status_log_and_the_quantity_is_restored
+        // for the assets.delete_status_log-gated deletion flow.
         $this->assertDatabaseCount('asset_status_logs', 1);
     }
 
@@ -215,6 +218,83 @@ class AssetManagementTest extends TestCase
 
         $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'ready_for_return'));
         $this->assertSame(0, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'in_use'));
+    }
+
+    public function test_admin_can_delete_a_status_log_and_the_quantity_is_restored(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrderLedBy($admin, $this->staffUser($admin, 'Executive Team Leader'));
+
+        $this->actingAs($admin)->post('/assets', [
+            'name' => 'Undo Drill', 'status' => 'available', 'current_location' => 'work_order', 'current_work_order_id' => $workOrder->id,
+        ])->assertRedirect();
+        $asset = Asset::where('name', 'Undo Drill')->firstOrFail();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1,
+            'status' => 'ready_for_return', 'reason' => 'Marked by mistake',
+        ])->assertRedirect();
+
+        $log = \App\Models\AssetStatusLog::where('asset_id', $asset->id)->latest()->firstOrFail();
+        $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'ready_for_return'));
+        $this->assertSame(0, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'available'));
+
+        $this->actingAs($admin)->delete("/asset-status-logs/{$log->id}")->assertRedirect()->assertSessionDoesntHaveErrors();
+
+        $this->assertDatabaseMissing('asset_status_logs', ['id' => $log->id]);
+        $this->assertSame(0, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'ready_for_return'));
+        $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'available'));
+        $this->assertSame('available', $asset->fresh()->status);
+    }
+
+    public function test_a_team_leader_without_the_permission_cannot_delete_a_status_log(): void
+    {
+        $admin = $this->admin();
+        $teamLeader = $this->staffUser($admin, 'Executive Team Leader');
+        $workOrder = $this->workOrderLedBy($admin, $teamLeader);
+
+        $this->actingAs($admin)->post('/assets', [
+            'name' => 'Guarded Drill', 'status' => 'available', 'current_location' => 'work_order', 'current_work_order_id' => $workOrder->id,
+        ])->assertRedirect();
+        $asset = Asset::where('name', 'Guarded Drill')->firstOrFail();
+
+        $this->actingAs($teamLeader)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1, 'status' => 'in_use',
+        ])->assertRedirect();
+
+        $log = \App\Models\AssetStatusLog::where('asset_id', $asset->id)->latest()->firstOrFail();
+
+        $this->actingAs($teamLeader)->delete("/asset-status-logs/{$log->id}")->assertForbidden();
+        $this->assertDatabaseHas('asset_status_logs', ['id' => $log->id]);
+    }
+
+    public function test_deleting_a_status_log_is_rejected_if_the_quantity_already_moved_on(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrderLedBy($admin, $this->staffUser($admin, 'Executive Team Leader'));
+
+        $this->actingAs($admin)->post('/assets', [
+            'name' => 'Chained Drill', 'status' => 'available', 'current_location' => 'work_order', 'current_work_order_id' => $workOrder->id,
+        ])->assertRedirect();
+        $asset = Asset::where('name', 'Chained Drill')->firstOrFail();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1, 'status' => 'ready_for_return',
+        ])->assertRedirect();
+        $firstLog = \App\Models\AssetStatusLog::where('asset_id', $asset->id)->latest()->firstOrFail();
+
+        // The same unit moves on again before anyone tries to undo the
+        // first change - nothing is left in ready_for_return to reverse.
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'ready_for_return', 'quantity' => 1, 'status' => 'returned',
+        ])->assertRedirect();
+
+        $this->actingAs($admin)->delete("/asset-status-logs/{$firstLog->id}")
+            ->assertRedirect()
+            ->assertSessionHasErrors('status_log');
+
+        $this->assertDatabaseHas('asset_status_logs', ['id' => $firstLog->id]);
+        $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'returned'));
     }
 
     public function test_update_status_reflects_live_stock_locations_not_the_stale_legacy_field(): void

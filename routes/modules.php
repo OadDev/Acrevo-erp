@@ -567,6 +567,9 @@ Route::middleware('permission:assets.edit')->group(function () {
 Route::middleware('permission:assets.update_status')->group(function () {
     Route::post('assets/{asset}/status', [AssetController::class, 'updateStatus'])->name('assets.status.update');
 });
+Route::middleware('permission:assets.delete_status_log')->group(function () {
+    Route::delete('asset-status-logs/{statusLog}', [AssetController::class, 'destroyStatusLog'])->name('asset-status-logs.destroy');
+});
 Route::middleware('permission:assets.delete')->group(function () {
     Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
 });
