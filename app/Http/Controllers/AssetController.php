@@ -393,10 +393,19 @@ class AssetController extends Controller
     {
         $user = $request->user();
 
+        // from_status must accept anything a bucket can actually sit at,
+        // not just AssetStock::STATUSES' original 5 values - this same
+        // endpoint can move a bucket to a status (e.g. ready_for_return)
+        // that only exists in Asset::STATUSES, and that bucket must then
+        // be changeable again later. Validating from_status against
+        // AssetStock::STATUSES alone locked out every status update past
+        // the first one for any bucket sitting at such a status.
+        $fromStatuses = array_unique(array_merge(AssetStock::STATUSES, Asset::STATUSES));
+
         $data = $request->validate([
             'location' => ['required', 'in:'.implode(',', Asset::LOCATIONS)],
             'work_order_id' => ['nullable', 'exists:work_orders,id'],
-            'from_status' => ['required', 'in:'.implode(',', AssetStock::STATUSES)],
+            'from_status' => ['required', 'in:'.implode(',', $fromStatuses)],
             'quantity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:'.implode(',', Asset::STATUSES)],
             'reason' => ['nullable', 'string'],
