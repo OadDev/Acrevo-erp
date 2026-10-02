@@ -314,6 +314,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
         Route::delete('ledger/{ledger}/bill', [LedgerController::class, 'destroyBill'])->name('ledger.bill.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
+        Route::get('ledger/pdf', [LedgerController::class, 'pdf'])->name('ledger.pdf');
         Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
         Route::put('attendance/{attendance}', [WorkOrderAttendanceController::class, 'update'])->name('attendance.update');
         Route::delete('attendance/{attendance}', [WorkOrderAttendanceController::class, 'destroy'])->name('attendance.destroy');
@@ -329,6 +330,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::delete('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'destroy'])->name('company-ledger.destroy');
     Route::delete('company-ledger/{companyLedger}/bill', [CompanyLedgerController::class, 'destroyBill'])->name('company-ledger.bill.destroy');
     Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
+    Route::get('company-ledger/pdf', [CompanyLedgerController::class, 'pdf'])->name('company-ledger.pdf');
     // Monthly Summary is entered by the office (Sales/HR/Admin, enforced in
     // the controller), not the site team, so it also skips the
     // site_records.manage middleware the other WO entry routes use.
