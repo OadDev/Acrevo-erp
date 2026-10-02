@@ -22,17 +22,18 @@
         <x-text-input type="date" name="att_from" value="{{ request('att_from') }}" placeholder="From" class="text-sm" />
         <x-text-input type="date" name="att_to" value="{{ request('att_to') }}" placeholder="To" class="text-sm" />
         <x-primary-button class="justify-center">Filter</x-primary-button>
-        @if (request('att_worker_id'))
-            <a href="{{ route('work-orders.attendance.pdf', array_filter([
-                'workOrder' => $workOrder,
-                'employee_id' => request('att_worker_id'),
-                'from' => request('att_from'),
-                'to' => request('att_to'),
-            ])) }}" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-                <x-icon name="download" class="h-4 w-4" /> PDF
-            </a>
-        @endif
+        <a href="{{ route('work-orders.attendance.pdf', array_filter([
+            'workOrder' => $workOrder,
+            'employee_id' => request('att_worker_id'),
+            'from' => request('att_from'),
+            'to' => request('att_to'),
+        ])) }}" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500" title="{{ request('att_worker_id') ? 'Download this worker\'s attendance as PDF' : 'Download every worker\'s attendance for this filter as PDF' }}">
+            <x-icon name="download" class="h-4 w-4" /> PDF
+        </a>
     </form>
+    <p class="px-4 pb-3 text-xs text-gray-400">
+        Leave "All Workers" selected and set a From/To range to download every worker's attendance for that period in one PDF - handy for handing out alongside weekly salary.
+    </p>
 
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-xs dark:divide-gray-800">

@@ -5,10 +5,11 @@ namespace App\Http\Controllers\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyLedger;
 use App\Models\WorkOrder;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CompanyLedgerController extends Controller
 {
@@ -126,11 +127,9 @@ class CompanyLedgerController extends Controller
         });
     }
 
-    public function export(Request $request, WorkOrder $workOrder): StreamedResponse
+    private function filteredEntries(Request $request, WorkOrder $workOrder)
     {
-        $this->authorizeFinanceOrAdmin();
-
-        $entries = $workOrder->companyLedgers()
+        return $workOrder->companyLedgers()
             ->when($request->get('from'), fn ($q, $from) => $q->whereDate('entry_date', '>=', $from))
             ->when($request->get('to'), fn ($q, $to) => $q->whereDate('entry_date', '<=', $to))
             ->when($request->get('category'), fn ($q, $category) => $q->where('category', $category))
@@ -138,6 +137,30 @@ class CompanyLedgerController extends Controller
             ->orderBy('entry_date')
             ->orderBy('id')
             ->get();
+    }
+
+    public function pdf(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorizeFinanceOrAdmin();
+
+        $entries = $this->filteredEntries($request, $workOrder);
+
+        $pdf = Pdf::loadView('work-orders.ledger-pdf', [
+            'workOrder' => $workOrder,
+            'entries' => $entries,
+            'from' => $request->get('from'),
+            'to' => $request->get('to'),
+            'title' => 'Company Ledger',
+        ]);
+
+        return $pdf->download('company-ledger-'.$workOrder->work_order_no.'-'.now()->format('Ymd-His').'.pdf');
+    }
+
+    public function export(Request $request, WorkOrder $workOrder): StreamedResponse
+    {
+        $this->authorizeFinanceOrAdmin();
+
+        $entries = $this->filteredEntries($request, $workOrder);
 
         $filename = 'company-ledger-'.$workOrder->work_order_no.'-'.now()->format('Ymd-His').'.csv';
 

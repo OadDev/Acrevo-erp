@@ -49,15 +49,26 @@
 <x-card :padded="false" x-data="{ editLedger: null }">
     <div class="flex flex-wrap items-center justify-between gap-3 p-4">
         <h3 class="text-sm font-semibold text-gray-500">Company Ledger</h3>
-        <a href="{{ route('work-orders.company-ledger.export', array_filter([
-            'workOrder' => $workOrder,
-            'from' => request('company_ledger_from'),
-            'to' => request('company_ledger_to'),
-            'category' => request('company_ledger_category'),
-            'type' => request('company_ledger_type'),
-        ])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            <x-icon name="download" class="h-4 w-4" /> Download CSV
-        </a>
+        <div class="flex items-center gap-4">
+            <a href="{{ route('work-orders.company-ledger.pdf', array_filter([
+                'workOrder' => $workOrder,
+                'from' => request('company_ledger_from'),
+                'to' => request('company_ledger_to'),
+                'category' => request('company_ledger_category'),
+                'type' => request('company_ledger_type'),
+            ])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                <x-icon name="download" class="h-4 w-4" /> Download PDF
+            </a>
+            <a href="{{ route('work-orders.company-ledger.export', array_filter([
+                'workOrder' => $workOrder,
+                'from' => request('company_ledger_from'),
+                'to' => request('company_ledger_to'),
+                'category' => request('company_ledger_category'),
+                'type' => request('company_ledger_type'),
+            ])) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                <x-icon name="download" class="h-4 w-4" /> Download CSV
+            </a>
+        </div>
     </div>
 
     <form method="GET" action="{{ route('work-orders.show', $workOrder) }}#company-ledger" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-5">

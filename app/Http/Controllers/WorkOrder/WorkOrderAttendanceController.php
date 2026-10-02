@@ -104,31 +104,52 @@ class WorkOrderAttendanceController extends Controller
         return back()->with('success', 'Attendance entry removed.');
     }
 
+    /**
+     * With employee_id, the original single-worker attendance sheet. Without
+     * it - the common case for weekly salary payout, where every worker's
+     * attendance for the period is needed at once - every worker active in
+     * the date range, grouped with their own subtotal, in one PDF that can
+     * be printed and handed out alongside that week's pay.
+     */
     public function pdf(Request $request, WorkOrder $workOrder)
     {
         $data = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
+            'employee_id' => ['nullable', 'exists:employees,id'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
         ]);
 
-        // withTrashed() so a relieved worker's historical attendance on
-        // this work order can still be exported, not just active workers.
-        $employee = Employee::withTrashed()->findOrFail($data['employee_id']);
         $from = $data['from'] ?? now()->startOfMonth()->toDateString();
         $to = $data['to'] ?? now()->toDateString();
 
+        if (! empty($data['employee_id'])) {
+            // withTrashed() so a relieved worker's historical attendance on
+            // this work order can still be exported, not just active workers.
+            $employee = Employee::withTrashed()->findOrFail($data['employee_id']);
+
+            $records = Attendance::where('work_order_id', $workOrder->id)
+                ->where('employee_id', $employee->id)
+                ->whereDate('date', '>=', $from)
+                ->whereDate('date', '<=', $to)
+                ->orderBy('date')
+                ->get();
+
+            $pdf = Pdf::loadView('work-orders.attendance-pdf', compact('workOrder', 'employee', 'records', 'from', 'to'));
+
+            return $pdf->download($employee->name.'-'.$workOrder->work_order_no.'-Attendance-'.$from.'-to-'.$to.'.pdf');
+        }
+
         $records = Attendance::where('work_order_id', $workOrder->id)
-            ->where('employee_id', $employee->id)
             ->whereDate('date', '>=', $from)
             ->whereDate('date', '<=', $to)
+            ->with('employee')
             ->orderBy('date')
-            ->get();
+            ->get()
+            ->groupBy('employee_id')
+            ->sortBy(fn ($entries) => $entries->first()->employee?->name ?? '');
 
-        $pdf = Pdf::loadView('work-orders.attendance-pdf', compact('workOrder', 'employee', 'records', 'from', 'to'));
+        $pdf = Pdf::loadView('work-orders.attendance-pdf-all', compact('workOrder', 'records', 'from', 'to'));
 
-        $filename = $employee->name.'-'.$workOrder->work_order_no.'-Attendance-'.$from.'-to-'.$to.'.pdf';
-
-        return $pdf->download($filename);
+        return $pdf->download($workOrder->work_order_no.'-Attendance-'.$from.'-to-'.$to.'.pdf');
     }
 }
