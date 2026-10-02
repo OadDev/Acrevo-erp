@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Asset;
 use App\Models\AssetStock;
 
 /**
@@ -66,32 +67,40 @@ class AssetStockSummary
      * Use (Available)/Damaged/Missing quantities in this bucket, so a
      * damaged or missing quantity can be traced back to exactly which
      * asset it belongs to.
+     *
+     * Driven by an Asset::query() ordered by name at the database level
+     * (the same ORDER BY the asset list below it on the same page uses),
+     * rather than grouping AssetStock rows and sorting the resulting
+     * Collection in PHP - the two previously used different comparisons
+     * (PHP's case-sensitive string sort vs. the database's own, usually
+     * case-insensitive, collation), so this summary's order could drift
+     * out of step with the list underneath it.
      */
-    public static function byAsset(string $location, ?string $workOrderId = null)
+    public static function byAsset(string $location, ?string $workOrderId = null, string $direction = 'asc')
     {
-        return AssetStock::where('location', $location)
-            ->where('work_order_id', $workOrderId)
-            ->where('quantity', '>', 0)
-            ->whereHas('asset')
-            ->with('asset')
+        $direction = $direction === 'desc' ? 'desc' : 'asc';
+
+        return Asset::query()
+            ->whereHas('stocks', fn ($q) => $q->where('location', $location)
+                ->where('work_order_id', $workOrderId)
+                ->where('quantity', '>', 0))
+            ->with(['stocks' => fn ($q) => $q->where('location', $location)->where('work_order_id', $workOrderId)])
+            ->orderBy('name', $direction)
             ->get()
-            ->groupBy('asset_id')
-            ->map(function ($stocks) {
-                $byStatus = $stocks->groupBy('status')->map(fn ($group) => $group->sum('quantity'));
+            ->map(function (Asset $asset) {
+                $byStatus = $asset->stocks->groupBy('status')->map(fn ($group) => $group->sum('quantity'));
 
                 $inUse = (int) ($byStatus['available'] ?? 0);
                 $damaged = (int) ($byStatus['damaged'] ?? 0);
                 $missing = (int) ($byStatus['missing'] ?? 0);
 
                 return (object) [
-                    'asset' => $stocks->first()->asset,
+                    'asset' => $asset,
                     'total' => $inUse + $damaged + $missing,
                     'in_use' => $inUse,
                     'damaged' => $damaged,
                     'missing' => $missing,
                 ];
-            })
-            ->sortBy(fn ($row) => $row->asset?->name ?? '')
-            ->values();
+            });
     }
 }

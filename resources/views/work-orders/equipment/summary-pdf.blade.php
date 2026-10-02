@@ -32,6 +32,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>S.No</th>
                     <th>Asset Name</th>
                     <th class="text-right">Total</th>
                     <th class="text-right">In Use</th>
@@ -42,6 +43,7 @@
             <tbody>
                 @foreach ($assetWiseSummary as $row)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $row->asset?->name ?? 'Removed Asset' }}</td>
                         <td class="text-right">{{ $row->total }}</td>
                         <td class="text-right">{{ $row->in_use }}</td>

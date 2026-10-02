@@ -25,10 +25,14 @@ class WorkOrderEquipmentController extends Controller
     {
         $this->authorize('view', $workOrder);
 
+        $direction = $request->get('direction') === 'desc' ? 'desc' : 'asc';
+
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
         $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
         $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
-        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
+        // Same name ordering/direction as the asset list below, so the
+        // summary above it never shows a different order than the list.
+        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id, $direction);
 
         $pendingMovements = AssetMovement::query()
             ->where('to_work_order_id', $workOrder->id)
@@ -72,7 +76,7 @@ class WorkOrderEquipmentController extends Controller
     {
         $this->authorize('view', $workOrder);
 
-        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id);
+        $assetWiseSummary = AssetStockSummary::byAsset('work_order', $workOrder->id, $request->get('direction') === 'desc' ? 'desc' : 'asc');
 
         $pdf = Pdf::loadView('work-orders.equipment.summary-pdf', compact('workOrder', 'assetWiseSummary'));
 
