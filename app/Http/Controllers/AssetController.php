@@ -469,6 +469,63 @@ class AssetController extends Controller
         return back()->with('success', "Marked {$data['quantity']} unit(s) at {$where} as \"{$data['status']}\".");
     }
 
+    /**
+     * Deletes a Status Update entry made by mistake and reverses the
+     * quantity it moved, back to whatever status it was changed from -
+     * the exact undo of the two AssetStock::adjust() calls updateStatus()
+     * made. AssetStock buckets are plain running totals with no per-entry
+     * provenance, so this is safe to reverse regardless of how many other
+     * status changes happened afterward elsewhere - the only requirement
+     * is that at least this much quantity is still sitting in the status
+     * this entry moved it to; if some of it has since moved on again
+     * (e.g. a later Status Update or Movement took some of it further),
+     * this is rejected rather than silently going negative or stranding
+     * the shortfall.
+     *
+     * Pre-fix rows (before location/quantity were tracked on this log)
+     * have no safe way to know what to reverse, so those are rejected too.
+     */
+    public function destroyStatusLog(AssetStatusLog $statusLog): RedirectResponse
+    {
+        $asset = Asset::withTrashed()->find($statusLog->asset_id);
+        abort_unless($asset, 404);
+
+        if ($statusLog->location === null || $statusLog->quantity === null) {
+            return back()->withErrors(['status_log' => 'This status change predates quantity tracking and cannot be safely reversed or deleted.']);
+        }
+
+        $available = AssetStock::quantityAt($asset, $statusLog->location, $statusLog->work_order_id, $statusLog->new_status);
+
+        if ($statusLog->quantity > $available) {
+            return back()->withErrors(['status_log' => "Only {$available} unit(s) are currently \"{$statusLog->new_status}\" there now - some of this change has already moved on elsewhere, so it can't be fully reversed. Reverse that newer change first."]);
+        }
+
+        AssetStock::adjust($asset, $statusLog->location, $statusLog->work_order_id, $statusLog->new_status, -$statusLog->quantity);
+        AssetStock::adjust($asset, $statusLog->location, $statusLog->work_order_id, $statusLog->previous_status, $statusLog->quantity);
+
+        $previousStatus = $statusLog->previous_status;
+        $location = $statusLog->location;
+        $workOrderId = $statusLog->work_order_id;
+
+        $statusLog->delete();
+
+        // Same staleness-avoidance rule as updateStatus(): only sync the
+        // legacy fields if the restored status now accounts for the
+        // asset's entire remaining quantity.
+        $asset->refresh();
+        $elsewhere = $asset->stocks()->where('status', '!=', $previousStatus)->sum('quantity');
+
+        if ($elsewhere === 0) {
+            $asset->update([
+                'status' => $previousStatus,
+                'current_location' => $location,
+                'current_work_order_id' => $workOrderId,
+            ]);
+        }
+
+        return back()->with('success', 'Status change deleted and the quantity restored to its previous status.');
+    }
+
     public function destroy(Asset $asset): RedirectResponse
     {
         $asset->delete();
