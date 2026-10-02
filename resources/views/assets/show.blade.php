@@ -465,22 +465,36 @@
                     @if ($statusUpdateStocks->isEmpty())
                         <p class="text-sm text-gray-400">No stock available to update.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.status.update', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ from: '', fromAvailable: null, fromStatus: '' }">
+                        <form method="POST" action="{{ route('assets.status.update', $asset) }}" enctype="multipart/form-data" class="space-y-3"
+                            x-data="{ fromAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.location.value = parts[0] || '';
+                                $refs.workOrderId.value = parts[1] || '';
+                                $refs.fromStatus.value = parts[2] || '';
+                            ">
                             @csrf
                             <div>
                                 <x-input-label value="Location / Work Order & Current Status" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; from = o.value; fromAvailable = o.dataset.available; fromStatus = o.dataset.status">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="fromAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select bucket</option>
                                     @foreach ($statusUpdateStocks as $stock)
-                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}|{{ $stock->status }}" data-available="{{ $stock->quantity }}" data-status="{{ $stock->status }}">
+                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}|{{ $stock->status }}" data-available="{{ $stock->quantity }}">
                                             {{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} — {{ ucwords(str_replace('_', ' ', $stock->status)) }} — {{ $stock->quantity }} units
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="location" :value="from.split('|')[0]">
-                                <input type="hidden" name="work_order_id" :value="from.split('|')[1] || ''">
-                                <input type="hidden" name="from_status" :value="from.split('|')[2]">
+                                <!-- Filled from the bucket select's own live value right before
+                                     submit (see x-on:submit above), not mirrored via :value on
+                                     every change - a browser restoring a previous selection on
+                                     back/forward navigation without firing a change event used to
+                                     leave these stale while the select looked selected, submitting
+                                     an empty from_status and failing with "The selected from
+                                     status is invalid." -->
+                                <input type="hidden" name="location" x-ref="location">
+                                <input type="hidden" name="work_order_id" x-ref="workOrderId">
+                                <input type="hidden" name="from_status" x-ref="fromStatus">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />
@@ -512,7 +526,13 @@
                     @if ($availableStocks->isEmpty())
                         <p class="text-sm text-gray-400">No available stock to move.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3" x-data="{ toLocation: 'work_order', from: '', fromAvailable: null }">
+                        <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3"
+                            x-data="{ toLocation: 'work_order', fromAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.fromLocation.value = parts[0] || '';
+                                $refs.fromWorkOrderId.value = parts[1] || '';
+                            ">
                             @csrf
                             <x-select-input name="type" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetMovement::TYPES as $type)
@@ -522,8 +542,8 @@
                             </x-select-input>
                             <div>
                                 <x-input-label value="From Location" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; from = o.value; fromAvailable = o.dataset.available">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="fromAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select Location</option>
                                     @foreach ($availableStocks as $stock)
                                         <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
@@ -531,8 +551,10 @@
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="from_location" :value="from.split('|')[0]">
-                                <input type="hidden" name="from_work_order_id" :value="from.split('|')[1] || ''">
+                                <!-- Filled from the select's live value at submit time - see the
+                                     note on the Update Status form above for why. -->
+                                <input type="hidden" name="from_location" x-ref="fromLocation">
+                                <input type="hidden" name="from_work_order_id" x-ref="fromWorkOrderId">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />
@@ -566,7 +588,13 @@
                     @if ($availableStocks->isEmpty())
                         <p class="text-sm text-gray-400">No available stock to verify.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ at: '', atAvailable: null }">
+                        <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3"
+                            x-data="{ atAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.location.value = parts[0] || '';
+                                $refs.workOrderId.value = parts[1] || '';
+                            ">
                             @csrf
                             <x-select-input name="result" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetVerification::RESULTS as $result)
@@ -575,8 +603,8 @@
                             </x-select-input>
                             <div>
                                 <x-input-label value="At Location" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; at = o.value; atAvailable = o.dataset.available">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="atAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select Location</option>
                                     @foreach ($availableStocks as $stock)
                                         <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
@@ -584,8 +612,10 @@
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="location" :value="at.split('|')[0]">
-                                <input type="hidden" name="work_order_id" :value="at.split('|')[1] || ''">
+                                <!-- Filled from the select's live value at submit time - see the
+                                     note on the Update Status form above for why. -->
+                                <input type="hidden" name="location" x-ref="location">
+                                <input type="hidden" name="work_order_id" x-ref="workOrderId">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />
@@ -611,7 +641,13 @@
                     @if ($availableStocks->isEmpty())
                         <p class="text-sm text-gray-400">No available stock to report a repair for.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ at: '', atAvailable: null }">
+                        <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3"
+                            x-data="{ atAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.location.value = parts[0] || '';
+                                $refs.workOrderId.value = parts[1] || '';
+                            ">
                             @csrf
                             <x-select-input name="repair_type" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetRepair::TYPES as $type)
@@ -620,8 +656,8 @@
                             </x-select-input>
                             <div>
                                 <x-input-label value="At Location" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; at = o.value; atAvailable = o.dataset.available">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="atAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select Location</option>
                                     @foreach ($availableStocks as $stock)
                                         <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
@@ -629,8 +665,10 @@
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="location" :value="at.split('|')[0]">
-                                <input type="hidden" name="work_order_id" :value="at.split('|')[1] || ''">
+                                <!-- Filled from the select's live value at submit time - see the
+                                     note on the Update Status form above for why. -->
+                                <input type="hidden" name="location" x-ref="location">
+                                <input type="hidden" name="work_order_id" x-ref="workOrderId">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />
