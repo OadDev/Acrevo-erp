@@ -185,6 +185,38 @@ class AssetManagementTest extends TestCase
         $this->assertDatabaseCount('asset_status_logs', 1);
     }
 
+    public function test_an_asset_bucket_can_have_its_status_changed_back_and_forth_repeatedly(): void
+    {
+        // Regression test: from_status used to be validated against
+        // AssetStock::STATUSES (only available/in_transit/missing/damaged/
+        // under_repair), so once a bucket moved to a status that only
+        // exists in Asset::STATUSES (e.g. ready_for_return or in_use),
+        // changing it again failed validation with "The selected from
+        // status is invalid" - the bucket was stuck after one change.
+        $admin = $this->admin();
+        $workOrder = $this->workOrderLedBy($admin, $this->staffUser($admin, 'Executive Team Leader'));
+
+        $this->actingAs($admin)->post('/assets', [
+            'name' => 'Toggle Drill', 'status' => 'available', 'current_location' => 'work_order', 'current_work_order_id' => $workOrder->id,
+        ])->assertRedirect();
+        $asset = Asset::where('name', 'Toggle Drill')->firstOrFail();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'available', 'quantity' => 1, 'status' => 'ready_for_return',
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'ready_for_return', 'quantity' => 1, 'status' => 'in_use',
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id, 'from_status' => 'in_use', 'quantity' => 1, 'status' => 'ready_for_return',
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(1, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'ready_for_return'));
+        $this->assertSame(0, \App\Models\AssetStock::quantityAt($asset, 'work_order', $workOrder->id, 'in_use'));
+    }
+
     public function test_update_status_reflects_live_stock_locations_not_the_stale_legacy_field(): void
     {
         // Regression test: "Update Status" used to be gated on
