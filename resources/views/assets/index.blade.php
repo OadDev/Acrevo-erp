@@ -61,6 +61,8 @@
                         <th class="px-4 py-2">Asset Name</th>
                         <th class="px-4 py-2 text-right">Total</th>
                         <th class="px-4 py-2 text-right">Available</th>
+                        <th class="px-4 py-2 text-right">In Use</th>
+                        <th class="px-4 py-2 text-right">Ready for Return</th>
                         <th class="px-4 py-2 text-right">Damaged</th>
                         <th class="px-4 py-2 text-right">Missing</th>
                     </tr>
@@ -70,12 +72,14 @@
                         <tr>
                             <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $row->asset?->name ?? 'Removed Asset' }}</td>
                             <td class="px-4 py-2 text-right text-gray-500">{{ $row->total }}</td>
-                            <td class="px-4 py-2 text-right text-emerald-600">{{ $row->in_use }}</td>
+                            <td class="px-4 py-2 text-right text-emerald-600">{{ $row->available }}</td>
+                            <td class="px-4 py-2 text-right text-blue-600">{{ $row->in_use }}</td>
+                            <td class="px-4 py-2 text-right text-sky-600">{{ $row->ready_for_return }}</td>
                             <td class="px-4 py-2 text-right text-amber-600">{{ $row->damaged }}</td>
                             <td class="px-4 py-2 text-right text-rose-600">{{ $row->missing }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">No stock currently at the Company Store.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">No stock currently at the Company Store.</td></tr>
                     @endforelse
                 </tbody>
             </table>

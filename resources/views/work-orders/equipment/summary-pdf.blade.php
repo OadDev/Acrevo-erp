@@ -35,7 +35,9 @@
                     <th>S.No</th>
                     <th>Asset Name</th>
                     <th class="text-right">Total</th>
+                    <th class="text-right">Available</th>
                     <th class="text-right">In Use</th>
+                    <th class="text-right">Ready for Return</th>
                     <th class="text-right">Damaged</th>
                     <th class="text-right">Missing</th>
                 </tr>
@@ -46,7 +48,9 @@
                         <td>{{ $loop->iteration }}</td>
                         <td>{{ $row->asset?->name ?? 'Removed Asset' }}</td>
                         <td class="text-right">{{ $row->total }}</td>
+                        <td class="text-right">{{ $row->available }}</td>
                         <td class="text-right">{{ $row->in_use }}</td>
+                        <td class="text-right">{{ $row->ready_for_return }}</td>
                         <td class="text-right">{{ $row->damaged }}</td>
                         <td class="text-right">{{ $row->missing }}</td>
                     </tr>

@@ -82,7 +82,7 @@ class CompanyStoreEquipmentSummaryTest extends TestCase
 
         $row = $response->viewData('companyStoreAssetSummary')->firstWhere('asset.name', 'Steel Sheets');
         $this->assertSame(15, $row->total);
-        $this->assertSame(10, $row->in_use);
+        $this->assertSame(10, $row->available);
         $this->assertSame(3, $row->damaged);
         $this->assertSame(2, $row->missing);
     }
