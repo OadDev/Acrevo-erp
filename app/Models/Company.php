@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Support\NumberToWords;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -84,7 +86,25 @@ class Company extends Model
     {
         [$name, $subunit] = self::CURRENCY_WORDS[$this->currency] ?? [$this->currency, null];
 
-        return \App\Support\NumberToWords::amountInWords($amount, $name, $subunit);
+        return NumberToWords::amountInWords($amount, $name, $subunit);
+    }
+
+    /**
+     * The logo as a data: URI, for embedding in a PDF. mPDF's HTML renderer
+     * can't reliably resolve a storage URL (no HTTP request context, and
+     * fetching over the network is slow/unsafe) or a bare relative path, so
+     * the image bytes are inlined directly rather than linked.
+     */
+    public function logoDataUri(): ?string
+    {
+        if (! $this->logo_path || ! Storage::disk('public')->exists($this->logo_path)) {
+            return null;
+        }
+
+        $mimeType = Storage::disk('public')->mimeType($this->logo_path) ?: 'image/png';
+        $contents = Storage::disk('public')->get($this->logo_path);
+
+        return "data:{$mimeType};base64,".base64_encode($contents);
     }
 
     public function proformaInvoices(): HasMany

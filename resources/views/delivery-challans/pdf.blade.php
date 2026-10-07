@@ -26,7 +26,13 @@
                 Email: {{ $deliveryChallan->company->email }}<br>
                 {{ $deliveryChallan->company->taxIdLabel() }}: {{ $deliveryChallan->company->taxId() }}
             </td>
-            <td class="muted" style="text-align: center; vertical-align: middle;">Logo</td>
+            <td style="text-align: center; vertical-align: middle;">
+                @if ($logoDataUri = $deliveryChallan->company->logoDataUri())
+                    <img src="{{ $logoDataUri }}" style="max-height: 70px; max-width: 160px;">
+                @else
+                    <span class="muted">Logo</span>
+                @endif
+            </td>
         </tr>
     </table>
 
