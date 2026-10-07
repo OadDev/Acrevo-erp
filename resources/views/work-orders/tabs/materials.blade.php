@@ -50,6 +50,16 @@
         <x-text-input type="date" name="mi_from" value="{{ request('mi_from') }}" placeholder="From" class="text-sm" />
         <x-text-input type="date" name="mi_to" value="{{ request('mi_to') }}" placeholder="To" class="text-sm" />
         <x-primary-button class="col-span-2 justify-center sm:col-span-1">Filter</x-primary-button>
+        <a href="{{ route('work-orders.materials.pdf', array_filter([
+            'workOrder' => $workOrder,
+            'material' => request('mi_material'),
+            'vendor' => request('mi_vendor'),
+            'scope' => request('mi_scope'),
+            'from' => request('mi_from'),
+            'to' => request('mi_to'),
+        ])) }}" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500" title="Download these Material Inward entries as PDF">
+            <x-icon name="download" class="h-4 w-4" /> PDF
+        </a>
         @if (request()->hasAny(['mi_material', 'mi_vendor', 'mi_scope', 'mi_from', 'mi_to']))
             <a href="{{ route('work-orders.show', $workOrder) }}#materials" class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Clear</a>
         @endif

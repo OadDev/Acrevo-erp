@@ -294,6 +294,7 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('materials', [MaterialEntryController::class, 'store'])->name('materials.store');
         Route::put('materials/{material}', [MaterialEntryController::class, 'update'])->name('materials.update');
         Route::delete('materials/{material}', [MaterialEntryController::class, 'destroy'])->name('materials.destroy');
+        Route::get('materials/pdf', [MaterialEntryController::class, 'pdf'])->name('materials.pdf');
         Route::post('material-usage', [MaterialUsageEntryController::class, 'store'])->name('material-usage.store');
         Route::put('material-usage/{usage}', [MaterialUsageEntryController::class, 'update'])->name('material-usage.update');
         Route::delete('material-usage/{usage}', [MaterialUsageEntryController::class, 'destroy'])->name('material-usage.destroy');
