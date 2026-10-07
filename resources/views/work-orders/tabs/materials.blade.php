@@ -2,6 +2,13 @@
     $materialAllocated = (float) ($workOrder->estimated_material_budget ?? 0);
     $materialTotal = $workOrder->materialEntries->sum('amount');
     $materialRemaining = $materialAllocated - $materialTotal;
+
+    $filteredMaterialEntries = $workOrder->materialEntries
+        ->when(request('mi_material'), fn ($c) => $c->filter(fn ($e) => str_contains(strtolower($e->material_name), strtolower(request('mi_material')))))
+        ->when(request('mi_vendor'), fn ($c) => $c->filter(fn ($e) => str_contains(strtolower((string) $e->vendor), strtolower(request('mi_vendor')))))
+        ->when(request('mi_scope'), fn ($c) => $c->filter(fn ($e) => $e->scope === request('mi_scope')))
+        ->when(request('mi_from'), fn ($c) => $c->filter(fn ($e) => $e->entry_date && $e->entry_date->format('Y-m-d') >= request('mi_from')))
+        ->when(request('mi_to'), fn ($c) => $c->filter(fn ($e) => $e->entry_date && $e->entry_date->format('Y-m-d') <= request('mi_to')));
 @endphp
 
 <x-card class="mb-6">
@@ -30,6 +37,24 @@
     <div class="flex items-center justify-between p-4">
         <h3 class="text-sm font-semibold text-gray-500">Material Inward</h3>
     </div>
+
+    <form method="GET" action="{{ route('work-orders.show', $workOrder) }}#materials" class="grid grid-cols-2 gap-2 border-t border-b border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-5">
+        <input type="hidden" name="tab" value="materials">
+        <x-text-input name="mi_material" value="{{ request('mi_material') }}" placeholder="Material" class="text-sm" />
+        <x-text-input name="mi_vendor" value="{{ request('mi_vendor') }}" placeholder="Supplier" class="text-sm" />
+        <x-select-input name="mi_scope" class="text-sm">
+            <option value="">All Scopes</option>
+            <option value="client" @selected(request('mi_scope') === 'client')>Client</option>
+            <option value="company" @selected(request('mi_scope') === 'company')>Company</option>
+        </x-select-input>
+        <x-text-input type="date" name="mi_from" value="{{ request('mi_from') }}" placeholder="From" class="text-sm" />
+        <x-text-input type="date" name="mi_to" value="{{ request('mi_to') }}" placeholder="To" class="text-sm" />
+        <x-primary-button class="col-span-2 justify-center sm:col-span-1">Filter</x-primary-button>
+        @if (request()->hasAny(['mi_material', 'mi_vendor', 'mi_scope', 'mi_from', 'mi_to']))
+            <a href="{{ route('work-orders.show', $workOrder) }}#materials" class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Clear</a>
+        @endif
+    </form>
+
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
             <thead>
@@ -43,13 +68,14 @@
                     <th class="px-4 py-2">Scope</th>
                     <th class="px-4 py-2">Supplier Details</th>
                     <th class="px-4 py-2">Delivery Vehicle Details</th>
+                    <th class="px-4 py-2">Remarks</th>
                     @if (auth()->user()->hasRole('Admin'))
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                @forelse ($workOrder->materialEntries as $entry)
+                @forelse ($filteredMaterialEntries as $entry)
                     <tr>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->entry_date?->format('d M Y') ?? '—' }}</td>
                         <td class="px-4 py-2">{{ $entry->material_name }}</td>
@@ -60,6 +86,7 @@
                         <td class="px-4 py-2 text-gray-500">{{ $entry->scope ? ucfirst($entry->scope) : '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->vendor ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->delivery_vehicle_details ?? '—' }}</td>
+                        <td class="px-4 py-2 text-gray-500">{{ $entry->remarks ?? '—' }}</td>
                         @if (auth()->user()->hasRole('Admin'))
                             <td class="whitespace-nowrap px-4 py-2">
                                 <button type="button" @click="editMaterial === {{ $entry->id }} ? editMaterial = null : editMaterial = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
@@ -73,7 +100,7 @@
                     </tr>
                     @if (auth()->user()->hasRole('Admin'))
                         <tr x-show="editMaterial === {{ $entry->id }}" x-cloak>
-                            <td colspan="10" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
+                            <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.materials.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                                     @csrf
                                     @method('PUT')
@@ -89,13 +116,14 @@
                                     </x-select-input>
                                     <x-text-input name="vendor" value="{{ $entry->vendor }}" class="text-xs" />
                                     <x-text-input name="delivery_vehicle_details" value="{{ $entry->delivery_vehicle_details }}" class="text-xs" />
+                                    <x-text-input name="remarks" value="{{ $entry->remarks }}" placeholder="Remarks" class="col-span-2 text-xs sm:col-span-3" />
                                     <button class="col-span-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 sm:col-span-3">Save</button>
                                 </form>
                             </td>
                         </tr>
                     @endif
                 @empty
-                    <tr><td colspan="10" class="px-4 py-6 text-center text-gray-400">No material inward entries yet.</td></tr>
+                    <tr><td colspan="11" class="px-4 py-6 text-center text-gray-400">{{ request()->hasAny(['mi_material', 'mi_vendor', 'mi_scope', 'mi_from', 'mi_to']) ? 'No material inward entries match this filter.' : 'No material inward entries yet.' }}</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -115,6 +143,7 @@
             </x-select-input>
             <x-text-input name="vendor" placeholder="Supplier details (optional)" class="text-sm" />
             <x-text-input name="delivery_vehicle_details" placeholder="Delivery vehicle details (optional)" class="text-sm" />
+            <x-text-input name="remarks" placeholder="Remarks (optional)" class="col-span-2 text-sm sm:col-span-3" />
             <x-primary-button class="col-span-2 justify-center sm:col-span-3">Add Material Inward</x-primary-button>
         </form>
     @endcan
