@@ -1305,6 +1305,60 @@ class WorkOrderWorkflowTest extends TestCase
     }
 
     /**
+     * The PDF option sir asked for on the Material Inward filter - its
+     * link on the tab carries the current filter through as query params,
+     * and the dedicated PDF route applies the same filter fresh against
+     * the database rather than just the entries already on the page.
+     */
+    public function test_material_inward_entries_can_be_downloaded_as_a_filtered_pdf(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-05', 'material_name' => 'Steel Rods', 'quantity' => '10',
+            'unit' => 'Nos', 'rate' => '650', 'vendor' => 'Sri Lakshmi Steels', 'scope' => 'client',
+            'remarks' => 'Delivered on time.',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-20', 'material_name' => 'Cement', 'quantity' => '50',
+            'unit' => 'Bags', 'rate' => '400', 'vendor' => 'Acme Traders', 'scope' => 'company',
+        ])->assertRedirect();
+
+        // The tab's PDF link carries the current filter through as query
+        // params on the dedicated materials.pdf route.
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_vendor=Acme");
+        $page->assertOk()->assertSee(route('work-orders.materials.pdf', ['workOrder' => $workOrder, 'vendor' => 'Acme']), false);
+
+        $html = view('work-orders.materials-pdf', [
+            'workOrder' => $workOrder,
+            'entries' => $workOrder->materialEntries()->where('vendor', 'like', '%Acme%')->get(),
+            'material' => null, 'vendor' => 'Acme', 'scope' => null, 'from' => null, 'to' => null,
+        ])->render();
+        $this->assertStringContainsString('Cement', $html);
+        $this->assertStringNotContainsString('Steel Rods', $html);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/materials/pdf?vendor=Acme");
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+
+        // No filter - the full report includes both, remarks and all.
+        $fullHtml = view('work-orders.materials-pdf', [
+            'workOrder' => $workOrder,
+            'entries' => $workOrder->materialEntries,
+            'material' => null, 'vendor' => null, 'scope' => null, 'from' => null, 'to' => null,
+        ])->render();
+        $this->assertStringContainsString('Steel Rods', $fullHtml);
+        $this->assertStringContainsString('Cement', $fullHtml);
+        $this->assertStringContainsString('Delivered on time.', $fullHtml);
+    }
+
+    /**
      * Remarks must also appear in the downloadable report - both the
      * per-section "materials" PDF and the full work order PDF share the
      * same underlying materials table.
