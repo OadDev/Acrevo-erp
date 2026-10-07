@@ -1225,6 +1225,112 @@ class WorkOrderWorkflowTest extends TestCase
         $response->assertOk()->assertSee('Sri Lakshmi Steels');
     }
 
+    /**
+     * Sir asked for a Remarks field on Material Inward, shown wherever the
+     * entry itself is shown - the tab table and the PDF report alike.
+     */
+    public function test_material_inward_remarks_are_saved_shown_and_editable(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10',
+            'unit' => 'Bags', 'rate' => '400', 'remarks' => 'Bags were slightly damp on arrival.',
+        ])->assertRedirect();
+
+        $entry = $workOrder->fresh()->materialEntries()->firstOrFail();
+        $this->assertSame('Bags were slightly damp on arrival.', $entry->remarks);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")
+            ->assertOk()->assertSee('Bags were slightly damp on arrival.');
+
+        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/materials/{$entry->id}", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10',
+            'unit' => 'Bags', 'rate' => '400', 'remarks' => 'Replacement bags received, all good.',
+        ])->assertRedirect();
+
+        $this->assertSame('Replacement bags received, all good.', $entry->fresh()->remarks);
+    }
+
+    /**
+     * The Filter option sir asked for on Material Inward - narrows the
+     * entries shown on the tab by material name, supplier, scope, and
+     * entry date range, mirroring the Worker Attendance tab's filter.
+     */
+    public function test_material_inward_entries_can_be_filtered(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-05', 'material_name' => 'Steel Rods', 'quantity' => '10',
+            'unit' => 'Nos', 'rate' => '650', 'vendor' => 'Sri Lakshmi Steels', 'scope' => 'client',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-20', 'material_name' => 'Cement', 'quantity' => '50',
+            'unit' => 'Bags', 'rate' => '400', 'vendor' => 'Acme Traders', 'scope' => 'company',
+        ])->assertRedirect();
+
+        // "Cement" and "Steel Rods" both appear elsewhere on the page too
+        // (the Daily Material Used form's own placeholder text mentions
+        // "Cement"), so exclusion is asserted against each entry's unique
+        // vendor name instead, to avoid a false match against unrelated
+        // markup on the same page.
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_material=steel");
+        $page->assertOk()->assertSee('Sri Lakshmi Steels')->assertDontSee('Acme Traders');
+
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_vendor=Acme");
+        $page->assertOk()->assertSee('Acme Traders')->assertDontSee('Sri Lakshmi Steels');
+
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_scope=client");
+        $page->assertOk()->assertSee('Sri Lakshmi Steels')->assertDontSee('Acme Traders');
+
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_from=2026-08-10&mi_to=2026-08-31");
+        $page->assertOk()->assertSee('Acme Traders')->assertDontSee('Sri Lakshmi Steels');
+
+        // No filter applied - both still show.
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials");
+        $page->assertOk()->assertSee('Sri Lakshmi Steels')->assertSee('Acme Traders');
+    }
+
+    /**
+     * Remarks must also appear in the downloadable report - both the
+     * per-section "materials" PDF and the full work order PDF share the
+     * same underlying materials table.
+     */
+    public function test_material_inward_remarks_appear_in_the_pdf_report(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10',
+            'unit' => 'Bags', 'rate' => '400', 'remarks' => 'Short delivery, 2 bags pending.',
+        ])->assertRedirect();
+
+        $html = view('work-orders.pdf.section', ['workOrder' => $workOrder->fresh(), 'section' => 'materials'])->render();
+        $this->assertStringContainsString('Short delivery, 2 bags pending.', $html);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/materials");
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
+
     public function test_daily_material_used_entry_can_be_recorded(): void
     {
         $admin = $this->admin();

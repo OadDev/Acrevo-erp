@@ -17,7 +17,7 @@ class MaterialEntry extends Model
         return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 
-    protected $fillable = ['work_order_id', 'material_name', 'brand', 'size', 'unit', 'quantity', 'rate', 'amount', 'vendor', 'scope', 'delivery_vehicle_details', 'entry_date', 'added_by'];
+    protected $fillable = ['work_order_id', 'material_name', 'brand', 'size', 'unit', 'quantity', 'rate', 'amount', 'vendor', 'scope', 'delivery_vehicle_details', 'remarks', 'entry_date', 'added_by'];
 
     protected function casts(): array
     {

@@ -26,6 +26,7 @@ class MaterialEntryController extends Controller
             'scope' => ['nullable', 'in:client,company'],
             'vendor' => ['nullable', 'string', 'max:255'],
             'delivery_vehicle_details' => ['nullable', 'string', 'max:255'],
+            'remarks' => ['nullable', 'string'],
         ]);
 
         $workOrder->materialEntries()->create($data + [
@@ -51,6 +52,7 @@ class MaterialEntryController extends Controller
             'scope' => ['nullable', 'in:client,company'],
             'vendor' => ['nullable', 'string', 'max:255'],
             'delivery_vehicle_details' => ['nullable', 'string', 'max:255'],
+            'remarks' => ['nullable', 'string'],
         ]);
 
         $material->update($data + [
