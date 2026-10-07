@@ -73,6 +73,7 @@
                             <th class="px-4 py-3">Warranty</th>
                             <th class="px-4 py-3 text-right">Cost</th>
                             <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Attachments</th>
                             @canany(['repairs.edit', 'repairs.delete'])
                                 <th class="px-4 py-3"></th>
                             @endcanany
@@ -93,6 +94,13 @@
                                 <td class="px-4 py-3 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
                                 <td class="px-4 py-3 text-right text-gray-500">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>
                                 <td class="px-4 py-3"><x-badge :status="$repair->status" /></td>
+                                <td class="px-4 py-3">
+                                    @forelse ($repair->getMedia('attachments') as $file)
+                                        <a href="{{ $file->getUrl() }}" target="_blank" class="block text-xs text-indigo-600 hover:underline">{{ $file->file_name }}</a>
+                                    @empty
+                                        <span class="text-xs text-gray-400">—</span>
+                                    @endforelse
+                                </td>
                                 @canany(['repairs.edit', 'repairs.delete'])
                                     <td class="px-4 py-3 text-right whitespace-nowrap">
                                         @can('repairs.edit')
