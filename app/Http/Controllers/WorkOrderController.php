@@ -69,10 +69,11 @@ class WorkOrderController extends Controller
         abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
 
         $teamLeaders = User::role('Executive Team Leader')->orderBy('name')->get();
+        $subContractorUsers = User::role('Sub Contractor')->where('is_active', true)->orderBy('name')->get();
 
         $parentWorkOrder = WorkOrder::find($request->get('parent_work_order_id'));
 
-        return view('work-orders.create', compact('quotation', 'site', 'teamLeaders', 'parentWorkOrder'));
+        return view('work-orders.create', compact('quotation', 'site', 'teamLeaders', 'subContractorUsers', 'parentWorkOrder'));
     }
 
     public function store(WorkOrderRequest $request): RedirectResponse
@@ -89,6 +90,18 @@ class WorkOrderController extends Controller
 
             if (! $team) {
                 return back()->withInput()->withErrors(['team_leader_id' => 'This Team Leader doesn\'t have an active Executive Team yet. Ask HR to form one first, or assign the team later from the work order\'s Team tab.']);
+            }
+        }
+
+        // A Way 2 (Sub-Contractor) work order can have both an executive
+        // team/leader (oversight) and a sub-contractor (execution) assigned
+        // together - unlike Way 1, where only the team applies.
+        $subContractor = null;
+        if (! empty($data['sub_contractor_user_id'])) {
+            $subContractor = User::find($data['sub_contractor_user_id']);
+
+            if (! $subContractor || ! $subContractor->hasRole('Sub Contractor')) {
+                return back()->withInput()->withErrors(['sub_contractor_user_id' => 'Selected user is not a Sub Contractor.']);
             }
         }
 
@@ -180,6 +193,8 @@ class WorkOrderController extends Controller
         $this->saveTimeSchedules($workOrder, $data['time_schedules'] ?? []);
         $this->saveProcedures($workOrder, $data['procedures'] ?? [], $data['start_date'] ?? null, $request->user()->id);
 
+        $assigned = false;
+
         if ($team) {
             WorkOrderExecutiveTeam::create([
                 'work_order_id' => $workOrder->id,
@@ -188,7 +203,22 @@ class WorkOrderController extends Controller
                 'assigned_at' => now(),
             ]);
 
-            $workOrder->transitionTo('team_assigned', 'Executive team assigned at work order creation.');
+            $assigned = true;
+        }
+
+        if ($subContractor) {
+            WorkOrderSubContractor::create([
+                'work_order_id' => $workOrder->id,
+                'user_id' => $subContractor->id,
+                'assigned_by' => $request->user()->id,
+                'assigned_at' => now(),
+            ]);
+
+            $assigned = true;
+        }
+
+        if ($assigned) {
+            $workOrder->transitionTo('team_assigned', 'Executive team/sub-contractor assigned at work order creation.');
         }
 
         $quotation?->enquiry?->update(['status' => 'converted']);

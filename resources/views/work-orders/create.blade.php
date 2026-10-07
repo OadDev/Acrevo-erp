@@ -157,12 +157,23 @@
                     </x-select-input>
                 </div>
 
-                <div class="sm:col-span-2" x-show="executionWay === 'way_1'" x-cloak>
-                    <x-input-label for="team_leader_id" value="Assign Executive Team Leader" />
+                <div class="sm:col-span-2" x-show="executionWay === 'way_1' || executionWay === 'way_2'" x-cloak>
+                    <x-input-label for="team_leader_id" value="Add or Assign an Executive Role" />
                     <x-select-input id="team_leader_id" name="team_leader_id" class="mt-1 block w-full">
                         <option value="">Assign later from the work order's Team tab</option>
                         @foreach ($teamLeaders as $leader)
                             <option value="{{ $leader->id }}" @selected(old('team_leader_id') == $leader->id)>{{ $leader->name }}</option>
+                        @endforeach
+                    </x-select-input>
+                    <p class="mt-1 text-xs text-gray-400">The executive responsible for execution - picks their active Executive Team.</p>
+                </div>
+
+                <div class="sm:col-span-2" x-show="executionWay === 'way_2'" x-cloak>
+                    <x-input-label for="sub_contractor_user_id" value="Sub-Contractor Responsible for Execution" />
+                    <x-select-input id="sub_contractor_user_id" name="sub_contractor_user_id" class="mt-1 block w-full">
+                        <option value="">Assign later from the work order's Team tab</option>
+                        @foreach ($subContractorUsers as $subContractor)
+                            <option value="{{ $subContractor->id }}" @selected(old('sub_contractor_user_id') == $subContractor->id)>{{ $subContractor->name }}</option>
                         @endforeach
                     </x-select-input>
                 </div>

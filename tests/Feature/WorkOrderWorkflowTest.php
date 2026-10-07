@@ -521,6 +521,118 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
     }
 
+    /**
+     * Sir's "WO Execution Method" feature: for a Way 2 (Sub-Contractor)
+     * work order, an executive role (team leader) and a sub-contractor can
+     * both be assigned together up front - the executive oversees, the
+     * sub-contractor executes, and both gain access to the work order.
+     */
+    public function test_work_order_creation_can_assign_both_an_executive_role_and_a_sub_contractor_for_way_2(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $leader = $this->executiveTeamLeader();
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        $subContractor = $this->subContractor();
+
+        $createResponse = $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}");
+        $createResponse->assertOk()->assertSee($leader->name)->assertSee($subContractor->name);
+
+        $storeResponse = $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with sub-contractor and executive',
+            'execution_way' => 'way_2',
+            'team_leader_id' => $leader->id,
+            'sub_contractor_user_id' => $subContractor->id,
+            'priority' => 'medium',
+        ]);
+        $storeResponse->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with sub-contractor and executive')->firstOrFail();
+        $this->assertSame('team_assigned', $workOrder->status);
+        $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
+        $this->assertTrue($workOrder->subContractors()->where('user_id', $subContractor->id)->exists());
+
+        // Both assigned users gain access to the work order's execution process.
+        $this->actingAs($leader)->get("/work-orders/{$workOrder->id}")->assertOk();
+        $this->actingAs($subContractor)->get("/work-orders/{$workOrder->id}")->assertOk();
+    }
+
+    /**
+     * Assigning a sub-contractor to a way_2 work order rejects a user that
+     * isn't actually a Sub Contractor - same guard assignSubContractor()
+     * already applies after creation.
+     */
+    public function test_work_order_creation_rejects_a_sub_contractor_user_without_the_role(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $response = $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with bad sub-contractor',
+            'execution_way' => 'way_2',
+            'sub_contractor_user_id' => $admin->id,
+            'priority' => 'medium',
+        ]);
+
+        $response->assertSessionHasErrors('sub_contractor_user_id');
+        $this->assertDatabaseMissing('work_orders', ['title' => 'WO with bad sub-contractor']);
+    }
+
+    /**
+     * The Team tab shows and allows managing both the Sub-Contractor and
+     * Executive Team panels together for a way_2 work order - they're no
+     * longer mutually exclusive.
+     */
+    public function test_the_team_tab_shows_both_sub_contractor_and_executive_team_panels_for_a_way_2_work_order(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'pending_hr_assignment', 'created_by' => $admin->id,
+        ]);
+
+        $leader = $this->executiveTeamLeader();
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        $subContractor = $this->subContractor();
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=team")
+            ->assertOk()
+            ->assertSee('Assign a Sub-Contractor')
+            ->assertSee('Assign a Team');
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/assign-sub-contractor", [
+            'sub_contractor_user_id' => $subContractor->id,
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/assign-team", [
+            'executive_team_id' => $team->id,
+        ])->assertRedirect();
+
+        $fresh = $workOrder->fresh();
+        $this->assertTrue($fresh->subContractors()->where('user_id', $subContractor->id)->whereNull('unassigned_at')->exists());
+        $this->assertTrue($fresh->executiveTeams()->where('executive_team_id', $team->id)->whereNull('unassigned_at')->exists());
+        $this->assertSame('team_assigned', $fresh->status);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=team")
+            ->assertOk()
+            ->assertSee($subContractor->name)
+            ->assertSee($team->name);
+    }
+
     public function test_work_order_creation_rejects_a_team_leader_with_no_active_team(): void
     {
         $admin = $this->admin();
