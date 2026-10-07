@@ -251,6 +251,7 @@
                                         <th class="px-4 py-2">Warranty</th>
                                         <th class="px-4 py-2 text-right">Cost</th>
                                         <th class="px-4 py-2">Status</th>
+                                        <th class="px-4 py-2">Attachments</th>
                                         <th class="px-4 py-2"></th>
                                     </tr>
                                 </thead>
@@ -267,6 +268,13 @@
                                             <td class="px-4 py-2 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
                                             <td class="px-4 py-2 text-right text-gray-500">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$repair->status" /></td>
+                                            <td class="px-4 py-2">
+                                                @forelse ($repair->getMedia('attachments') as $file)
+                                                    <a href="{{ $file->getUrl() }}" target="_blank" class="block text-xs text-indigo-600 hover:underline">{{ $file->file_name }}</a>
+                                                @empty
+                                                    <span class="text-xs text-gray-400">—</span>
+                                                @endforelse
+                                            </td>
                                             <td class="px-4 py-2 text-right whitespace-nowrap">
                                                 @can('repairs.update_status')
                                                     @if ($canUpdateThisRepair && ! in_array($repair->status, ['completed', 'cancelled']))

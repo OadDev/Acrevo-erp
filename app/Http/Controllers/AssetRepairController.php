@@ -46,7 +46,7 @@ class AssetRepairController extends Controller
     private function filtered(Request $request)
     {
         return AssetRepair::query()
-            ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'createdBy'])
+            ->with(['asset' => fn ($q) => $q->withTrashed(), 'workOrder', 'createdBy', 'media'])
             ->when($request->get('q'), fn ($q, $search) => $q->whereHas('asset', fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
