@@ -133,9 +133,76 @@ class WorkOrderEquipmentSummaryTest extends TestCase
         $summary = $response->viewData('assetWiseSummary')->firstWhere('asset.name', 'Ladder');
 
         $this->assertSame(10, $summary->total);
-        $this->assertSame(6, $summary->in_use);
+        $this->assertSame(6, $summary->available);
         $this->assertSame(2, $summary->damaged);
         $this->assertSame(2, $summary->missing);
+    }
+
+    /**
+     * Sir reported: changing a quantity's status to In Use or Ready for
+     * Return via Update Status was making it disappear from the Asset
+     * List, the stat cards, and the Asset-wise Summary - and filtering by
+     * that exact status found nothing either. Update Status only relabels
+     * a bucket in place; it never relocates it, so none of that quantity
+     * has actually left the work order. Only a Movement that actually
+     * moves quantity elsewhere should make it disappear from here.
+     */
+    public function test_marking_quantity_in_use_or_ready_for_return_keeps_the_asset_visible_in_the_list_summary_and_filter(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+        $destination = $this->workOrder($admin);
+        $asset = $this->allocate($workOrder, $admin, 'Generator', 10);
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id,
+            'from_status' => 'available', 'quantity' => 4, 'status' => 'in_use',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/assets/{$asset->id}/status", [
+            'location' => 'work_order', 'work_order_id' => $workOrder->id,
+            'from_status' => 'available', 'quantity' => 3, 'status' => 'ready_for_return',
+        ])->assertRedirect();
+        // 3 Available, 4 In Use, 3 Ready for Return now remain at this site.
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment");
+        $response->assertOk()->assertSee('Generator');
+        $response->assertViewHas('stockSummary', fn ($s) => $s['total'] === 10 && $s['available'] === 3);
+        $this->assertSame(4, $response->viewData('stockSummary')['in_use']);
+        $this->assertSame(3, $response->viewData('stockSummary')['ready_for_return']);
+
+        $assetIds = $response->viewData('assets')->pluck('id')->all();
+        $this->assertContains($asset->id, $assetIds);
+
+        $row = $response->viewData('assetWiseSummary')->firstWhere('asset.name', 'Generator');
+        $this->assertSame(10, $row->total);
+        $this->assertSame(3, $row->available);
+        $this->assertSame(4, $row->in_use);
+        $this->assertSame(3, $row->ready_for_return);
+
+        // Filtering explicitly by either new status still finds the asset -
+        // the filter now reads the AssetStock ledger instead of the stale
+        // legacy Asset::status column.
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment?status=in_use")
+            ->assertOk()->assertSee('Generator');
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment?status=ready_for_return")
+            ->assertOk()->assertSee('Generator');
+
+        // Moving the remaining 3 Available units out via a real Movement
+        // takes Available to 0, but the asset must stay fully visible here -
+        // the 4 In Use + 3 Ready for Return haven't gone anywhere.
+        $this->actingAs($admin)->post("/assets/{$asset->id}/movements", [
+            'type' => 'site_to_site_transfer',
+            'from_location' => 'work_order', 'from_work_order_id' => $workOrder->id,
+            'to_location' => 'work_order', 'to_work_order_id' => $destination->id,
+            'quantity' => 3, 'moved_at' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $after = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/equipment");
+        $after->assertOk()->assertSee('Generator');
+        $after->assertViewHas('stockSummary', fn ($s) => $s['total'] === 7 && $s['available'] === 0);
+        $this->assertSame(4, $after->viewData('stockSummary')['in_use']);
+        $this->assertSame(3, $after->viewData('stockSummary')['ready_for_return']);
+        $this->assertNotNull($after->viewData('assetWiseSummary')->firstWhere('asset.name', 'Generator'));
     }
 
     /**

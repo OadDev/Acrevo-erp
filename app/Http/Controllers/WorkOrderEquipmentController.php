@@ -29,6 +29,7 @@ class WorkOrderEquipmentController extends Controller
 
         $assets = $this->currentEquipment($request, $workOrder)->paginate(20)->withQueryString();
         $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $stockSummary['in_use'] = AssetStockSummary::inUse('work_order', $workOrder->id);
         $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
         // Same name ordering/direction as the asset list below, so the
         // summary above it never shows a different order than the list.
@@ -58,6 +59,7 @@ class WorkOrderEquipmentController extends Controller
 
         $assets = $this->currentEquipment($request, $workOrder)->get();
         $stockSummary = AssetStockSummary::totals('work_order', $workOrder->id);
+        $stockSummary['in_use'] = AssetStockSummary::inUse('work_order', $workOrder->id);
         $stockSummary['ready_for_return'] = AssetStockSummary::readyForReturn('work_order', $workOrder->id);
 
         $pdf = Pdf::loadView('work-orders.equipment.pdf', compact('workOrder', 'assets', 'stockSummary'));
@@ -115,29 +117,45 @@ class WorkOrderEquipmentController extends Controller
     }
 
     /**
-     * Every Asset holding Available quantity at this work order in the
-     * AssetStock ledger - not just those whose legacy current_work_order_id
-     * happens to point here, since that field only follows a Movement that
-     * covers an asset's entire available stock (see AssetMovementController
-     * ::confirm()). A partial quantity confirmed into this site still shows
-     * up here even though current_work_order_id may still point elsewhere.
+     * Every Asset still genuinely here at this work order - holding
+     * Available, In Use, or Ready for Return quantity in the AssetStock
+     * ledger, not just those whose legacy current_work_order_id happens to
+     * point here, since that field only follows a Movement that covers an
+     * asset's entire available stock (see AssetMovementController::confirm()).
+     * A partial quantity confirmed into this site still shows up here even
+     * though current_work_order_id may still point elsewhere.
+     *
+     * Changing a bucket's status via Update Status (e.g. Available -> In
+     * Use or Ready for Return) never relocates it, so it must never make
+     * the asset disappear from here by itself - only a Movement actually
+     * moving the quantity to another location does. Picking an explicit
+     * status in the filter searches that exact bucket instead (including
+     * damaged/missing/under_repair, which don't otherwise keep an asset
+     * listed here on their own), so it still finds the asset even when its
+     * current status isn't one of the three that qualify it by default.
      */
     private function currentEquipment(Request $request, WorkOrder $workOrder)
     {
+        $statusFilter = $request->get('status');
+
         return Asset::query()
-            ->whereHas('stocks', fn ($q) => $q->where('location', 'work_order')
-                ->where('work_order_id', $workOrder->id)
-                ->where('status', 'available')
-                ->where('quantity', '>', 0))
+            ->whereHas('stocks', function ($q) use ($workOrder, $statusFilter) {
+                $q->where('location', 'work_order')
+                    ->where('work_order_id', $workOrder->id)
+                    ->where('quantity', '>', 0);
+
+                $statusFilter
+                    ? $q->where('status', $statusFilter)
+                    : $q->whereIn('status', ['available', 'in_use', 'ready_for_return']);
+            })
             ->with(['stocks' => fn ($q) => $q->where('location', 'work_order')
                 ->where('work_order_id', $workOrder->id)
-                ->where('status', 'available')])
+                ->where('quantity', '>', 0)])
             ->when($request->get('q'), fn ($q, $search) => $q->where(fn ($q2) => $q2
                 ->where('asset_code', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('serial_number', 'like', "%{$search}%")
                 ->orWhere('category', 'like', "%{$search}%")))
-            ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
             ->orderBy($request->get('sort', 'name'), $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc');
     }
 

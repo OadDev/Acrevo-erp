@@ -27,12 +27,13 @@
 
     <table>
         <thead>
-            <tr><th>Total Allocated</th><th>Available</th><th>Damaged</th><th>Missing</th><th>Ready for Return</th></tr>
+            <tr><th>Total Allocated</th><th>Available</th><th>In Use</th><th>Damaged</th><th>Missing</th><th>Ready for Return</th></tr>
         </thead>
         <tbody>
             <tr>
                 <td>{{ $stockSummary['total'] }}</td>
                 <td>{{ $stockSummary['available'] }}</td>
+                <td>{{ $stockSummary['in_use'] }}</td>
                 <td>{{ $stockSummary['damaged'] }}</td>
                 <td>{{ $stockSummary['missing'] }}</td>
                 <td>{{ $stockSummary['ready_for_return'] }}</td>
@@ -56,7 +57,7 @@
                         <td>{{ $asset->category ?: '—' }}</td>
                         <td>{{ $asset->serial_number ?: '—' }}</td>
                         <td>{{ $asset->stocks->sum('quantity') }}</td>
-                        <td>{{ ucwords(str_replace('_', ' ', $asset->status)) }}</td>
+                        <td>{{ $asset->stocks->map(fn ($s) => ucwords(str_replace('_', ' ', $s->status)).' ('.$s->quantity.')')->join(', ') }}</td>
                         <td>{{ $asset->condition ?: '—' }}</td>
                     </tr>
                 @endforeach
