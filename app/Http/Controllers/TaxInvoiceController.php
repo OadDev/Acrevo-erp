@@ -10,6 +10,7 @@ use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TaxInvoiceController extends Controller
@@ -46,9 +47,21 @@ class TaxInvoiceController extends Controller
     {
         $data = $this->validated($request);
 
-        $taxInvoice = DB::transaction(function () use ($data, $request) {
+        // Optional manual override of the auto-generated number - kept out
+        // of validated()/update() entirely (never present on the edit form,
+        // see _form.blade.php) so an existing number can never be
+        // accidentally blanked out when editing. Left blank, this stays
+        // null and HasCompanySequenceNumber auto-generates exactly as
+        // before; provided, the trait sees it already set and skips
+        // auto-generation (see its own empty() check).
+        $manualNumber = $request->validate([
+            'tax_invoice_no' => ['nullable', 'string', 'max:255', Rule::unique('tax_invoices', 'tax_invoice_no')],
+        ])['tax_invoice_no'] ?? null;
+
+        $taxInvoice = DB::transaction(function () use ($data, $manualNumber, $request) {
             $taxInvoice = TaxInvoice::create([
                 ...collect($data)->except('items')->all(),
+                'tax_invoice_no' => $manualNumber,
                 'status' => 'draft',
                 'created_by' => $request->user()->id,
             ]);

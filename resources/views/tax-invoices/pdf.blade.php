@@ -21,10 +21,23 @@
     <table class="bordered">
         <tr>
             <td style="width: 55%;">
-                <span class="bold">{{ $taxInvoice->company->legal_name ?: $taxInvoice->company->name }}</span><br>
-                {{ $taxInvoice->company->address }}<br>
-                {{ $taxInvoice->company->city }}@if($taxInvoice->company->city && $taxInvoice->company->country), @endif{{ $taxInvoice->company->country }}<br>
-                {{ $taxInvoice->company->taxIdLabel() }} : {{ $taxInvoice->company->taxId() ?: '—' }}
+                <table class="no-border">
+                    <tr>
+                        <td style="width: 70px; padding: 0;">
+                            @if ($logoDataUri = $taxInvoice->company->logoDataUri())
+                                <img src="{{ $logoDataUri }}" style="max-height: 55px; max-width: 65px;">
+                            @else
+                                <span class="muted">Logo</span>
+                            @endif
+                        </td>
+                        <td style="padding: 0;">
+                            <span class="bold">{{ $taxInvoice->company->legal_name ?: $taxInvoice->company->name }}</span><br>
+                            {{ $taxInvoice->company->address }}<br>
+                            {{ $taxInvoice->company->city }}@if($taxInvoice->company->city && $taxInvoice->company->country), @endif{{ $taxInvoice->company->country }}<br>
+                            {{ $taxInvoice->company->taxIdLabel() }} : {{ $taxInvoice->company->taxId() ?: '—' }}
+                        </td>
+                    </tr>
+                </table>
             </td>
             <td>
                 <table class="no-border">
