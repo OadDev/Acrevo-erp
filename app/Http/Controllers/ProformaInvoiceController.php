@@ -11,6 +11,7 @@ use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProformaInvoiceController extends Controller
@@ -47,9 +48,21 @@ class ProformaInvoiceController extends Controller
     {
         $data = $this->validated($request);
 
-        $proformaInvoice = DB::transaction(function () use ($data, $request) {
+        // Optional manual override of the auto-generated number - kept out
+        // of validated()/update() entirely (never present on the edit form,
+        // see _form.blade.php) so an existing number can never be
+        // accidentally blanked out when editing. Left blank, this stays
+        // null and HasCompanySequenceNumber auto-generates exactly as
+        // before; provided, the trait sees it already set and skips
+        // auto-generation (see its own empty() check).
+        $manualNumber = $request->validate([
+            'proforma_no' => ['nullable', 'string', 'max:255', Rule::unique('proforma_invoices', 'proforma_no')],
+        ])['proforma_no'] ?? null;
+
+        $proformaInvoice = DB::transaction(function () use ($data, $manualNumber, $request) {
             $proformaInvoice = ProformaInvoice::create([
                 ...collect($data)->except('items')->all(),
+                'proforma_no' => $manualNumber,
                 'status' => 'draft',
                 'created_by' => $request->user()->id,
             ]);

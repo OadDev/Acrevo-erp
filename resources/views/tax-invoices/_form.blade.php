@@ -44,6 +44,15 @@
                     <x-input-label value="Tax % (GST/VAT)" />
                     <x-text-input type="number" step="0.01" min="0" max="100" name="tax_percent" x-model.number="taxPercent" class="mt-1 block w-full" />
                 </div>
+                @unless ($ti)
+                    <div>
+                        <x-input-label value="Invoice No. (optional)" />
+                        <x-text-input name="tax_invoice_no" placeholder="Leave blank to auto-generate" class="mt-1 block w-full" value="{{ old('tax_invoice_no') }}" />
+                        @error('tax_invoice_no')
+                            <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @endunless
             </div>
         </x-card>
 
