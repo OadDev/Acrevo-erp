@@ -281,6 +281,19 @@
             <path d="m9 13.5 2 2 4-4.5" />
             @break
 
+        @case('truck')
+            <path d="M3 7h11v9H3z" />
+            <path d="M14 10h4l3 3v3h-7z" />
+            <circle cx="7.5" cy="18" r="1.7" />
+            <circle cx="17.5" cy="18" r="1.7" />
+            @break
+
+        @case('package')
+            <path d="m3.5 8 8.5-4.5L20.5 8l-8.5 4.5L3.5 8Z" />
+            <path d="M3.5 8v8l8.5 4.5V12.5" />
+            <path d="M20.5 8v8L12 20.5" />
+            @break
+
         @default
             <circle cx="12" cy="12" r="8.5" />
     @endswitch

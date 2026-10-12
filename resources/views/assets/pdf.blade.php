@@ -148,7 +148,7 @@
     @else
         <table>
             <thead>
-                <tr><th>S.No</th><th>Date</th><th>From</th><th>To</th><th>Updated By</th><th>Site / WO</th><th>Reason</th></tr>
+                <tr><th>S.No</th><th>Date</th><th>From</th><th>To</th><th>Qty</th><th>Updated By</th><th>Site / WO</th><th>Reason</th></tr>
             </thead>
             <tbody>
                 @foreach ($asset->statusLogs->sortBy('created_at') as $log)
@@ -157,8 +157,9 @@
                         <td>{{ $log->created_at->format('d M Y') }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $log->previous_status)) }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $log->new_status)) }}</td>
+                        <td>{{ $log->quantity ?? '—' }}</td>
                         <td>{{ $log->updatedBy?->name }}</td>
-                        <td>{{ $log->workOrder?->work_order_no ?? '—' }}</td>
+                        <td>{{ $log->workOrder?->work_order_no ?? ($log->location ? ucwords(str_replace('_', ' ', $log->location)) : '—') }}</td>
                         <td>{{ $log->reason ?: '—' }}</td>
                     </tr>
                 @endforeach

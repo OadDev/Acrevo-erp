@@ -521,6 +521,118 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
     }
 
+    /**
+     * Sir's "WO Execution Method" feature: for a Way 2 (Sub-Contractor)
+     * work order, an executive role (team leader) and a sub-contractor can
+     * both be assigned together up front - the executive oversees, the
+     * sub-contractor executes, and both gain access to the work order.
+     */
+    public function test_work_order_creation_can_assign_both_an_executive_role_and_a_sub_contractor_for_way_2(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $leader = $this->executiveTeamLeader();
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        $subContractor = $this->subContractor();
+
+        $createResponse = $this->actingAs($admin)->get("/work-orders/create?quotation_id={$quotation->id}");
+        $createResponse->assertOk()->assertSee($leader->name)->assertSee($subContractor->name);
+
+        $storeResponse = $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with sub-contractor and executive',
+            'execution_way' => 'way_2',
+            'team_leader_id' => $leader->id,
+            'sub_contractor_user_id' => $subContractor->id,
+            'priority' => 'medium',
+        ]);
+        $storeResponse->assertRedirect();
+
+        $workOrder = WorkOrder::where('title', 'WO with sub-contractor and executive')->firstOrFail();
+        $this->assertSame('team_assigned', $workOrder->status);
+        $this->assertTrue($workOrder->executiveTeams()->where('executive_team_id', $team->id)->exists());
+        $this->assertTrue($workOrder->subContractors()->where('user_id', $subContractor->id)->exists());
+
+        // Both assigned users gain access to the work order's execution process.
+        $this->actingAs($leader)->get("/work-orders/{$workOrder->id}")->assertOk();
+        $this->actingAs($subContractor)->get("/work-orders/{$workOrder->id}")->assertOk();
+    }
+
+    /**
+     * Assigning a sub-contractor to a way_2 work order rejects a user that
+     * isn't actually a Sub Contractor - same guard assignSubContractor()
+     * already applies after creation.
+     */
+    public function test_work_order_creation_rejects_a_sub_contractor_user_without_the_role(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $quotation = Quotation::create(['enquiry_id' => $enquiry->id, 'client_id' => $client->id, 'status' => 'approved', 'total_amount' => 100, 'created_by' => $admin->id]);
+        $site = Site::create(['quotation_id' => $quotation->id, 'client_id' => $client->id, 'address' => 'Addr', 'created_by' => $admin->id]);
+
+        $response = $this->actingAs($admin)->post('/work-orders', [
+            'quotation_id' => $quotation->id,
+            'site_id' => $site->id,
+            'client_id' => $client->id,
+            'title' => 'WO with bad sub-contractor',
+            'execution_way' => 'way_2',
+            'sub_contractor_user_id' => $admin->id,
+            'priority' => 'medium',
+        ]);
+
+        $response->assertSessionHasErrors('sub_contractor_user_id');
+        $this->assertDatabaseMissing('work_orders', ['title' => 'WO with bad sub-contractor']);
+    }
+
+    /**
+     * The Team tab shows and allows managing both the Sub-Contractor and
+     * Executive Team panels together for a way_2 work order - they're no
+     * longer mutually exclusive.
+     */
+    public function test_the_team_tab_shows_both_sub_contractor_and_executive_team_panels_for_a_way_2_work_order(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'pending_hr_assignment', 'created_by' => $admin->id,
+        ]);
+
+        $leader = $this->executiveTeamLeader();
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
+        $subContractor = $this->subContractor();
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=team")
+            ->assertOk()
+            ->assertSee('Assign a Sub-Contractor')
+            ->assertSee('Assign a Team');
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/assign-sub-contractor", [
+            'sub_contractor_user_id' => $subContractor->id,
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/assign-team", [
+            'executive_team_id' => $team->id,
+        ])->assertRedirect();
+
+        $fresh = $workOrder->fresh();
+        $this->assertTrue($fresh->subContractors()->where('user_id', $subContractor->id)->whereNull('unassigned_at')->exists());
+        $this->assertTrue($fresh->executiveTeams()->where('executive_team_id', $team->id)->whereNull('unassigned_at')->exists());
+        $this->assertSame('team_assigned', $fresh->status);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=team")
+            ->assertOk()
+            ->assertSee($subContractor->name)
+            ->assertSee($team->name);
+    }
+
     public function test_work_order_creation_rejects_a_team_leader_with_no_active_team(): void
     {
         $admin = $this->admin();
@@ -1111,6 +1223,166 @@ class WorkOrderWorkflowTest extends TestCase
 
         $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}");
         $response->assertOk()->assertSee('Sri Lakshmi Steels');
+    }
+
+    /**
+     * Sir asked for a Remarks field on Material Inward, shown wherever the
+     * entry itself is shown - the tab table and the PDF report alike.
+     */
+    public function test_material_inward_remarks_are_saved_shown_and_editable(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10',
+            'unit' => 'Bags', 'rate' => '400', 'remarks' => 'Bags were slightly damp on arrival.',
+        ])->assertRedirect();
+
+        $entry = $workOrder->fresh()->materialEntries()->firstOrFail();
+        $this->assertSame('Bags were slightly damp on arrival.', $entry->remarks);
+
+        $this->actingAs($admin)->get("/work-orders/{$workOrder->id}")
+            ->assertOk()->assertSee('Bags were slightly damp on arrival.');
+
+        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/materials/{$entry->id}", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10',
+            'unit' => 'Bags', 'rate' => '400', 'remarks' => 'Replacement bags received, all good.',
+        ])->assertRedirect();
+
+        $this->assertSame('Replacement bags received, all good.', $entry->fresh()->remarks);
+    }
+
+    /**
+     * The Filter option sir asked for on Material Inward - narrows the
+     * entries shown on the tab by material name, supplier, scope, and
+     * entry date range, mirroring the Worker Attendance tab's filter.
+     */
+    public function test_material_inward_entries_can_be_filtered(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-05', 'material_name' => 'Steel Rods', 'quantity' => '10',
+            'unit' => 'Nos', 'rate' => '650', 'vendor' => 'Sri Lakshmi Steels', 'scope' => 'client',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-20', 'material_name' => 'Cement', 'quantity' => '50',
+            'unit' => 'Bags', 'rate' => '400', 'vendor' => 'Acme Traders', 'scope' => 'company',
+        ])->assertRedirect();
+
+        // "Cement" and "Steel Rods" both appear elsewhere on the page too
+        // (the Daily Material Used form's own placeholder text mentions
+        // "Cement"), so exclusion is asserted against each entry's unique
+        // vendor name instead, to avoid a false match against unrelated
+        // markup on the same page.
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_material=steel");
+        $page->assertOk()->assertSee('Sri Lakshmi Steels')->assertDontSee('Acme Traders');
+
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_vendor=Acme");
+        $page->assertOk()->assertSee('Acme Traders')->assertDontSee('Sri Lakshmi Steels');
+
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_scope=client");
+        $page->assertOk()->assertSee('Sri Lakshmi Steels')->assertDontSee('Acme Traders');
+
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_from=2026-08-10&mi_to=2026-08-31");
+        $page->assertOk()->assertSee('Acme Traders')->assertDontSee('Sri Lakshmi Steels');
+
+        // No filter applied - both still show.
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials");
+        $page->assertOk()->assertSee('Sri Lakshmi Steels')->assertSee('Acme Traders');
+    }
+
+    /**
+     * The PDF option sir asked for on the Material Inward filter - its
+     * link on the tab carries the current filter through as query params,
+     * and the dedicated PDF route applies the same filter fresh against
+     * the database rather than just the entries already on the page.
+     */
+    public function test_material_inward_entries_can_be_downloaded_as_a_filtered_pdf(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-05', 'material_name' => 'Steel Rods', 'quantity' => '10',
+            'unit' => 'Nos', 'rate' => '650', 'vendor' => 'Sri Lakshmi Steels', 'scope' => 'client',
+            'remarks' => 'Delivered on time.',
+        ])->assertRedirect();
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => '2026-08-20', 'material_name' => 'Cement', 'quantity' => '50',
+            'unit' => 'Bags', 'rate' => '400', 'vendor' => 'Acme Traders', 'scope' => 'company',
+        ])->assertRedirect();
+
+        // The tab's PDF link carries the current filter through as query
+        // params on the dedicated materials.pdf route.
+        $page = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}?tab=materials&mi_vendor=Acme");
+        $page->assertOk()->assertSee(route('work-orders.materials.pdf', ['workOrder' => $workOrder, 'vendor' => 'Acme']), false);
+
+        $html = view('work-orders.materials-pdf', [
+            'workOrder' => $workOrder,
+            'entries' => $workOrder->materialEntries()->where('vendor', 'like', '%Acme%')->get(),
+            'material' => null, 'vendor' => 'Acme', 'scope' => null, 'from' => null, 'to' => null,
+        ])->render();
+        $this->assertStringContainsString('Cement', $html);
+        $this->assertStringNotContainsString('Steel Rods', $html);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/materials/pdf?vendor=Acme");
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+
+        // No filter - the full report includes both, remarks and all.
+        $fullHtml = view('work-orders.materials-pdf', [
+            'workOrder' => $workOrder,
+            'entries' => $workOrder->materialEntries,
+            'material' => null, 'vendor' => null, 'scope' => null, 'from' => null, 'to' => null,
+        ])->render();
+        $this->assertStringContainsString('Steel Rods', $fullHtml);
+        $this->assertStringContainsString('Cement', $fullHtml);
+        $this->assertStringContainsString('Delivered on time.', $fullHtml);
+    }
+
+    /**
+     * Remarks must also appear in the downloadable report - both the
+     * per-section "materials" PDF and the full work order PDF share the
+     * same underlying materials table.
+     */
+    public function test_material_inward_remarks_appear_in_the_pdf_report(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/materials", [
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'quantity' => '10',
+            'unit' => 'Bags', 'rate' => '400', 'remarks' => 'Short delivery, 2 bags pending.',
+        ])->assertRedirect();
+
+        $html = view('work-orders.pdf.section', ['workOrder' => $workOrder->fresh(), 'section' => 'materials'])->render();
+        $this->assertStringContainsString('Short delivery, 2 bags pending.', $html);
+
+        $response = $this->actingAs($admin)->get("/work-orders/{$workOrder->id}/pdf/materials");
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_daily_material_used_entry_can_be_recorded(): void

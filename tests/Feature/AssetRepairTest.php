@@ -242,6 +242,38 @@ class AssetRepairTest extends TestCase
         $this->assertCount(1, $repair->getMedia('attachments'));
     }
 
+    /**
+     * Sir reported: a repair entry with an uploaded image/file was created
+     * successfully, but there was no way to open that file again afterward
+     * - the Repair History tables (on the asset's own page and on the
+     * global Repair History list) never rendered a link to it at all.
+     */
+    public function test_an_uploaded_repair_attachment_can_be_viewed_from_both_repair_history_tables(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/assets', ['name' => 'Jack Hammer'])->assertRedirect();
+        $asset = Asset::where('name', 'Jack Hammer')->firstOrFail();
+
+        $this->actingAs($admin)->post("/assets/{$asset->id}/repairs", [
+            'repair_type' => 'mechanical', 'location' => 'company_store', 'quantity' => 1,
+            'issue_description' => 'Cracked housing', 'reported_date' => now()->toDateString(),
+            'attachments' => [UploadedFile::fake()->image('damage.jpg')],
+        ])->assertRedirect();
+
+        $repair = AssetRepair::where('asset_id', $asset->id)->firstOrFail();
+        $file = $repair->getMedia('attachments')->first();
+        $this->assertNotNull($file);
+
+        $this->actingAs($admin)->get("/assets/{$asset->id}")
+            ->assertOk()
+            ->assertSee($file->getUrl(), false);
+
+        $this->actingAs($admin)->get('/asset-repairs')
+            ->assertOk()
+            ->assertSee($file->getUrl(), false);
+    }
+
     public function test_repair_history_still_loads_after_the_referenced_asset_is_removed(): void
     {
         $admin = $this->admin();

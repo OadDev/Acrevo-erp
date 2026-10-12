@@ -65,16 +65,20 @@
                 @if ($asset->stocks->isEmpty())
                     <p class="px-4 pb-4 text-sm text-gray-400">No stock recorded yet.</p>
                 @else
+                    @php
+                        $statusColumns = collect(array_merge(\App\Models\AssetStock::STATUSES, \App\Models\Asset::STATUSES))
+                            ->unique()
+                            ->filter(fn ($status) => $asset->stocks->contains('status', $status))
+                            ->values();
+                    @endphp
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                             <thead class="bg-gray-50 dark:bg-gray-800/50">
                                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                     <th class="px-4 py-2">Location</th>
-                                    <th class="px-4 py-2 text-right">Available</th>
-                                    <th class="px-4 py-2 text-right">In Transit</th>
-                                    <th class="px-4 py-2 text-right">Missing</th>
-                                    <th class="px-4 py-2 text-right">Damaged</th>
-                                    <th class="px-4 py-2 text-right">Under Repair</th>
+                                    @foreach ($statusColumns as $status)
+                                        <th class="px-4 py-2 text-right">{{ ucwords(str_replace('_', ' ', $status)) }}</th>
+                                    @endforeach
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -88,7 +92,7 @@
                                                 {{ ucwords(str_replace('_', ' ', $first->location)) }}
                                             @endif
                                         </td>
-                                        @foreach (\App\Models\AssetStock::STATUSES as $status)
+                                        @foreach ($statusColumns as $status)
                                             <td class="px-4 py-2 text-right text-gray-500">{{ $group->firstWhere('status', $status)->quantity ?? 0 }}</td>
                                         @endforeach
                                     </tr>
@@ -247,6 +251,7 @@
                                         <th class="px-4 py-2">Warranty</th>
                                         <th class="px-4 py-2 text-right">Cost</th>
                                         <th class="px-4 py-2">Status</th>
+                                        <th class="px-4 py-2">Attachments</th>
                                         <th class="px-4 py-2"></th>
                                     </tr>
                                 </thead>
@@ -263,6 +268,13 @@
                                             <td class="px-4 py-2 text-gray-500">{{ $repair->is_warranty_repair ? 'Warranty' : 'Paid' }}</td>
                                             <td class="px-4 py-2 text-right text-gray-500">{{ $repair->cost !== null ? 'Rs. '.number_format($repair->cost, 2) : '—' }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$repair->status" /></td>
+                                            <td class="px-4 py-2">
+                                                @forelse ($repair->getMedia('attachments') as $file)
+                                                    <a href="{{ $file->getUrl() }}" target="_blank" class="block text-xs text-indigo-600 hover:underline">{{ $file->file_name }}</a>
+                                                @empty
+                                                    <span class="text-xs text-gray-400">—</span>
+                                                @endforelse
+                                            </td>
                                             <td class="px-4 py-2 text-right whitespace-nowrap">
                                                 @can('repairs.update_status')
                                                     @if ($canUpdateThisRepair && ! in_array($repair->status, ['completed', 'cancelled']))
@@ -371,10 +383,14 @@
                                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         <th class="px-4 py-2">Date</th>
                                         <th class="px-4 py-2">Change</th>
+                                        <th class="px-4 py-2 text-right">Qty</th>
                                         <th class="px-4 py-2">Updated By</th>
                                         <th class="px-4 py-2">Site / Work Order</th>
                                         <th class="px-4 py-2">Reason / Remarks</th>
                                         <th class="px-4 py-2">Proof</th>
+                                        @can('assets.delete_status_log')
+                                            <th class="px-4 py-2">Action</th>
+                                        @endcan
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -382,14 +398,32 @@
                                         <tr>
                                             <td class="px-4 py-2 text-gray-500">{{ $log->created_at->format('d M Y, h:i A') }}</td>
                                             <td class="px-4 py-2"><x-badge :status="$log->previous_status" /> &rarr; <x-badge :status="$log->new_status" /></td>
+                                            <td class="px-4 py-2 text-right text-gray-500">{{ $log->quantity ?? '—' }}</td>
                                             <td class="px-4 py-2 text-gray-500">{{ $log->updatedBy?->name }} @if($log->role)<span class="text-xs text-gray-400">({{ $log->role }})</span>@endif</td>
-                                            <td class="px-4 py-2 text-gray-500">{{ $log->workOrder?->work_order_no ?? '—' }}</td>
+                                            <td class="px-4 py-2 text-gray-500">
+                                                @if ($log->workOrder)
+                                                    {{ $log->workOrder->work_order_no }}
+                                                @elseif ($log->location)
+                                                    {{ ucwords(str_replace('_', ' ', $log->location)) }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
                                             <td class="px-4 py-2 text-gray-500">{{ $log->reason ?: '—' }}</td>
                                             <td class="px-4 py-2">
                                                 @foreach ($log->getMedia('proof') as $proof)
                                                     <a href="{{ $proof->getUrl() }}" target="_blank" class="text-xs text-indigo-600 hover:underline">View</a>
                                                 @endforeach
                                             </td>
+                                            @can('assets.delete_status_log')
+                                                <td class="px-4 py-2">
+                                                    <form method="POST" action="{{ route('asset-status-logs.destroy', $log) }}" onsubmit="return confirm('Delete this status change? The {{ $log->quantity ?? '' }} unit(s) will be moved back from \'{{ ucwords(str_replace('_', ' ', $log->new_status)) }}\' to \'{{ ucwords(str_replace('_', ' ', $log->previous_status)) }}\'.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                                                    </form>
+                                                </td>
+                                            @endcan
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -436,20 +470,61 @@
             @if ($canUpdateStatus)
                 <x-card>
                     <h3 class="mb-3 text-sm font-semibold text-gray-500">Update Status</h3>
-                    <form method="POST" action="{{ route('assets.status.update', $asset) }}" enctype="multipart/form-data" class="space-y-3">
-                        @csrf
-                        <x-select-input name="status" class="w-full text-sm" required>
-                            @foreach (\App\Models\Asset::STATUSES as $status)
-                                <option value="{{ $status }}" @selected($status === $asset->status)>{{ ucwords(str_replace('_', ' ', $status)) }}</option>
-                            @endforeach
-                        </x-select-input>
-                        <x-textarea-input name="reason" rows="2" class="w-full text-sm" placeholder="Reason / remarks"></x-textarea-input>
-                        <div>
-                            <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
-                            <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
-                        </div>
-                        <x-primary-button class="w-full justify-center">Save Status</x-primary-button>
-                    </form>
+                    @if ($statusUpdateStocks->isEmpty())
+                        <p class="text-sm text-gray-400">No stock available to update.</p>
+                    @else
+                        <form method="POST" action="{{ route('assets.status.update', $asset) }}" enctype="multipart/form-data" class="space-y-3"
+                            x-data="{ fromAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.location.value = parts[0] || '';
+                                $refs.workOrderId.value = parts[1] || '';
+                                $refs.fromStatus.value = parts[2] || '';
+                            ">
+                            @csrf
+                            <div>
+                                <x-input-label value="Location / Work Order & Current Status" />
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="fromAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
+                                    <option value="">Select bucket</option>
+                                    @foreach ($statusUpdateStocks as $stock)
+                                        <option value="{{ $stock->location }}|{{ $stock->work_order_id }}|{{ $stock->status }}" data-available="{{ $stock->quantity }}">
+                                            {{ $stock->location === 'work_order' && $stock->workOrder ? $stock->workOrder->work_order_no : ucwords(str_replace('_', ' ', $stock->location)) }} — {{ ucwords(str_replace('_', ' ', $stock->status)) }} — {{ $stock->quantity }} units
+                                        </option>
+                                    @endforeach
+                                </x-select-input>
+                                <!-- Filled from the bucket select's own live value right before
+                                     submit (see x-on:submit above), not mirrored via :value on
+                                     every change - a browser restoring a previous selection on
+                                     back/forward navigation without firing a change event used to
+                                     leave these stale while the select looked selected, submitting
+                                     an empty from_status and failing with "The selected from
+                                     status is invalid." -->
+                                <input type="hidden" name="location" x-ref="location">
+                                <input type="hidden" name="work_order_id" x-ref="workOrderId">
+                                <input type="hidden" name="from_status" x-ref="fromStatus">
+                            </div>
+                            <div>
+                                <x-input-label value="Quantity" />
+                                <x-text-input type="number" name="quantity" min="1" x-bind:max="fromAvailable" class="w-full text-sm" required />
+                                <p class="mt-1 text-xs text-gray-400" x-show="fromAvailable" x-text="'Max ' + fromAvailable + ' units.'"></p>
+                            </div>
+                            <div>
+                                <x-input-label value="New Status" />
+                                <x-select-input name="status" class="w-full text-sm" required>
+                                    @foreach (\App\Models\Asset::STATUSES as $status)
+                                        <option value="{{ $status }}">{{ ucwords(str_replace('_', ' ', $status)) }}</option>
+                                    @endforeach
+                                </x-select-input>
+                            </div>
+                            <x-textarea-input name="reason" rows="2" class="w-full text-sm" placeholder="Reason / remarks"></x-textarea-input>
+                            <div>
+                                <label class="text-xs text-gray-400">Supporting photo / document (optional)</label>
+                                <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="mt-1 block w-full text-sm">
+                            </div>
+                            <x-primary-button class="w-full justify-center">Save Status</x-primary-button>
+                        </form>
+                    @endif
                 </x-card>
             @endif
 
@@ -459,7 +534,13 @@
                     @if ($availableStocks->isEmpty())
                         <p class="text-sm text-gray-400">No available stock to move.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3" x-data="{ toLocation: 'work_order', from: '', fromAvailable: null }">
+                        <form method="POST" action="{{ route('assets.movements.store', $asset) }}" class="space-y-3"
+                            x-data="{ toLocation: 'work_order', fromAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.fromLocation.value = parts[0] || '';
+                                $refs.fromWorkOrderId.value = parts[1] || '';
+                            ">
                             @csrf
                             <x-select-input name="type" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetMovement::TYPES as $type)
@@ -469,8 +550,8 @@
                             </x-select-input>
                             <div>
                                 <x-input-label value="From Location" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; from = o.value; fromAvailable = o.dataset.available">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="fromAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select Location</option>
                                     @foreach ($availableStocks as $stock)
                                         <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
@@ -478,8 +559,10 @@
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="from_location" :value="from.split('|')[0]">
-                                <input type="hidden" name="from_work_order_id" :value="from.split('|')[1] || ''">
+                                <!-- Filled from the select's live value at submit time - see the
+                                     note on the Update Status form above for why. -->
+                                <input type="hidden" name="from_location" x-ref="fromLocation">
+                                <input type="hidden" name="from_work_order_id" x-ref="fromWorkOrderId">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />
@@ -513,7 +596,13 @@
                     @if ($availableStocks->isEmpty())
                         <p class="text-sm text-gray-400">No available stock to verify.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ at: '', atAvailable: null }">
+                        <form method="POST" action="{{ route('assets.verifications.store', $asset) }}" enctype="multipart/form-data" class="space-y-3"
+                            x-data="{ atAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.location.value = parts[0] || '';
+                                $refs.workOrderId.value = parts[1] || '';
+                            ">
                             @csrf
                             <x-select-input name="result" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetVerification::RESULTS as $result)
@@ -522,8 +611,8 @@
                             </x-select-input>
                             <div>
                                 <x-input-label value="At Location" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; at = o.value; atAvailable = o.dataset.available">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="atAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select Location</option>
                                     @foreach ($availableStocks as $stock)
                                         <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
@@ -531,8 +620,10 @@
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="location" :value="at.split('|')[0]">
-                                <input type="hidden" name="work_order_id" :value="at.split('|')[1] || ''">
+                                <!-- Filled from the select's live value at submit time - see the
+                                     note on the Update Status form above for why. -->
+                                <input type="hidden" name="location" x-ref="location">
+                                <input type="hidden" name="work_order_id" x-ref="workOrderId">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />
@@ -558,7 +649,13 @@
                     @if ($availableStocks->isEmpty())
                         <p class="text-sm text-gray-400">No available stock to report a repair for.</p>
                     @else
-                        <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3" x-data="{ at: '', atAvailable: null }">
+                        <form method="POST" action="{{ route('assets.repairs.store', $asset) }}" enctype="multipart/form-data" class="space-y-3"
+                            x-data="{ atAvailable: null }"
+                            x-on:submit="
+                                const parts = ($refs.bucket.value || '').split('|');
+                                $refs.location.value = parts[0] || '';
+                                $refs.workOrderId.value = parts[1] || '';
+                            ">
                             @csrf
                             <x-select-input name="repair_type" class="w-full text-sm" required>
                                 @foreach (\App\Models\AssetRepair::TYPES as $type)
@@ -567,8 +664,8 @@
                             </x-select-input>
                             <div>
                                 <x-input-label value="At Location" />
-                                <x-select-input class="w-full text-sm" required
-                                    x-on:change="const o = $event.target.selectedOptions[0]; at = o.value; atAvailable = o.dataset.available">
+                                <x-select-input class="w-full text-sm" required x-ref="bucket"
+                                    x-on:change="atAvailable = $event.target.selectedOptions[0]?.dataset.available ?? null">
                                     <option value="">Select Location</option>
                                     @foreach ($availableStocks as $stock)
                                         <option value="{{ $stock->location }}|{{ $stock->work_order_id }}" data-available="{{ $stock->quantity }}">
@@ -576,8 +673,10 @@
                                         </option>
                                     @endforeach
                                 </x-select-input>
-                                <input type="hidden" name="location" :value="at.split('|')[0]">
-                                <input type="hidden" name="work_order_id" :value="at.split('|')[1] || ''">
+                                <!-- Filled from the select's live value at submit time - see the
+                                     note on the Update Status form above for why. -->
+                                <input type="hidden" name="location" x-ref="location">
+                                <input type="hidden" name="work_order_id" x-ref="workOrderId">
                             </div>
                             <div>
                                 <x-input-label value="Quantity" />

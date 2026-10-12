@@ -77,6 +77,55 @@ class WorkOrderWorkerAttendanceFilterTest extends TestCase
         $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
     }
 
+    /**
+     * Labourers are paid weekly, so the common case is downloading every
+     * worker's attendance for a date range at once - not just one worker
+     * at a time - to hand out alongside that week's pay. Leaving
+     * att_worker_id unset (the "All Workers" option) must still produce a
+     * PDF, one section per worker with its own subtotal.
+     */
+    public function test_worker_attendance_can_be_downloaded_as_a_pdf_for_all_workers_at_once(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        $mason = Employee::create(['name' => 'Mason Kumar', 'employee_code' => 'W1', 'department_id' => Department::first()->id, 'status' => 'active']);
+        $helper = Employee::create(['name' => 'Helper Raj', 'employee_code' => 'W2', 'department_id' => Department::first()->id, 'status' => 'active']);
+
+        $workOrder->attendances()->create(['employee_id' => $mason->id, 'date' => '2026-08-03', 'status' => 'present', 'salary' => 600, 'marked_by' => $admin->id]);
+        $workOrder->attendances()->create(['employee_id' => $mason->id, 'date' => '2026-08-04', 'status' => 'present', 'salary' => 600, 'marked_by' => $admin->id]);
+        $workOrder->attendances()->create(['employee_id' => $helper->id, 'date' => '2026-08-03', 'status' => 'present', 'salary' => 500, 'marked_by' => $admin->id]);
+        // Outside the filtered week - must not appear in either worker's
+        // section or affect the totals.
+        $workOrder->attendances()->create(['employee_id' => $mason->id, 'date' => '2026-08-25', 'status' => 'present', 'salary' => 600, 'marked_by' => $admin->id]);
+
+        // The tab's filter form always shows the PDF button now, even with
+        // no worker selected.
+        $page = $this->actingAs($admin)->get(route('work-orders.show', $workOrder).'?tab=mb&att_from=2026-08-01&att_to=2026-08-07');
+        $page->assertOk()->assertSee(route('work-orders.attendance.pdf', ['workOrder' => $workOrder, 'from' => '2026-08-01', 'to' => '2026-08-07']));
+
+        $pdfResponse = $this->actingAs($admin)->get(route('work-orders.attendance.pdf', [
+            'workOrder' => $workOrder, 'from' => '2026-08-01', 'to' => '2026-08-07',
+        ]));
+        $pdfResponse->assertOk();
+        $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
+
+        // Assert through the rendered HTML the PDF is built from, same
+        // pattern as the single-worker test below.
+        $records = \App\Models\Attendance::where('work_order_id', $workOrder->id)
+            ->whereDate('date', '>=', '2026-08-01')->whereDate('date', '<=', '2026-08-07')
+            ->with('employee')->orderBy('date')->get()
+            ->groupBy('employee_id')->sortBy(fn ($entries) => $entries->first()->employee?->name ?? '');
+        $html = view('work-orders.attendance-pdf-all', compact('workOrder', 'records') + ['from' => '2026-08-01', 'to' => '2026-08-07'])->render();
+
+        $this->assertStringContainsString('Mason Kumar', $html);
+        $this->assertStringContainsString('Helper Raj', $html);
+        $this->assertStringContainsString('03 Aug 2026', $html);
+        $this->assertStringNotContainsString('25 Aug 2026', $html);
+        // Mason's subtotal for the week: 2 x 600 = 1200.
+        $this->assertStringContainsString('1,200.00', $html);
+    }
+
     public function test_the_worker_attendance_pdf_only_includes_records_from_this_work_order(): void
     {
         $admin = $this->admin();

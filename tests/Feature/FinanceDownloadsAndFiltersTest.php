@@ -65,6 +65,62 @@ class FinanceDownloadsAndFiltersTest extends TestCase
         $response->assertSee(route('work-orders.company-ledger.export', $workOrder), false);
     }
 
+    public function test_site_ledger_entries_can_be_downloaded_as_a_filtered_pdf(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        $workOrder->ledgers()->create(['type' => 'credit', 'amount' => 5000, 'entry_date' => '2026-08-05', 'balance' => 0, 'created_by' => $admin->id, 'category' => 'Cement']);
+        $workOrder->ledgers()->create(['type' => 'debit', 'amount' => 1500, 'entry_date' => '2026-08-10', 'balance' => 0, 'created_by' => $admin->id, 'category' => 'Transport']);
+        // Outside the filter - must not appear or count toward totals.
+        $workOrder->ledgers()->create(['type' => 'debit', 'amount' => 9000, 'entry_date' => '2026-08-25', 'balance' => 0, 'created_by' => $admin->id]);
+
+        // The filter form shows a Download PDF link alongside the CSV one.
+        $page = $this->actingAs($admin)->get(route('work-orders.show', $workOrder).'?tab=ledger&ledger_from=2026-08-01&ledger_to=2026-08-15');
+        $page->assertOk()->assertSee(route('work-orders.ledger.pdf', ['workOrder' => $workOrder, 'from' => '2026-08-01', 'to' => '2026-08-15']));
+
+        $pdfResponse = $this->actingAs($admin)->get(route('work-orders.ledger.pdf', [
+            'workOrder' => $workOrder, 'from' => '2026-08-01', 'to' => '2026-08-15',
+        ]));
+        $pdfResponse->assertOk();
+        $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
+
+        $entries = $workOrder->ledgers()->whereDate('entry_date', '>=', '2026-08-01')->whereDate('entry_date', '<=', '2026-08-15')->orderBy('entry_date')->get();
+        $html = view('work-orders.ledger-pdf', ['workOrder' => $workOrder, 'entries' => $entries, 'from' => '2026-08-01', 'to' => '2026-08-15', 'title' => 'Site Ledger'])->render();
+
+        $this->assertStringContainsString('Cement', $html);
+        $this->assertStringContainsString('Transport', $html);
+        $this->assertStringContainsString('5,000.00', $html);
+        $this->assertStringNotContainsString('9,000.00', $html);
+    }
+
+    public function test_company_ledger_entries_can_be_downloaded_as_a_filtered_pdf_for_finance_and_admin_only(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        $workOrder->companyLedgers()->create(['type' => 'credit', 'amount' => 8000, 'entry_date' => '2026-08-05', 'balance' => 0, 'created_by' => $admin->id, 'category' => 'Fuel']);
+        $workOrder->companyLedgers()->create(['type' => 'debit', 'amount' => 2000, 'entry_date' => '2026-08-25', 'balance' => 0, 'created_by' => $admin->id, 'category' => 'Tools']);
+
+        $pdfResponse = $this->actingAs($admin)->get(route('work-orders.company-ledger.pdf', [
+            'workOrder' => $workOrder, 'from' => '2026-08-01', 'to' => '2026-08-15',
+        ]));
+        $pdfResponse->assertOk();
+        $this->assertSame('application/pdf', $pdfResponse->headers->get('Content-Type'));
+
+        $entries = $workOrder->companyLedgers()->whereDate('entry_date', '>=', '2026-08-01')->whereDate('entry_date', '<=', '2026-08-15')->orderBy('entry_date')->get();
+        $html = view('work-orders.ledger-pdf', ['workOrder' => $workOrder, 'entries' => $entries, 'from' => '2026-08-01', 'to' => '2026-08-15', 'title' => 'Company Ledger'])->render();
+        $this->assertStringContainsString('Fuel', $html);
+        $this->assertStringNotContainsString('Tools', $html);
+
+        // Restricted to Finance/Admin, same as the CSV export.
+        $email = 'sales+'.uniqid().'@example.com';
+        $this->actingAs($admin)->post('/admin/users', ['name' => 'Sales Person', 'email' => $email, 'role' => 'Sales'])->assertRedirect();
+        $sales = User::where('email', $email)->firstOrFail();
+
+        $this->actingAs($sales)->get(route('work-orders.company-ledger.pdf', $workOrder))->assertForbidden();
+    }
+
     public function test_finance_invoices_can_be_downloaded_as_pdf_and_csv(): void
     {
         $admin = $this->admin();

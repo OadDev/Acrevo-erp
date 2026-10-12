@@ -2,7 +2,7 @@
     <x-slot name="header">
         <x-page-header :title="'Equipment — '.$workOrder->work_order_no" subtitle="Current equipment assigned to this site.">
             <x-slot name="actions">
-                <x-link-button :href="route('work-orders.equipment.summary.pdf', $workOrder)" variant="secondary">Download Asset-wise Report (PDF)</x-link-button>
+                <x-link-button :href="route('work-orders.equipment.summary.pdf', array_merge(['workOrder' => $workOrder], request()->query()))" variant="secondary">Download Asset-wise Report (PDF)</x-link-button>
                 <x-link-button :href="route('work-orders.equipment.pdf', array_merge(['workOrder' => $workOrder], request()->query()))" variant="secondary">Download PDF</x-link-button>
                 @can('assets.view_history')
                     <x-link-button :href="route('work-orders.equipment.history', $workOrder)" variant="secondary">Equipment History</x-link-button>
@@ -12,7 +12,7 @@
         </x-page-header>
     </x-slot>
 
-    <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-6">
         <x-card class="flex items-start justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Total Allocated</p>
@@ -33,6 +33,15 @@
         </x-card>
         <x-card class="flex items-start justify-between">
             <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">In Use</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['in_use'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                <x-icon name="wrench" class="h-5 w-5" />
+            </div>
+        </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Damaged</p>
                 <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['damaged'] }}</p>
             </div>
@@ -49,6 +58,15 @@
                 <x-icon name="search" class="h-5 w-5" />
             </div>
         </x-card>
+        <x-card class="flex items-start justify-between">
+            <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Ready for Return</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ $stockSummary['ready_for_return'] }}</p>
+            </div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
+                <x-icon name="rotate-ccw" class="h-5 w-5" />
+            </div>
+        </x-card>
     </div>
 
     <x-card :padded="false" class="mb-4">
@@ -57,9 +75,12 @@
             <table class="min-w-full divide-y divide-gray-100 text-sm dark:divide-gray-800">
                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th class="px-4 py-2">S.No</th>
                         <th class="px-4 py-2">Asset Name</th>
                         <th class="px-4 py-2 text-right">Total Allocated</th>
+                        <th class="px-4 py-2 text-right">Available</th>
                         <th class="px-4 py-2 text-right">In Use</th>
+                        <th class="px-4 py-2 text-right">Ready for Return</th>
                         <th class="px-4 py-2 text-right">Damaged</th>
                         <th class="px-4 py-2 text-right">Missing</th>
                     </tr>
@@ -67,14 +88,17 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @forelse ($assetWiseSummary as $row)
                         <tr>
+                            <td class="px-4 py-2 text-gray-500">{{ $loop->iteration }}</td>
                             <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $row->asset?->name ?? 'Removed Asset' }}</td>
                             <td class="px-4 py-2 text-right text-gray-500">{{ $row->total }}</td>
-                            <td class="px-4 py-2 text-right text-emerald-600">{{ $row->in_use }}</td>
+                            <td class="px-4 py-2 text-right text-emerald-600">{{ $row->available }}</td>
+                            <td class="px-4 py-2 text-right text-blue-600">{{ $row->in_use }}</td>
+                            <td class="px-4 py-2 text-right text-sky-600">{{ $row->ready_for_return }}</td>
                             <td class="px-4 py-2 text-right text-amber-600">{{ $row->damaged }}</td>
                             <td class="px-4 py-2 text-right text-rose-600">{{ $row->missing }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">No equipment allocated to this site yet.</td></tr>
+                        <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">No equipment allocated to this site yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -181,7 +205,13 @@
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->category ?: '—' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->serial_number ?: '—' }}</td>
                                 <td class="px-4 py-3 text-right text-gray-500">{{ $asset->stocks->sum('quantity') }}</td>
-                                <td class="px-4 py-3"><x-badge :status="$asset->status" /></td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach ($asset->stocks as $stock)
+                                            <x-badge :status="$stock->status">{{ ucwords(str_replace('_', ' ', $stock->status)) }} ({{ $stock->quantity }})</x-badge>
+                                        @endforeach
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3 text-gray-500">{{ $asset->condition ?: '—' }}</td>
                             </tr>
                         @endforeach

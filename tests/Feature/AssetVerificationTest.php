@@ -157,7 +157,10 @@ class AssetVerificationTest extends TestCase
 
         $this->actingAs($admin)->post('/assets', ['name' => 'Missing Drill', 'status' => 'available'])->assertRedirect();
         $missingAsset = Asset::where('name', 'Missing Drill')->firstOrFail();
-        $this->actingAs($admin)->post("/assets/{$missingAsset->id}/status", ['status' => 'missing'])->assertRedirect();
+        $this->actingAs($admin)->post("/assets/{$missingAsset->id}/status", [
+            'location' => $missingAsset->current_location, 'work_order_id' => $missingAsset->current_work_order_id,
+            'from_status' => 'available', 'quantity' => 1, 'status' => 'missing',
+        ])->assertRedirect();
 
         $this->actingAs($admin)->post('/assets', ['name' => 'Present Drill', 'status' => 'available'])->assertRedirect();
 

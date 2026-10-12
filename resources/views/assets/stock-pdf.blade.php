@@ -31,15 +31,19 @@
     @if ($asset->stocks->isEmpty())
         <p class="muted">No stock recorded yet.</p>
     @else
+        @php
+            $statusColumns = collect(array_merge(\App\Models\AssetStock::STATUSES, \App\Models\Asset::STATUSES))
+                ->unique()
+                ->filter(fn ($status) => $asset->stocks->contains('status', $status))
+                ->values();
+        @endphp
         <table>
             <thead>
                 <tr>
                     <th>Location</th>
-                    <th class="text-right">Available</th>
-                    <th class="text-right">In Transit</th>
-                    <th class="text-right">Missing</th>
-                    <th class="text-right">Damaged</th>
-                    <th class="text-right">Under Repair</th>
+                    @foreach ($statusColumns as $status)
+                        <th class="text-right">{{ ucwords(str_replace('_', ' ', $status)) }}</th>
+                    @endforeach
                 </tr>
             </thead>
             <tbody>
@@ -53,7 +57,7 @@
                                 {{ ucwords(str_replace('_', ' ', $first->location)) }}
                             @endif
                         </td>
-                        @foreach (\App\Models\AssetStock::STATUSES as $status)
+                        @foreach ($statusColumns as $status)
                             <td class="text-right">{{ $group->firstWhere('status', $status)->quantity ?? 0 }}</td>
                         @endforeach
                     </tr>

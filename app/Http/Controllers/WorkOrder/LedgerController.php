@@ -5,10 +5,11 @@ namespace App\Http\Controllers\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Models\Ledger;
 use App\Models\WorkOrder;
+use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LedgerController extends Controller
 {
@@ -129,9 +130,9 @@ class LedgerController extends Controller
         });
     }
 
-    public function export(Request $request, WorkOrder $workOrder): StreamedResponse
+    private function filteredEntries(Request $request, WorkOrder $workOrder)
     {
-        $entries = $workOrder->ledgers()
+        return $workOrder->ledgers()
             ->when($request->get('from'), fn ($q, $from) => $q->whereDate('entry_date', '>=', $from))
             ->when($request->get('to'), fn ($q, $to) => $q->whereDate('entry_date', '<=', $to))
             ->when($request->get('category'), fn ($q, $category) => $q->where('category', $category))
@@ -139,6 +140,26 @@ class LedgerController extends Controller
             ->orderBy('entry_date')
             ->orderBy('id')
             ->get();
+    }
+
+    public function pdf(Request $request, WorkOrder $workOrder)
+    {
+        $entries = $this->filteredEntries($request, $workOrder);
+
+        $pdf = Pdf::loadView('work-orders.ledger-pdf', [
+            'workOrder' => $workOrder,
+            'entries' => $entries,
+            'from' => $request->get('from'),
+            'to' => $request->get('to'),
+            'title' => 'Site Ledger',
+        ]);
+
+        return $pdf->download('site-ledger-'.$workOrder->work_order_no.'-'.now()->format('Ymd-His').'.pdf');
+    }
+
+    public function export(Request $request, WorkOrder $workOrder): StreamedResponse
+    {
+        $entries = $this->filteredEntries($request, $workOrder);
 
         $filename = 'ledger-'.$workOrder->work_order_no.'-'.now()->format('Ymd-His').'.csv';
 

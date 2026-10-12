@@ -12,7 +12,7 @@ class AssetStatusLog extends Model implements HasMedia
     use InteractsWithMedia;
 
     protected $fillable = [
-        'asset_id', 'previous_status', 'new_status', 'updated_by', 'role', 'work_order_id', 'reason',
+        'asset_id', 'previous_status', 'new_status', 'updated_by', 'role', 'work_order_id', 'location', 'quantity', 'reason',
     ];
 
     public function registerMediaCollections(): void

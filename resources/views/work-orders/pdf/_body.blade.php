@@ -226,7 +226,7 @@
     </table>
     @if ($workOrder->materialEntries->isNotEmpty())
         <table>
-            <thead><tr><th>Date</th><th>Material</th><th>Qty</th><th>Unit</th><th>Rate</th><th class="text-right">Amount</th><th>Supplier</th></tr></thead>
+            <thead><tr><th>Date</th><th>Material</th><th>Qty</th><th>Unit</th><th>Rate</th><th class="text-right">Amount</th><th>Supplier</th><th>Remarks</th></tr></thead>
             <tbody>
                 @foreach ($workOrder->materialEntries as $entry)
                     <tr>
@@ -237,6 +237,7 @@
                         <td>Rs. {{ number_format($entry->rate, 2) }}</td>
                         <td class="text-right">Rs. {{ number_format($entry->amount, 2) }}</td>
                         <td>{{ $entry->vendor ?? '—' }}</td>
+                        <td>{{ $entry->remarks ?? '—' }}</td>
                     </tr>
                 @endforeach
             </tbody>
