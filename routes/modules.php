@@ -333,6 +333,9 @@ Route::middleware('permission:payroll.view')->group(function () {
     Route::post('payroll/generate-from-attendance', [PayrollController::class, 'generateFromAttendance'])->name('payroll.generate-from-attendance');
     Route::post('payroll/{payroll}/record-payment', [PayrollController::class, 'recordPayment'])->name('payroll.record-payment');
     Route::delete('payroll/{payroll}/payments/{payment}', [PayrollController::class, 'destroyPayment'])->name('payroll.payments.destroy');
+    // Registered before payroll/{payroll}/pdf below - otherwise "report"
+    // would bind as the {payroll} route parameter and 404.
+    Route::get('payroll/report/pdf', [PayrollController::class, 'reportPdf'])->name('payroll.report.pdf');
     Route::get('payroll/{payroll}/pdf', [PayrollController::class, 'pdf'])->name('payroll.pdf');
     Route::delete('payroll/{payroll}', [PayrollController::class, 'destroy'])->name('payroll.destroy');
 });

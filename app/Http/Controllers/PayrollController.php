@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollPayment;
+use App\Models\WorkOrder;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,7 +58,88 @@ class PayrollController extends Controller
             ->get()
             ->groupBy('employee_id');
 
-        return view('payroll.index', compact('payrolls', 'employees', 'month', 'year', 'attendanceByEmployee', 'scope'));
+        $report = $scope === 'worker' ? $this->workerReport($request, $month, $year) : null;
+
+        return view('payroll.index', compact('payrolls', 'employees', 'month', 'year', 'attendanceByEmployee', 'scope') + ($report ?? []));
+    }
+
+    /**
+     * Sir asked for the WO Workers Payroll page to stop requiring you to
+     * open every work order separately to filter attendance and add up
+     * salaries by hand - this is that report. Filterable by Work Order,
+     * worker, and an arbitrary date range (defaulting to the month/year
+     * selected above when no range is given), with totals computed
+     * automatically: every worker's combined total across however many
+     * work orders they touched in range, broken down WO-wise, plus a
+     * grand total across everyone currently in view.
+     */
+    private function workerReport(Request $request, int $month, int $year): array
+    {
+        $reportFrom = $request->get('from') ?: \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->toDateString();
+        $reportTo = $request->get('to') ?: \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->toDateString();
+        $reportWorkOrderId = $request->get('work_order_id') ?: null;
+        $reportEmployeeId = $request->get('employee_id') ?: null;
+
+        $attendances = Attendance::query()
+            ->whereIn('employee_id', Employee::workOrderWorkers()->pluck('id'))
+            ->whereDate('date', '>=', $reportFrom)
+            ->whereDate('date', '<=', $reportTo)
+            ->when($reportWorkOrderId, fn ($q, $v) => $q->where('work_order_id', $v))
+            ->when($reportEmployeeId, fn ($q, $v) => $q->where('employee_id', $v))
+            ->with(['employee', 'workOrder'])
+            ->orderBy('date')
+            ->get();
+
+        $reportByWorker = $attendances->groupBy('employee_id')
+            ->map(function ($records) {
+                $byWorkOrder = $records->groupBy('work_order_id')
+                    ->map(fn ($woRecords) => (object) [
+                        'workOrder' => $woRecords->first()->workOrder,
+                        'records' => $woRecords->sortBy('date')->values(),
+                        'daysPresent' => $woRecords->pluck('date')->map->format('Y-m-d')->unique()->count(),
+                        'totalSalary' => (float) $woRecords->sum('salary'),
+                        'totalAdvance' => (float) $woRecords->sum('advance'),
+                    ])
+                    ->sortBy(fn ($row) => $row->workOrder?->work_order_no ?? '')
+                    ->values();
+
+                return (object) [
+                    'employee' => $records->first()->employee,
+                    'byWorkOrder' => $byWorkOrder,
+                    'daysPresent' => $records->pluck('date')->map->format('Y-m-d')->unique()->count(),
+                    'totalSalary' => (float) $records->sum('salary'),
+                    'totalAdvance' => (float) $records->sum('advance'),
+                ];
+            })
+            ->sortBy(fn ($row) => $row->employee?->name ?? '')
+            ->values();
+
+        return [
+            'reportFrom' => $reportFrom,
+            'reportTo' => $reportTo,
+            'reportWorkOrderId' => $reportWorkOrderId,
+            'reportEmployeeId' => $reportEmployeeId,
+            'reportWorkOrders' => WorkOrder::orderByDesc('created_at')->limit(200)->get(),
+            'reportByWorker' => $reportByWorker,
+            'reportGrandTotalSalary' => (float) $attendances->sum('salary'),
+            'reportGrandTotalAdvance' => (float) $attendances->sum('advance'),
+        ];
+    }
+
+    public function reportPdf(Request $request)
+    {
+        $report = $this->workerReport($request, (int) $request->get('month', now()->month), (int) $request->get('year', now()->year));
+
+        $singleWorker = $report['reportEmployeeId'] ? $report['reportByWorker']->first() : null;
+        $workOrderFilter = $report['reportWorkOrderId'] ? WorkOrder::find($report['reportWorkOrderId']) : null;
+
+        $pdf = Pdf::loadView('payroll.report-pdf', $report + compact('singleWorker', 'workOrderFilter'));
+
+        $filename = $singleWorker
+            ? $singleWorker->employee->name.'-Payroll-'.$report['reportFrom'].'-to-'.$report['reportTo'].'.pdf'
+            : 'WO-Workers-Payroll-'.$report['reportFrom'].'-to-'.$report['reportTo'].'.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function store(Request $request): RedirectResponse
