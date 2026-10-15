@@ -27,7 +27,7 @@ class DailyProgressController extends Controller
                 $report->addMedia($file)->toMediaCollection('attachments');
             }
         } catch (FileIsTooBig $e) {
-            return 'One of those files is too large (max 20MB).';
+            return 'One of those files is too large (max 50MB).';
         }
 
         return null;
@@ -43,7 +43,7 @@ class DailyProgressController extends Controller
             'problems' => ['nullable', 'string'],
             'materials_required' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:20480'],
+            'files.*' => ['file', 'max:51200'],
         ]);
 
         $report = $workOrder->dailyProgressReports()->create(collect($data)->except('files')->all() + [
@@ -71,7 +71,7 @@ class DailyProgressController extends Controller
             'problems' => ['nullable', 'string'],
             'materials_required' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:20480'],
+            'files.*' => ['file', 'max:51200'],
         ]);
 
         $report->update(collect($data)->except('files')->all());
