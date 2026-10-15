@@ -23,7 +23,7 @@ class ApprovalRequestController extends Controller
                 $approvalRequest->addMedia($file)->toMediaCollection('attachment');
             }
         } catch (FileIsTooBig $e) {
-            return 'One of those files is too large (max 20MB).';
+            return 'One of those files is too large (max 50MB).';
         }
 
         return null;
@@ -35,7 +35,7 @@ class ApprovalRequestController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
+            'files.*' => ['file', 'max:51200', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
         ]);
 
         $approvalRequest = $workOrder->approvalRequests()->create([

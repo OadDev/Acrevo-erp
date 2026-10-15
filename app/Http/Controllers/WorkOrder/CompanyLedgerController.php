@@ -24,7 +24,7 @@ class CompanyLedgerController extends Controller
             'description' => ['nullable', 'string'],
             'remark' => ['nullable', 'string'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
+            'bill' => ['nullable', 'file', 'max:51200', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
         $ledger = $workOrder->companyLedgers()->create([
@@ -42,7 +42,7 @@ class CompanyLedgerController extends Controller
             try {
                 $ledger->addMediaFromRequest('bill')->toMediaCollection('bill');
             } catch (FileIsTooBig $e) {
-                return back()->withErrors(['bill' => 'That file is too large (max 20MB).']);
+                return back()->withErrors(['bill' => 'That file is too large (max 50MB).']);
             }
         }
 
@@ -67,7 +67,7 @@ class CompanyLedgerController extends Controller
             'description' => ['nullable', 'string'],
             'remark' => ['nullable', 'string'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'bill' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf'],
+            'bill' => ['nullable', 'file', 'max:51200', 'mimes:jpg,jpeg,png,pdf'],
         ]);
 
         $companyLedger->update([
@@ -83,7 +83,7 @@ class CompanyLedgerController extends Controller
             try {
                 $companyLedger->addMediaFromRequest('bill')->toMediaCollection('bill');
             } catch (FileIsTooBig $e) {
-                return back()->withErrors(['bill' => 'That file is too large (max 20MB).']);
+                return back()->withErrors(['bill' => 'That file is too large (max 50MB).']);
             }
         }
 

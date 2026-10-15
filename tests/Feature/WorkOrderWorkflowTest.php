@@ -1030,6 +1030,50 @@ class WorkOrderWorkflowTest extends TestCase
             ->assertOk()->assertSee('Time Schedule')->assertSee('Foundation to roofing');
     }
 
+    /**
+     * Sir asked to raise the Work Order media upload limit from 20MB to
+     * 50MB. WorkOrderMediaController and DailyChecklistItemController
+     * already allowed 50MB; Site Ledger/Company Ledger bills, Progress
+     * Report files, and Approval Request files were still capped at
+     * 20MB. A 30MB file - previously rejected everywhere here - must now
+     * be accepted on all four.
+     */
+    public function test_a_file_over_20mb_is_now_accepted_across_wo_upload_points(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+        $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
+        $workOrder = WorkOrder::create([
+            'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium', 'execution_way' => 'way_2',
+            'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
+        ]);
+        $thirtyMb = 30 * 1024;
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
+            'type' => 'debit', 'category' => 'Materials', 'amount' => '500',
+            'bill' => \Illuminate\Http\UploadedFile::fake()->create('bill.pdf', $thirtyMb, 'application/pdf'),
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $this->assertNotNull($workOrder->fresh()->ledgers()->firstOrFail()->getFirstMedia('bill'));
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/company-ledger", [
+            'entry_date' => now()->toDateString(), 'type' => 'debit', 'category' => 'Fuel', 'amount' => '500',
+            'bill' => \Illuminate\Http\UploadedFile::fake()->create('bill.pdf', $thirtyMb, 'application/pdf'),
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $this->assertNotNull($workOrder->fresh()->companyLedgers()->firstOrFail()->getFirstMedia('bill'));
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/progress", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering done',
+            'files' => [\Illuminate\Http\UploadedFile::fake()->create('site.jpg', $thirtyMb, 'image/jpeg')],
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $this->assertNotNull($workOrder->fresh()->dailyProgressReports()->firstOrFail()->getFirstMedia('attachments'));
+
+        $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Need extra material',
+            'files' => [\Illuminate\Http\UploadedFile::fake()->create('quote.pdf', $thirtyMb, 'application/pdf')],
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $this->assertNotNull($workOrder->fresh()->approvalRequests()->firstOrFail()->getFirstMedia('attachment'));
+    }
+
     public function test_a_ledger_entry_can_be_recorded_with_a_bill_attachment(): void
     {
         $admin = $this->admin();
