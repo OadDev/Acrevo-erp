@@ -1,0 +1,271 @@
+name: Migrate data to new Hostinger
+
+# One-time (or re-run-before-cutover) migration: dumps the live database
+# and uploaded files from the CURRENT Hostinger server (the one
+# deploy.yml already targets, via the existing HOSTINGER_SSH_* secrets)
+# and restores them onto the NEW Hostinger server, then builds and
+# deploys the current code there too - so the new server ends up a full
+# working mirror you can test independently before touching DNS.
+#
+# Safe to re-run: every run fully overwrites the NEW server's database
+# and uploaded files with a fresh copy from the OLD server. It never
+# writes anything back to the OLD server - that one is only ever read
+# from, so it stays the untouched fallback until you've verified the new
+# one and decide to decommission it yourself.
+#
+# Every secret value is kept out of shell command strings - it only ever
+# flows through SSHPASS (an env var sshpass reads directly) or through
+# files written with the runner's own single-layer "$VAR" expansion,
+# never spliced into a command line that a second (remote) shell would
+# re-parse. That keeps a password containing $, ', ", or backticks safe.
+#
+# Required secrets (add these in GitHub -> Settings -> Secrets and
+# variables -> Actions - never type the values into chat with Claude):
+#   NEW_HOSTINGER_SSH_HOST
+#   NEW_HOSTINGER_SSH_PORT
+#   NEW_HOSTINGER_SSH_USERNAME
+#   NEW_HOSTINGER_SSH_PASSWORD
+#   NEW_HOSTINGER_DEPLOY_PATH   (e.g. /home/u123456789/domains/geethanworks.in/public_html)
+#   NEW_DB_HOST                 (usually "localhost" on Hostinger)
+#   NEW_DB_DATABASE
+#   NEW_DB_USERNAME
+#   NEW_DB_PASSWORD
+#
+# Also reuses the existing secrets deploy.yml already has for the OLD
+# server: HOSTINGER_SSH_HOST/PORT/USERNAME/PASSWORD/DEPLOY_PATH.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type MIGRATE-NOW to proceed. This overwrites the NEW server''s database and storage/app/public with a fresh copy from the OLD server.'
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Abort unless confirmed
+        if: ${{ github.event.inputs.confirm != 'MIGRATE-NOW' }}
+        run: |
+          echo "::error::Type MIGRATE-NOW in the confirm field to run this workflow. Aborting without touching anything."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, pdo_mysql, gd, zip, exif, curl, intl
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install and build frontend assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install sshpass
+        run: sudo apt-get update -y && sudo apt-get install -y sshpass
+
+      - name: Dump database and pack storage files on the OLD server
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          OLD_DEPLOY_PATH: ${{ secrets.HOSTINGER_DEPLOY_PATH }}
+        run: |
+          set -e
+          cat > old_dump.sh <<'SCRIPT'
+          set -e
+          cd "$1"
+          set +x
+          # Read DB_* with the app's own vendored phpdotenv (not a
+          # hand-rolled grep/sed parse) - it's the one piece of code
+          # guaranteed to resolve a quoted-and-escaped value in .env
+          # exactly the way Laravel itself does, byte for byte.
+          eval "$(php -r '
+            require "vendor/autoload.php";
+            $d = Dotenv\Dotenv::parse(file_get_contents(".env"));
+            foreach (["DB_HOST", "DB_DATABASE", "DB_USERNAME", "DB_PASSWORD"] as $k) {
+                echo $k."=".escapeshellarg($d[$k] ?? "")."\n";
+            }
+          ')"
+          # Quoted for the MySQL option file below - an unquoted value
+          # there treats a bare # as a start-of-comment, which would
+          # silently truncate a password containing one.
+          mycnf_quote() {
+            v="$1"
+            v="${v//\\/\\\\}"
+            v="${v//\"/\\\"}"
+            printf '"%s"' "$v"
+          }
+          printf '[client]\nhost=%s\nuser=%s\npassword=%s\n' "$(mycnf_quote "$DB_HOST")" "$(mycnf_quote "$DB_USERNAME")" "$(mycnf_quote "$DB_PASSWORD")" > /tmp/migration_old.cnf
+          mysqldump --defaults-extra-file=/tmp/migration_old.cnf --single-transaction --quick --routines --triggers \
+            "$DB_DATABASE" > /tmp/migration_db.sql
+          rm -f /tmp/migration_old.cnf
+          set -x
+          mkdir -p storage/app/public
+          tar -czf /tmp/migration_storage.tar.gz -C storage/app public
+          cp .env /tmp/migration_env
+          SCRIPT
+          QUOTED_PATH=$(printf '%q' "$OLD_DEPLOY_PATH")
+          sshpass -e ssh -p "${{ secrets.HOSTINGER_SSH_PORT }}" -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "bash -s -- $QUOTED_PATH" < old_dump.sh
+
+      - name: Download dump and files from the OLD server
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        run: |
+          set -e
+          sshpass -e scp -P ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}:/tmp/migration_db.sql" \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}:/tmp/migration_storage.tar.gz" \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}:/tmp/migration_env" \
+            ./
+          du -h migration_db.sql migration_storage.tar.gz
+
+      - name: Remove temp files from the OLD server
+        env:
+          SSHPASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+        if: always()
+        run: |
+          sshpass -e ssh -p ${{ secrets.HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.HOSTINGER_SSH_USERNAME }}@${{ secrets.HOSTINGER_SSH_HOST }}" \
+            "rm -f /tmp/migration_db.sql /tmp/migration_storage.tar.gz /tmp/migration_env" || true
+
+      - name: Prepare the NEW server's .env and MySQL credentials file locally
+        env:
+          NEW_DB_HOST: ${{ secrets.NEW_DB_HOST }}
+          NEW_DB_DATABASE: ${{ secrets.NEW_DB_DATABASE }}
+          NEW_DB_USERNAME: ${{ secrets.NEW_DB_USERNAME }}
+          NEW_DB_PASSWORD: ${{ secrets.NEW_DB_PASSWORD }}
+        run: |
+          set -e
+          # Rewritten with PHP (not sed) - a DB_* value can contain regex
+          # or sed-replacement metacharacters (/, &, \) that would corrupt
+          # a sed substitution; PHP's str_starts_with/implode here do
+          # plain substring work only.
+          mv migration_env old_env
+          php -r '
+            // Every override is written double-quoted with \ and " escaped,
+            // the same way phpdotenv itself writes a quoted value - so a
+            // password containing a space or a # (a comment starter in an
+            // unquoted .env value) still reads back as one exact value.
+            $quote = fn ($v) => "\"".str_replace(["\\", "\""], ["\\\\", "\\\""], $v)."\"";
+            $lines = file("old_env");
+            $overrides = ["DB_HOST" => $quote(getenv("NEW_DB_HOST")), "DB_DATABASE" => $quote(getenv("NEW_DB_DATABASE")), "DB_USERNAME" => $quote(getenv("NEW_DB_USERNAME")), "DB_PASSWORD" => $quote(getenv("NEW_DB_PASSWORD"))];
+            $seen = [];
+            $out = [];
+            foreach ($lines as $line) {
+                $matched = false;
+                foreach ($overrides as $key => $value) {
+                    if (str_starts_with($line, $key."=")) {
+                        $out[] = $key."=".$value."\n";
+                        $seen[$key] = true;
+                        $matched = true;
+                        break;
+                    }
+                }
+                if (! $matched) {
+                    $out[] = $line;
+                }
+            }
+            foreach ($overrides as $key => $value) {
+                if (empty($seen[$key])) {
+                    $out[] = $key."=".$value."\n";
+                }
+            }
+            file_put_contents("migration_new_env", implode("", $out));
+          '
+          # Quoted for the MySQL option file - an unquoted value there
+          # treats a bare # as a start-of-comment, which would silently
+          # truncate a password containing one.
+          mycnf_quote() {
+            v="$1"
+            v="${v//\\/\\\\}"
+            v="${v//\"/\\\"}"
+            printf '"%s"' "$v"
+          }
+          printf '[client]\nhost=%s\nuser=%s\npassword=%s\n' "$(mycnf_quote "$NEW_DB_HOST")" "$(mycnf_quote "$NEW_DB_USERNAME")" "$(mycnf_quote "$NEW_DB_PASSWORD")" > migration_new.cnf
+
+      - name: Create deploy path and upload dump, files, and credentials to the NEW server
+        env:
+          SSHPASS: ${{ secrets.NEW_HOSTINGER_SSH_PASSWORD }}
+          NEW_DEPLOY_PATH: ${{ secrets.NEW_HOSTINGER_DEPLOY_PATH }}
+        run: |
+          set -e
+          QUOTED_PATH=$(printf '%q' "$NEW_DEPLOY_PATH")
+          sshpass -e ssh -p ${{ secrets.NEW_HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.NEW_HOSTINGER_SSH_USERNAME }}@${{ secrets.NEW_HOSTINGER_SSH_HOST }}" \
+            "mkdir -p $QUOTED_PATH"
+          sshpass -e scp -P ${{ secrets.NEW_HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            migration_db.sql migration_storage.tar.gz migration_new_env migration_new.cnf \
+            "${{ secrets.NEW_HOSTINGER_SSH_USERNAME }}@${{ secrets.NEW_HOSTINGER_SSH_HOST }}:/tmp/"
+
+      - name: Sync built application code to the NEW server
+        env:
+          SSHPASS: ${{ secrets.NEW_HOSTINGER_SSH_PASSWORD }}
+        run: |
+          sshpass -e rsync -az --delete \
+            -e "ssh -p ${{ secrets.NEW_HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.env' \
+            --exclude='storage' \
+            --exclude='public/storage' \
+            ./ "${{ secrets.NEW_HOSTINGER_SSH_USERNAME }}@${{ secrets.NEW_HOSTINGER_SSH_HOST }}:${{ secrets.NEW_HOSTINGER_DEPLOY_PATH }}/"
+
+      - name: Restore database, files and .env on the NEW server, then finish setup
+        env:
+          SSHPASS: ${{ secrets.NEW_HOSTINGER_SSH_PASSWORD }}
+          NEW_DEPLOY_PATH: ${{ secrets.NEW_HOSTINGER_DEPLOY_PATH }}
+          NEW_DB_DATABASE: ${{ secrets.NEW_DB_DATABASE }}
+        run: |
+          set -e
+          cat > new_restore.sh <<'SCRIPT'
+          set -e
+          cd "$1"
+          mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache
+
+          mv /tmp/migration_new_env .env
+          tar -xzf /tmp/migration_storage.tar.gz -C storage/app
+
+          mysql --defaults-extra-file=/tmp/migration_new.cnf "$2" < /tmp/migration_db.sql
+          rm -f /tmp/migration_db.sql /tmp/migration_storage.tar.gz /tmp/migration_new.cnf
+
+          PHP_BIN=$(command -v php8.5 || echo /opt/alt/php85/usr/bin/php)
+          [ -x "$PHP_BIN" ] || PHP_BIN=$(command -v php8.4 || echo /opt/alt/php84/usr/bin/php)
+          [ -x "$PHP_BIN" ] || PHP_BIN=$(command -v php8.3 || echo /opt/alt/php83/usr/bin/php)
+          [ -x "$PHP_BIN" ] || PHP_BIN=$(command -v php8.2 || echo /opt/alt/php82/usr/bin/php)
+          [ -x "$PHP_BIN" ] || PHP_BIN=php
+          echo "Using PHP binary: $PHP_BIN ($($PHP_BIN -v | head -1))"
+
+          $PHP_BIN artisan storage:link --force
+          $PHP_BIN artisan migrate --force
+          $PHP_BIN artisan optimize:clear
+          $PHP_BIN artisan config:cache
+          $PHP_BIN artisan route:cache
+          $PHP_BIN artisan view:cache
+          SCRIPT
+          QUOTED_PATH=$(printf '%q' "$NEW_DEPLOY_PATH")
+          QUOTED_DB=$(printf '%q' "$NEW_DB_DATABASE")
+          sshpass -e ssh -p ${{ secrets.NEW_HOSTINGER_SSH_PORT }} -o StrictHostKeyChecking=no \
+            "${{ secrets.NEW_HOSTINGER_SSH_USERNAME }}@${{ secrets.NEW_HOSTINGER_SSH_HOST }}" \
+            "bash -s -- $QUOTED_PATH $QUOTED_DB" < new_restore.sh
+
+      - name: Done
+        run: |
+          echo "Data + built code mirrored onto the NEW server."
+          echo "Next: verify the new server works on its own (e.g. curl with --resolve geethanworks.in:443:<NEW_IP>, or a temporary hosts-file entry on your own machine), then switch DNS and update deploy.yml's HOSTINGER_* secrets to the NEW values so future deploys target it."
