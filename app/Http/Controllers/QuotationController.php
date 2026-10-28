@@ -144,7 +144,7 @@ class QuotationController extends Controller
     public function revise(Quotation $quotation): RedirectResponse
     {
         $revision = DB::transaction(function () use ($quotation) {
-            $new = $quotation->replicate(['status', 'approved_at', 'approved_by', 'rejected_reason', 'pdf_path']);
+            $new = $quotation->replicate(['quotation_no', 'status', 'approved_at', 'approved_by', 'rejected_reason', 'pdf_path']);
             $new->version = $quotation->version + 1;
             $new->parent_quotation_id = $quotation->id;
             $new->status = 'draft';
