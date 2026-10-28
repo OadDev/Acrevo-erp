@@ -14,7 +14,7 @@ class SiteDocumentController extends Controller
     {
         $data = $request->validate([
             'category' => ['required', 'in:'.implode(',', Site::DOCUMENT_CATEGORIES)],
-            'file' => ['required', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+            'file' => ['required', 'file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx,csv'],
         ]);
 
         try {
