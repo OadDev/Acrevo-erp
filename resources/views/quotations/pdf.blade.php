@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <style>
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 12px; color: #1f2937; }
-        h1 { font-size: 20px; margin-bottom: 0; color: #4338ca; }
+        .doc-title { font-size: 20px; margin-bottom: 0; color: #4338ca; }
         .muted { color: #6b7280; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; }
@@ -13,10 +13,15 @@
         .totals { width: 260px; margin-left: auto; margin-top: 12px; }
         .totals td { border: none; padding: 4px 8px; }
         .grand { font-weight: bold; font-size: 14px; border-top: 1px solid #e5e7eb; }
+        .rich-text-content h1 { font-size: 16px; margin: 10px 0 4px; }
+        .rich-text-content h2 { font-size: 14px; margin: 8px 0 4px; }
+        .rich-text-content h3 { font-size: 12px; margin: 8px 0 4px; }
+        .rich-text-content p { margin: 0 0 6px; }
+        .rich-text-content ul, .rich-text-content ol { margin: 0 0 6px; padding-left: 18px; }
     </style>
 </head>
 <body>
-    <h1>{{ config('app.name') }}</h1>
+    <h1 class="doc-title">{{ config('app.name') }}</h1>
     <p class="muted">Quotation {{ $quotation->quotation_no }} (Version {{ $quotation->version }})</p>
 
     <table style="margin-top: 20px; border: none;">
@@ -64,7 +69,8 @@
     </table>
 
     @if ($quotation->terms)
-        <p style="margin-top: 24px;"><strong>Terms &amp; Conditions</strong><br>{{ $quotation->terms }}</p>
+        <p style="margin-top: 24px;"><strong>Terms &amp; Conditions</strong></p>
+        <div class="rich-text-content">{!! $quotation->terms !!}</div>
     @endif
 
     @if ($quotation->media->isNotEmpty())

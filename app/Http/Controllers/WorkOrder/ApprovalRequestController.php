@@ -7,6 +7,7 @@ use App\Models\ApprovalRequest;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderZipExporter;
 use App\Support\Pdf;
+use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -40,7 +41,7 @@ class ApprovalRequestController extends Controller
 
         $approvalRequest = $workOrder->approvalRequests()->create([
             'title' => $data['title'],
-            'description' => $data['description'] ?? null,
+            'description' => RichText::sanitize($data['description'] ?? null),
             'direction' => 'company_to_client',
             'requested_by' => $request->user()->id,
             'status' => 'pending',
@@ -83,7 +84,10 @@ class ApprovalRequestController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        $approvalRequest->update($data);
+        $approvalRequest->update([
+            'title' => $data['title'],
+            'description' => RichText::sanitize($data['description'] ?? null),
+        ]);
 
         return back()->with('success', 'Approval request updated.');
     }

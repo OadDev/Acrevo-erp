@@ -8,6 +8,7 @@ use App\Models\Quotation;
 use App\Models\Site;
 use App\Services\ConversationService;
 use App\Support\Pdf;
+use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,7 @@ class QuotationController extends Controller
                 'discount_type' => $data['discount_type'],
                 'discount_value' => $data['discount_value'] ?? 0,
                 'tax_percent' => $data['tax_percent'] ?? 0,
-                'terms' => $data['terms'] ?? null,
+                'terms' => RichText::sanitize($data['terms'] ?? null),
                 'valid_until' => $data['valid_until'] ?? null,
                 'status' => 'draft',
                 'created_by' => $request->user()->id,
@@ -86,7 +87,7 @@ class QuotationController extends Controller
                 'discount_type' => $data['discount_type'],
                 'discount_value' => $data['discount_value'] ?? 0,
                 'tax_percent' => $data['tax_percent'] ?? 0,
-                'terms' => $data['terms'] ?? null,
+                'terms' => RichText::sanitize($data['terms'] ?? null),
                 'valid_until' => $data['valid_until'] ?? null,
             ]);
 

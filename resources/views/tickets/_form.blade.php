@@ -56,7 +56,7 @@
 
     <div class="sm:col-span-2">
         <x-input-label for="description" value="Description" />
-        <x-textarea-input id="description" name="description" rows="4" class="mt-1 block w-full">{{ old('description', $ticket->description ?? '') }}</x-textarea-input>
+        <x-rich-text-input name="description" class="mt-1 block">{!! old('description', $ticket->description ?? '') !!}</x-rich-text-input>
     </div>
 
     <div class="sm:col-span-2">

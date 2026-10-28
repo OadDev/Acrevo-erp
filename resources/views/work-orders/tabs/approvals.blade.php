@@ -45,13 +45,13 @@
                         @csrf
                         @method('PUT')
                         <x-text-input name="title" value="{{ $approval->title }}" class="w-full text-xs" required />
-                        <x-textarea-input name="description" rows="2" class="w-full text-xs">{{ $approval->description }}</x-textarea-input>
+                        <x-rich-text-input name="description">{!! $approval->description !!}</x-rich-text-input>
                         <button class="w-full rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Save</button>
                     </form>
                 @endif
 
                 @if ($approval->description)
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ $approval->description }}</p>
+                    <div class="rich-text-content mt-2 text-sm text-gray-600 dark:text-gray-300">{!! $approval->description !!}</div>
                 @endif
 
                 @if ($approval->getMedia('attachment')->isNotEmpty())
@@ -103,7 +103,7 @@
                 </div>
                 <div>
                     <x-input-label value="Description" />
-                    <x-textarea-input name="description" rows="3" class="mt-1 w-full"></x-textarea-input>
+                    <x-rich-text-input name="description" class="mt-1" />
                 </div>
                 <div>
                     <x-input-label value="Attachments (images, documents, videos - multiple allowed)" />

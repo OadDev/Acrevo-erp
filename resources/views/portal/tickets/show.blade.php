@@ -17,7 +17,7 @@
                     <div><dt class="text-gray-400">Raised By</dt><dd>{{ $ticket->raisedByName() }}</dd></div>
                     <div><dt class="text-gray-400">Raised On</dt><dd>{{ $ticket->raisedAtIst() }}</dd></div>
                     <div><dt class="text-gray-400">Status</dt><dd><x-badge :status="$ticket->status" /></dd></div>
-                    <div class="col-span-2"><dt class="text-gray-400">Description</dt><dd>{{ $ticket->description ?: '—' }}</dd></div>
+                    <div class="col-span-2"><dt class="text-gray-400">Description</dt><dd class="rich-text-content">{!! $ticket->description ?: '—' !!}</dd></div>
                 </dl>
 
                 @if ($ticket->media->isNotEmpty())

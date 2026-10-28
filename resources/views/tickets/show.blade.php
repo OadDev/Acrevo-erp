@@ -56,7 +56,7 @@
                     <div><dt class="text-gray-400">Department</dt><dd>{{ $ticket->department?->name ?? '—' }}</dd></div>
                     <div><dt class="text-gray-400">Assigned To</dt><dd>{{ $ticket->assignedTo?->name ?? '—' }}</dd></div>
                     <div><dt class="text-gray-400">Due Date</dt><dd>{{ optional($ticket->due_date)->format('d M Y') ?? '—' }}</dd></div>
-                    <div class="col-span-2"><dt class="text-gray-400">Description</dt><dd>{{ $ticket->description ?: '—' }}</dd></div>
+                    <div class="col-span-2"><dt class="text-gray-400">Description</dt><dd class="rich-text-content">{!! $ticket->description ?: '—' !!}</dd></div>
                 </dl>
 
                 @if ($ticket->media->isNotEmpty())
