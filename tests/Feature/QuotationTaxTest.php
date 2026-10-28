@@ -251,6 +251,54 @@ class QuotationTaxTest extends TestCase
         ])->assertSessionHasErrors(['enquiry_id', 'client_id']);
     }
 
+    public function test_creating_a_revision_does_not_500_and_leaves_the_original_quotation_intact(): void
+    {
+        // Regression test: replicate() copies every attribute unless told
+        // otherwise, including the unique quotation_no. The sequence
+        // generator only assigns a fresh number when the column is empty,
+        // so the revision kept the original's quotation_no and the INSERT
+        // blew up on the unique constraint - a 500 on every "Create
+        // Revision" click.
+        $admin = $this->admin();
+        $enquiry = $this->enquiry($admin);
+
+        $this->actingAs($admin)->post('/quotations', [
+            'enquiry_id' => $enquiry->id,
+            'client_id' => $enquiry->client_id,
+            'discount_type' => 'flat',
+            'discount_value' => 0,
+            'tax_percent' => 18,
+            'terms' => 'Original terms',
+            'items' => [
+                ['item_type' => 'service', 'name' => 'Tiling', 'unit' => 'Sqft', 'quantity' => 100, 'unit_price' => 100, 'discount' => 0],
+            ],
+        ])->assertRedirect();
+
+        $original = Quotation::firstOrFail();
+        $original->update(['status' => 'approved', 'approved_at' => now(), 'approved_by' => 'Client']);
+        $originalNo = $original->quotation_no;
+        $originalTerms = $original->terms;
+
+        $response = $this->actingAs($admin)->post("/quotations/{$original->id}/revise");
+        $response->assertRedirect();
+        $response->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(2, Quotation::count());
+
+        $original->refresh();
+        $this->assertSame($originalNo, $original->quotation_no);
+        $this->assertSame($originalTerms, $original->terms);
+        $this->assertSame('approved', $original->status);
+
+        $revision = Quotation::where('parent_quotation_id', $original->id)->firstOrFail();
+        $this->assertNotSame($originalNo, $revision->quotation_no);
+        $this->assertSame(2, $revision->version);
+        $this->assertSame('draft', $revision->status);
+        $this->assertSame($originalTerms, $revision->terms);
+        $this->assertCount(1, $revision->items);
+        $this->assertEqualsWithDelta((float) $original->total_amount, (float) $revision->total_amount, 0.01);
+    }
+
     public function test_updating_a_quotation_still_applies_tax_only_once(): void
     {
         $admin = $this->admin();
