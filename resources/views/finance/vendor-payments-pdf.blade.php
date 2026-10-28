@@ -5,7 +5,7 @@
     @include('work-orders.pdf._styles')
 </head>
 <body>
-    <h1>{{ config('app.name') }}</h1>
+    <h1 class="doc-title">{{ config('app.name') }}</h1>
     <p class="muted">Sub Contractor Payments</p>
     <p class="muted">
         @if ($filters['from'] ?? null) From: {{ \Carbon\Carbon::parse($filters['from'])->format('d M Y') }} &middot; @endif

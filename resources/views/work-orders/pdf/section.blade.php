@@ -5,7 +5,7 @@
     @include('work-orders.pdf._styles')
 </head>
 <body>
-    <h1>{{ config('app.name') }}</h1>
+    <h1 class="doc-title">{{ config('app.name') }}</h1>
     <p class="muted">{{ $workOrder->work_order_no }} — {{ $workOrder->title }}</p>
     <p class="muted">{{ \App\Support\WorkOrderPdfSections::SECTIONS[$section] }} &middot; Generated {{ now()->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p>
 

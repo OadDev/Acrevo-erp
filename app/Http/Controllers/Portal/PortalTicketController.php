@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\WorkOrder;
+use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -45,7 +46,10 @@ class PortalTicketController extends Controller
         $workOrder = WorkOrder::findOrFail($data['work_order_id']);
         abort_unless($workOrder->client_id === $client->id, 403);
 
-        $ticket = Ticket::create(collect($data)->except('files')->all() + [
+        $ticketData = collect($data)->except('files')->all();
+        $ticketData['description'] = RichText::sanitize($ticketData['description'] ?? null);
+
+        $ticket = Ticket::create($ticketData + [
             'priority' => 'medium',
             'raised_by_type' => 'client',
             'raised_by_client_id' => $client->id,

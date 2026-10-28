@@ -478,7 +478,7 @@
                             <div><dt class="inline text-gray-400">Requested:</dt> <dd class="inline text-gray-600 dark:text-gray-300">{{ $approval->requestedAtIst() }}</dd></div>
                         </dl>
                         @if ($approval->description)
-                            <p class="mt-1 text-gray-500">{{ $approval->description }}</p>
+                            <div class="rich-text-content mt-1 text-gray-500">{!! $approval->description !!}</div>
                         @endif
                         @if ($approval->getMedia('attachment')->isNotEmpty())
                             <div class="mt-1 flex flex-wrap gap-2">

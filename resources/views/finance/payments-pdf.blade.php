@@ -5,7 +5,7 @@
     @include('work-orders.pdf._styles')
 </head>
 <body>
-    <h1>{{ config('app.name') }}</h1>
+    <h1 class="doc-title">{{ config('app.name') }}</h1>
     <p class="muted">Client Payments</p>
     <p class="muted">
         @if ($client ?? null) Client: {{ $client->name }} &middot; @endif

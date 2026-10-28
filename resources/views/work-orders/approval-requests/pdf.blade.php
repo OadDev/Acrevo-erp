@@ -4,8 +4,13 @@
     <meta charset="utf-8">
     <style>
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 12px; color: #1f2937; }
-        h1 { font-size: 20px; margin-bottom: 0; color: #4338ca; }
+        .doc-title { font-size: 20px; margin-bottom: 0; color: #4338ca; }
         .muted { color: #6b7280; }
+        .rich-text-content h1 { font-size: 16px; margin: 10px 0 4px; }
+        .rich-text-content h2 { font-size: 14px; margin: 8px 0 4px; }
+        .rich-text-content h3 { font-size: 12px; margin: 8px 0 4px; }
+        .rich-text-content p { margin: 0 0 6px; }
+        .rich-text-content ul, .rich-text-content ol { margin: 0 0 6px; padding-left: 18px; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; }
         th { background: #f9fafb; text-transform: uppercase; font-size: 10px; color: #6b7280; width: 30%; }
@@ -16,7 +21,7 @@
     </style>
 </head>
 <body>
-    <h1>{{ config('app.name') }}</h1>
+    <h1 class="doc-title">{{ config('app.name') }}</h1>
     <p class="muted">Approval Request {{ $approvalRequest->approval_no }} &middot; {{ $approvalRequest->workOrder->work_order_no }}</p>
 
     <table>
@@ -27,7 +32,7 @@
         <tr><th>Request Date</th><td>{{ $approvalRequest->requestedAtIst() }}</td></tr>
         <tr><th>Status</th><td><span class="status status-{{ $approvalRequest->status }}">{{ Str::title($approvalRequest->status) }}</span></td></tr>
         @if ($approvalRequest->description)
-            <tr><th>Details</th><td>{{ $approvalRequest->description }}</td></tr>
+            <tr><th>Details</th><td><div class="rich-text-content">{!! $approvalRequest->description !!}</div></td></tr>
         @endif
         @foreach ($approvalRequest->getMedia('attachment') as $attachment)
             <tr><th>Attachment</th><td>@include('work-orders.pdf._media', ['media' => $attachment, 'label' => $attachment->file_name])</td></tr>

@@ -62,7 +62,7 @@
         <div class="space-y-4">
             <div>
                 <x-input-label value="Terms & Conditions" />
-                <x-textarea-input name="terms" rows="4" class="mt-1 block w-full">{{ old('terms', $quotation->terms ?? '') }}</x-textarea-input>
+                <x-rich-text-input name="terms" class="mt-1 block">{!! old('terms', $quotation->terms ?? '') !!}</x-rich-text-input>
             </div>
             <div>
                 <x-input-label value="Valid Until" />

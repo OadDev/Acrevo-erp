@@ -1,6 +1,6 @@
 <style>
     body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: #1f2937; }
-    h1 { font-size: 20px; margin-bottom: 0; color: #4338ca; }
+    .doc-title { font-size: 20px; margin-bottom: 0; color: #4338ca; }
     h2.section-title { font-size: 14px; color: #4338ca; margin: 22px 0 6px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; }
     .wo-heading { margin-top: 0; page-break-before: always; }
     .wo-heading:first-child { page-break-before: auto; }
@@ -15,4 +15,9 @@
     .status-rejected, .status-failed, .status-cancelled, .status-retasked { background: #fee2e2; color: #991b1b; }
     .status-pending, .status-draft, .status-submitted { background: #f3f4f6; color: #374151; }
     .empty { color: #9ca3af; font-style: italic; padding: 6px 0; }
+    .rich-text-content h1 { font-size: 16px; margin: 10px 0 4px; }
+    .rich-text-content h2 { font-size: 14px; margin: 8px 0 4px; }
+    .rich-text-content h3 { font-size: 12px; margin: 8px 0 4px; }
+    .rich-text-content p { margin: 0 0 6px; }
+    .rich-text-content ul, .rich-text-content ol { margin: 0 0 6px; padding-left: 18px; }
 </style>

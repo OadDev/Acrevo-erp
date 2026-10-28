@@ -4,15 +4,20 @@
     <meta charset="utf-8">
     <style>
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: #1f2937; }
-        h1 { font-size: 20px; margin-bottom: 0; color: #4338ca; }
+        .doc-title { font-size: 20px; margin-bottom: 0; color: #4338ca; }
         .muted { color: #6b7280; }
+        .rich-text-content h1 { font-size: 16px; margin: 10px 0 4px; }
+        .rich-text-content h2 { font-size: 14px; margin: 8px 0 4px; }
+        .rich-text-content h3 { font-size: 12px; margin: 8px 0 4px; }
+        .rich-text-content p { margin: 0 0 6px; }
+        .rich-text-content ul, .rich-text-content ol { margin: 0 0 6px; padding-left: 18px; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; vertical-align: top; }
         th { background: #f9fafb; text-transform: uppercase; font-size: 9px; color: #6b7280; }
     </style>
 </head>
 <body>
-    <h1>{{ config('app.name') }}</h1>
+    <h1 class="doc-title">{{ config('app.name') }}</h1>
     <p class="muted">Approved Requests &middot; {{ $workOrder->work_order_no }} &mdash; {{ $workOrder->title }}</p>
     <p class="muted">Generated {{ now()->timezone('Asia/Kolkata')->format('d M Y, h:i A') }}</p>
 
@@ -40,7 +45,7 @@
                     <td>{{ $approval->respondedAtIst() ?? '—' }}</td>
                 </tr>
                 @if ($approval->description)
-                    <tr><td></td><td colspan="6" class="muted">{{ $approval->description }}</td></tr>
+                    <tr><td></td><td colspan="6" class="muted rich-text-content">{!! $approval->description !!}</td></tr>
                 @endif
                 @foreach ($approval->getMedia('attachment') as $attachment)
                     <tr><td></td><td colspan="6">@include('work-orders.pdf._media', ['media' => $attachment, 'label' => $attachment->file_name])</td></tr>

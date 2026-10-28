@@ -48,7 +48,7 @@
     @if ($quotation->terms)
         <x-card class="mb-6">
             <h3 class="mb-2 text-sm font-semibold text-gray-500">Terms &amp; Conditions</h3>
-            <p class="whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">{{ $quotation->terms }}</p>
+            <div class="rich-text-content text-sm text-gray-600 dark:text-gray-300">{!! $quotation->terms !!}</div>
         </x-card>
     @endif
 

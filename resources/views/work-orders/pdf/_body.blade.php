@@ -483,15 +483,15 @@
         </table>
         @foreach ($workOrder->approvalRequests as $approval)
             @if ($approval->description || $approval->response_note)
-                <p style="margin-top:4px;">
+                <div style="margin-top:4px;">
                     <strong>{{ $approval->approval_no }}</strong>
                     @if ($approval->description)
-                        — {{ $approval->description }}
+                        <div class="rich-text-content">{!! $approval->description !!}</div>
                     @endif
                     @if ($approval->response_note)
-                        <br><span class="muted">Response ({{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }}): {{ $approval->response_note }}</span>
+                        <span class="muted">Response ({{ Str::title($approval->status) }} by {{ $approval->respondedBy?->name ?? '—' }}): {{ $approval->response_note }}</span>
                     @endif
-                </p>
+                </div>
             @endif
         @endforeach
         @php $approvalAttachments = $workOrder->approvalRequests->filter(fn ($a) => $a->getMedia('attachment')->isNotEmpty()); @endphp
@@ -529,7 +529,10 @@
         </table>
         @foreach ($workOrder->tickets as $ticket)
             @if ($ticket->description)
-                <p style="margin-top:4px;"><strong>{{ $ticket->ticket_no }}</strong> — {{ $ticket->description }}</p>
+                <div style="margin-top:4px;">
+                    <strong>{{ $ticket->ticket_no }}</strong>
+                    <div class="rich-text-content">{!! $ticket->description !!}</div>
+                </div>
             @endif
         @endforeach
         @php $ticketAttachments = $workOrder->tickets->filter(fn ($t) => $t->getMedia('attachments')->isNotEmpty()); @endphp

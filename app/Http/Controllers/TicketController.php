@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderZipExporter;
 use App\Support\Pdf;
+use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -56,7 +57,10 @@ class TicketController extends Controller
 
     public function store(TicketRequest $request): RedirectResponse
     {
-        $ticket = Ticket::create($request->validated() + [
+        $data = $request->validated();
+        $data['description'] = RichText::sanitize($data['description'] ?? null);
+
+        $ticket = Ticket::create($data + [
             'raised_by_type' => 'internal',
             'raised_by' => $request->user()->id,
             'status' => 'open',
@@ -98,7 +102,10 @@ class TicketController extends Controller
     {
         $this->authorize('update', $ticket);
 
-        $ticket->update(collect($request->validated())->except('files')->all());
+        $data = collect($request->validated())->except('files')->all();
+        $data['description'] = RichText::sanitize($data['description'] ?? null);
+
+        $ticket->update($data);
 
         if ($error = $this->attachFiles($ticket, $request)) {
             return back()->withErrors(['files' => $error]);
