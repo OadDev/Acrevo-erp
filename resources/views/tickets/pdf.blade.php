@@ -56,6 +56,9 @@
     @forelse ($ticket->comments as $comment)
         <div class="comment">
             <p>{{ $comment->comment }}</p>
+            @foreach ($comment->getMedia('attachments') as $attachment)
+                @include('work-orders.pdf._media', ['media' => $attachment, 'label' => 'Attachment'])
+            @endforeach
             <p class="muted">{{ $comment->user?->name ?? 'Client' }} &middot; {{ $comment->created_at->timezone('Asia/Kolkata')->format('d-M-Y, h:i A') }} IST</p>
         </div>
     @empty

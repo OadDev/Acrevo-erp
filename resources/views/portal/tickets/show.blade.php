@@ -36,15 +36,28 @@
 
             <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Comments</h3>
-                <form method="POST" action="{{ route('portal.tickets.comments.store', $ticket) }}" class="mb-4 flex gap-2">
+                <form method="POST" action="{{ route('portal.tickets.comments.store', $ticket) }}" enctype="multipart/form-data" class="mb-4 space-y-2">
                     @csrf
-                    <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
-                    <x-primary-button>Post</x-primary-button>
+                    <div class="flex gap-2">
+                        <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
+                        <x-primary-button>Post</x-primary-button>
+                    </div>
+                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="block w-full text-xs">
+                    @error('files')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
                 </form>
                 <div class="space-y-3">
                     @forelse ($ticket->comments->where('is_internal', false) as $comment)
                         <div class="border-l-2 border-indigo-200 pl-3 text-sm dark:border-indigo-500/30">
                             <p class="text-gray-700 dark:text-gray-300">{{ $comment->comment }}</p>
+                            @if ($comment->getMedia('attachments')->isNotEmpty())
+                                <div class="mt-1 flex flex-wrap gap-2">
+                                    @foreach ($comment->getMedia('attachments') as $attachment)
+                                        <a href="{{ $attachment->getUrl() }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                                            <x-icon name="paperclip" class="h-3 w-3" /> {{ $attachment->file_name }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
                             <p class="text-xs text-gray-400">{{ $comment->user?->name ?? 'Team' }} · {{ $comment->created_at->diffForHumans() }}</p>
                         </div>
                     @empty

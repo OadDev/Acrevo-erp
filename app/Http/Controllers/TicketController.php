@@ -79,7 +79,7 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load(['workOrder.client', 'raisedBy', 'assignedTo', 'department', 'comments.user', 'media']);
+        $ticket->load(['workOrder.client', 'raisedBy', 'assignedTo', 'department', 'comments.user', 'comments.media', 'media']);
 
         return view('tickets.show', compact('ticket'));
     }
@@ -147,9 +147,21 @@ class TicketController extends Controller
 
     public function addComment(Request $request, Ticket $ticket): RedirectResponse
     {
-        $data = $request->validate(['comment' => ['required', 'string']]);
+        $data = $request->validate([
+            'comment' => ['required', 'string'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
+        ]);
 
-        $ticket->comments()->create($data + ['user_id' => $request->user()->id]);
+        $comment = $ticket->comments()->create(collect($data)->except('files')->all() + ['user_id' => $request->user()->id]);
+
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $comment->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
+        }
 
         return back()->with('success', 'Comment added.');
     }
@@ -172,7 +184,7 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'comments.user', 'media']);
+        $ticket->load(['workOrder.client', 'raisedBy', 'raisedByClient', 'assignedTo', 'department', 'comments.user', 'comments.media', 'media']);
 
         $pdf = Pdf::loadView('tickets.pdf', compact('ticket'));
 
