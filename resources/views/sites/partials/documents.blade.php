@@ -42,7 +42,7 @@
                     <option value="{{ $value }}">{{ $label }}</option>
                 @endforeach
             </x-select-input>
-            <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="col-span-2 text-sm sm:col-span-2" required>
+            <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.csv" class="col-span-2 text-sm sm:col-span-2" required>
             <x-primary-button class="justify-center">Upload</x-primary-button>
         </form>
     @endcan
