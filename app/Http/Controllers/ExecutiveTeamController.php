@@ -23,7 +23,10 @@ class ExecutiveTeamController extends Controller
 
     public function create(): View
     {
-        $teamLeaders = User::role(['Executive Team Leader', 'Admin'])->get();
+        // Any user holding assigned_work.view is eligible as a Team Leader -
+        // not hardcoded to the Executive Team Leader role (Admin is covered
+        // automatically, since the Admin role holds every permission).
+        $teamLeaders = User::permission('assigned_work.view')->get();
 
         return view('executive-teams.create', compact('teamLeaders'));
     }
@@ -58,10 +61,12 @@ class ExecutiveTeamController extends Controller
         $executiveTeam->load(['teamLeader', 'members.employee', 'workOrderAssignments.workOrder']);
         // The HR > Worker list holds both unregistered workers (no login,
         // Employee-only) and registered workers (Employee linked to a User
-        // with the Worker role). Both are eligible team members - an
-        // Employee linked to a non-Worker User (HR, Sales, etc.) is not.
+        // holding assigned_work.view - not hardcoded to the Worker role, so
+        // a custom role granted that permission is also eligible). Both are
+        // eligible team members - an Employee linked to a User without that
+        // permission (HR, Sales, etc.) is not.
         $availableEmployees = Employee::where('status', 'active')
-            ->where(fn ($q) => $q->whereNull('user_id')->orWhereHas('user', fn ($q2) => $q2->role('Worker')))
+            ->where(fn ($q) => $q->whereNull('user_id')->orWhereHas('user', fn ($q2) => $q2->permission('assigned_work.view')))
             ->whereNotIn('id', $executiveTeam->members->pluck('employee_id'))
             ->get();
 
@@ -70,7 +75,7 @@ class ExecutiveTeamController extends Controller
 
     public function edit(ExecutiveTeam $executiveTeam): View
     {
-        $teamLeaders = User::role(['Executive Team Leader', 'Admin'])->get();
+        $teamLeaders = User::permission('assigned_work.view')->get();
 
         return view('executive-teams.edit', compact('executiveTeam', 'teamLeaders'));
     }
@@ -110,7 +115,7 @@ class ExecutiveTeamController extends Controller
         ]);
 
         $employee = Employee::findOrFail($data['employee_id']);
-        abort_if($employee->user && ! $employee->user->hasRole('Worker'), 422, 'Only workers from the HR > Worker list can be added to an executive team.');
+        abort_if($employee->user && ! $employee->user->can('assigned_work.view'), 422, 'Only workers from the HR > Worker list can be added to an executive team.');
 
         $executiveTeam->members()->create($data + ['joined_at' => now()]);
 

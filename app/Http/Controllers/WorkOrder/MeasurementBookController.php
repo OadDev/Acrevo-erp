@@ -33,7 +33,7 @@ class MeasurementBookController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, MeasurementBook $measurementBook): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('site_records.manage');
 
         abort_unless($measurementBook->work_order_id === $workOrder->id, 404);
 
@@ -49,7 +49,7 @@ class MeasurementBookController extends Controller
 
     public function destroy(WorkOrder $workOrder, MeasurementBook $measurementBook): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('site_records.manage');
 
         abort_unless($measurementBook->work_order_id === $workOrder->id, 404);
 

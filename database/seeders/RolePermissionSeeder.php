@@ -32,6 +32,7 @@ class RolePermissionSeeder extends Seeder
             'site_visits.view', 'site_visits.create', 'site_visits.edit',
             'quotations.view', 'quotations.create', 'quotations.edit', 'quotations.send', 'quotations.approve',
             'work_orders.view', 'work_orders.create', 'work_orders.edit', 'work_orders.cancel',
+            'work_orders.summary_manage',
             'ongoing_sites.view', 'completed_sites.view',
         ],
         'hr' => [
@@ -173,7 +174,7 @@ class RolePermissionSeeder extends Seeder
         ],
         'HR' => [
             'hr' => '*',
-            'sales' => ['work_orders.view'],
+            'sales' => ['work_orders.view', 'work_orders.summary_manage'],
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
@@ -182,7 +183,7 @@ class RolePermissionSeeder extends Seeder
         'Executive Team Leader' => [
             'executive' => '*',
             'tickets' => ['tickets.view', 'tickets.create'],
-            'sales' => ['work_orders.view'],
+            'sales' => ['work_orders.view', 'work_orders.summary_manage'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
             // View + update status only, scoped in the controller to assets
