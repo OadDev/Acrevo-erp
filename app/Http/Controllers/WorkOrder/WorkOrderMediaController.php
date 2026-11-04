@@ -31,7 +31,7 @@ class WorkOrderMediaController extends Controller
 
     public function destroy(WorkOrder $workOrder, Media $media): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('media.upload');
 
         abort_unless($media->model_id === $workOrder->id, 404);
 

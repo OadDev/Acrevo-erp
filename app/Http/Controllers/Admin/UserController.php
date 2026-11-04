@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -135,8 +136,30 @@ class UserController extends Controller
     {
         $roles = Role::where('name', '!=', 'Client')->orderBy('name')->get();
         $departments = Department::orderBy('name')->get();
+        $permissions = Permission::orderBy('name')->get()->groupBy(fn ($p) => explode('.', $p->name)[0]);
+        $rolePermissionNames = $user->getPermissionsViaRoles()->pluck('name')->all();
+        $directPermissionNames = $user->getDirectPermissions()->pluck('name')->all();
 
-        return view('admin.users.edit', compact('user', 'roles', 'departments'));
+        return view('admin.users.edit', compact('user', 'roles', 'departments', 'permissions', 'rolePermissionNames', 'directPermissionNames'));
+    }
+
+    /**
+     * Grants/revokes permissions on this specific user, on top of whatever
+     * their role already grants - so Admin can tailor one person's access
+     * (e.g. let a Site Coordinator also correct Ledger entries) without
+     * creating a whole new role or reassigning them to Executive Team
+     * Leader just to get that one extra permission.
+     */
+    public function updatePermissions(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'exists:permissions,name'],
+        ]);
+
+        $user->syncPermissions($data['permissions'] ?? []);
+
+        return redirect()->route('admin.users.edit', $user)->with('success', 'Individual permissions updated.');
     }
 
     public function update(Request $request, User $user): RedirectResponse

@@ -75,7 +75,7 @@ class ApprovalRequestController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('work_orders.edit', 'approval_requests.manage');
 
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
@@ -94,7 +94,7 @@ class ApprovalRequestController extends Controller
 
     public function destroy(WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('work_orders.edit', 'approval_requests.manage');
 
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 

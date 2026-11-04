@@ -68,7 +68,10 @@ class WorkOrderController extends Controller
 
         abort_if($site->status === 'completed', 422, 'This site was already marked completed and handed over. Ask an Admin to reopen it before adding more work orders.');
 
-        $teamLeaders = User::role('Executive Team Leader')->orderBy('name')->get();
+        // Any user holding assigned_work.view is eligible as a Team Leader -
+        // not hardcoded to the Executive Team Leader role - so a custom
+        // role granted that permission is also offered here.
+        $teamLeaders = User::permission('assigned_work.view')->orderBy('name')->get();
         $subContractorUsers = User::role('Sub Contractor')->where('is_active', true)->orderBy('name')->get();
 
         $parentWorkOrder = WorkOrder::find($request->get('parent_work_order_id'));
@@ -228,7 +231,7 @@ class WorkOrderController extends Controller
 
     public function edit(WorkOrder $workOrder): View
     {
-        $this->authorizeAdminOnly();
+        $this->authorize('update', $workOrder);
 
         $byCategory = fn ($category) => $workOrder->budgetItems()->where('category', $category)->get();
 
@@ -268,7 +271,7 @@ class WorkOrderController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorize('update', $workOrder);
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],

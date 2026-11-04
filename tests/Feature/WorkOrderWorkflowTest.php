@@ -2035,8 +2035,12 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame(0, $workOrder->fresh()->timeSchedules()->count());
     }
 
-    public function test_only_admin_can_edit_or_remove_tab_entries_on_a_work_order(): void
+    public function test_a_role_with_site_records_manage_can_correct_a_material_entry_but_one_without_it_cannot(): void
     {
+        // A role holding site_records.manage (e.g. the Executive Team
+        // Leader, or any custom role an Admin grants it to) can now correct
+        // its own mistaken entries, not just Admin - correction used to be
+        // hardcoded to the Admin role regardless of permissions.
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
         $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
@@ -2044,30 +2048,31 @@ class WorkOrderWorkflowTest extends TestCase
             'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
-        $nonAdmin = $this->executiveTeamLeader();
+        $unauthorized = $this->sales();
+        $teamLeader = $this->executiveTeamLeader();
 
         $material = $workOrder->materialEntries()->create([
             'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'unit' => 'Bags',
             'quantity' => 10, 'rate' => 400, 'amount' => 4000, 'added_by' => $admin->id,
         ]);
 
-        $this->actingAs($nonAdmin)->put("/work-orders/{$workOrder->id}/materials/{$material->id}", [
+        $this->actingAs($unauthorized)->put("/work-orders/{$workOrder->id}/materials/{$material->id}", [
             'entry_date' => now()->toDateString(), 'material_name' => 'Hacked', 'unit' => 'Bags', 'quantity' => 1, 'rate' => 1,
         ])->assertForbidden();
-        $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}/materials/{$material->id}")->assertForbidden();
+        $this->actingAs($unauthorized)->delete("/work-orders/{$workOrder->id}/materials/{$material->id}")->assertForbidden();
 
-        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/materials/{$material->id}", [
+        $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/materials/{$material->id}", [
             'entry_date' => now()->toDateString(), 'material_name' => 'Corrected Cement', 'unit' => 'Bags', 'quantity' => 12, 'rate' => 450,
         ])->assertRedirect();
         $material->refresh();
         $this->assertSame('Corrected Cement', $material->material_name);
         $this->assertEquals(5400, $material->amount);
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/materials/{$material->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/materials/{$material->id}")->assertRedirect();
         $this->assertNull($workOrder->materialEntries()->find($material->id));
     }
 
-    public function test_admin_can_edit_and_remove_a_checklist_and_its_items(): void
+    public function test_a_role_with_daily_checklist_manage_can_edit_and_remove_a_checklist_and_its_items_but_one_without_it_cannot(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -2082,25 +2087,26 @@ class WorkOrderWorkflowTest extends TestCase
         ]);
         $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team A', 'team_leader_id' => $leader->id, 'is_active' => true]);
         WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
-        $nonAdmin = $this->executiveTeamLeader();
+        $unauthorized = $this->sales();
+        $teamLeader = $this->executiveTeamLeader();
 
         $checklist = $workOrder->dailyChecklists()->create([
             'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'created_by' => $admin->id,
         ]);
         $item = $checklist->checklistItems()->create(['description' => 'Lay bricks', 'sort_order' => 0]);
 
-        $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}/checklist-items/{$item->id}")->assertForbidden();
-        $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertForbidden();
+        $this->actingAs($unauthorized)->delete("/work-orders/{$workOrder->id}/checklist-items/{$item->id}")->assertForbidden();
+        $this->actingAs($unauthorized)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertForbidden();
 
-        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/checklists/{$checklist->id}", [
+        $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/checklists/{$checklist->id}", [
             'title' => 'Day 1 - Corrected', 'executive_team_id' => $team->id, 'date' => now()->toDateString(),
         ])->assertRedirect();
         $this->assertSame('Day 1 - Corrected', $checklist->fresh()->title);
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/checklist-items/{$item->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/checklist-items/{$item->id}")->assertRedirect();
         $this->assertNull($checklist->checklistItems()->find($item->id));
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertRedirect();
         $this->assertNull($workOrder->dailyChecklists()->find($checklist->id));
     }
 
@@ -2113,7 +2119,10 @@ class WorkOrderWorkflowTest extends TestCase
             'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
-        $nonAdmin = $this->executiveTeamLeader();
+        $unauthorized = $this->sales();
+        // A role holding site_records.manage - not just Admin - can now
+        // correct ledger entries too.
+        $teamLeader = $this->executiveTeamLeader();
 
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
             'type' => 'credit', 'amount' => '10000',
@@ -2128,24 +2137,24 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertEquals(10000, $first->balance);
         $this->assertEquals(8000, $second->balance);
 
-        $this->actingAs($nonAdmin)->put("/work-orders/{$workOrder->id}/ledger/{$first->id}", [
+        $this->actingAs($unauthorized)->put("/work-orders/{$workOrder->id}/ledger/{$first->id}", [
             'entry_date' => now()->toDateString(), 'type' => 'credit', 'amount' => '5000',
         ])->assertForbidden();
 
         // Correcting the first (credit) entry from 10000 to 5000 must ripple
         // through to the second entry's stored balance too.
-        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/ledger/{$first->id}", [
+        $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/ledger/{$first->id}", [
             'entry_date' => now()->toDateString(), 'type' => 'credit', 'amount' => '5000',
         ])->assertRedirect();
 
         $this->assertEquals(5000, $first->fresh()->balance);
         $this->assertEquals(3000, $second->fresh()->balance);
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/ledger/{$first->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/ledger/{$first->id}")->assertRedirect();
         $this->assertEquals(-2000, $second->fresh()->balance);
     }
 
-    public function test_admin_can_edit_and_remove_a_measurement_book_item(): void
+    public function test_a_role_with_site_records_manage_can_edit_and_remove_a_measurement_book_item_but_one_without_it_cannot(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -2154,7 +2163,8 @@ class WorkOrderWorkflowTest extends TestCase
             'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
-        $nonAdmin = $this->executiveTeamLeader();
+        $unauthorized = $this->sales();
+        $teamLeader = $this->executiveTeamLeader();
         $mb = $workOrder->measurementBooks()->create([
             'description' => 'Ground floor slab', 'date' => now()->toDateString(), 'recorded_by' => $admin->id, 'status' => 'draft', 'type' => 'actual',
         ]);
@@ -2162,18 +2172,18 @@ class WorkOrderWorkflowTest extends TestCase
             'item_description' => 'RCC slab', 'unit' => 'Sqft', 'length' => 10, 'breadth' => 5, 'quantity' => 50, 'rate' => 120, 'amount' => 6000,
         ]);
 
-        $this->actingAs($nonAdmin)->put("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items/{$item->id}", [
+        $this->actingAs($unauthorized)->put("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items/{$item->id}", [
             'item_description' => 'Hacked', 'unit' => 'Sqft', 'quantity' => 1,
         ])->assertForbidden();
 
-        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items/{$item->id}", [
+        $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items/{$item->id}", [
             'item_description' => 'RCC slab corrected', 'unit' => 'Sqft', 'quantity' => 60, 'rate' => 120,
         ])->assertRedirect();
         $item->refresh();
         $this->assertSame('RCC slab corrected', $item->item_description);
         $this->assertEquals(7200, $item->amount);
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items/{$item->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/measurement-books/{$mb->id}/items/{$item->id}")->assertRedirect();
         $this->assertNull($mb->items()->find($item->id));
     }
 
@@ -2210,7 +2220,7 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertNull(\App\Models\QcInspection::find($inspection->id));
     }
 
-    public function test_only_admin_can_edit_or_remove_a_work_order_attendance_entry(): void
+    public function test_a_role_with_site_records_manage_can_edit_or_remove_a_work_order_attendance_entry_but_one_without_it_cannot(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -2219,7 +2229,8 @@ class WorkOrderWorkflowTest extends TestCase
             'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
-        $nonAdmin = $this->executiveTeamLeader();
+        $unauthorized = $this->sales();
+        $teamLeader = $this->executiveTeamLeader();
         $worker = \App\Models\Employee::create([
             'employee_code' => 'EMP-'.uniqid(), 'name' => 'Site Worker', 'status' => 'active',
             'department_id' => Department::first()->id, 'employment_type' => 'permanent',
@@ -2231,18 +2242,19 @@ class WorkOrderWorkflowTest extends TestCase
         ])->assertRedirect();
         $attendance = \App\Models\Attendance::where('employee_id', $worker->id)->firstOrFail();
 
-        $this->actingAs($nonAdmin)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
+        $this->actingAs($unauthorized)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
             'date' => now()->toDateString(), 'status' => 'absent',
         ])->assertForbidden();
-        $this->actingAs($nonAdmin)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertForbidden();
+        $this->actingAs($unauthorized)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertForbidden();
 
-        // Marked Present by mistake - Admin corrects it to Absent.
-        $this->actingAs($admin)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
+        // Marked Present by mistake - the Team Leader (who holds
+        // site_records.manage, same as Admin) corrects it to Absent.
+        $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
             'date' => now()->toDateString(), 'status' => 'absent',
         ])->assertRedirect();
         $this->assertSame('absent', $attendance->fresh()->status);
 
-        $this->actingAs($admin)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertRedirect();
+        $this->actingAs($teamLeader)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertRedirect();
         $this->assertNull(\App\Models\Attendance::find($attendance->id));
     }
 

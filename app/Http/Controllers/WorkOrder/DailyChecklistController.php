@@ -50,7 +50,7 @@ class DailyChecklistController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, DailyChecklist $checklist): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('daily_checklist.manage');
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -65,7 +65,7 @@ class DailyChecklistController extends Controller
 
     public function destroy(WorkOrder $workOrder, DailyChecklist $checklist): RedirectResponse
     {
-        $this->authorizeAdminOnly();
+        $this->authorizeAnyPermission('daily_checklist.manage');
 
         $checklist->checklistItems()->delete();
         $checklist->delete();

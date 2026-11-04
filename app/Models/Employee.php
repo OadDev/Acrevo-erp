@@ -100,12 +100,14 @@ class Employee extends Model implements HasMedia
 
     /**
      * Employees whose attendance belongs on the WO Workers Payroll: an
-     * unregistered worker (no login) or one linked to a User with the
-     * Worker role. Mirrors the Executive Team member eligibility rule.
+     * unregistered worker (no login) or one linked to a User holding
+     * assigned_work.view. Mirrors the Executive Team member eligibility
+     * rule (ExecutiveTeamController), which is also permission-based rather
+     * than hardcoded to the Worker role.
      */
     public function scopeWorkOrderWorkers(Builder $query): Builder
     {
-        return $query->where(fn ($q) => $q->whereNull('user_id')->orWhereHas('user', fn ($q2) => $q2->role('Worker')));
+        return $query->where(fn ($q) => $q->whereNull('user_id')->orWhereHas('user', fn ($q2) => $q2->permission('assigned_work.view')));
     }
 
     /**

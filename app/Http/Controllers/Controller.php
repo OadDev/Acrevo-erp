@@ -19,6 +19,22 @@ abstract class Controller
     }
 
     /**
+     * Gates correcting (editing/removing) an already-recorded Work Order
+     * entry behind the same permission that already governs creating that
+     * kind of entry - whoever a role lets create a Daily Checklist/Material
+     * entry/etc. can also fix their own mistake in it, instead of every
+     * correction being hardcoded to the Admin role regardless of what
+     * permissions a role (built-in or custom) actually holds. Admin is
+     * covered automatically, since the Admin role holds every permission.
+     */
+    protected function authorizeAnyPermission(string ...$permissions): void
+    {
+        $user = Auth::user();
+
+        abort_unless($user && collect($permissions)->contains(fn ($permission) => $user->can($permission)), 403, 'You do not have permission to edit or remove this record.');
+    }
+
+    /**
      * The Company Ledger tracks company-side expenses against a work order
      * and is restricted to Finance and Admin only - no other role should
      * even see it exists.
@@ -30,10 +46,13 @@ abstract class Controller
 
     /**
      * The Monthly Summary log is entered by the office, not the site team -
-     * only Sales, HR, and Admin can add or correct rows in it.
+     * gated behind its own permission (granted to Sales, HR, and Executive
+     * Team Leader by default) rather than a hardcoded role list, so Admin
+     * can extend it to another role without assigning Executive Team
+     * Leader itself.
      */
     protected function authorizeSummaryEditors(): void
     {
-        abort_unless(Auth::user()?->hasAnyRole(['Admin', 'Sales', 'HR', 'Executive Team Leader']), 403, 'Only Sales, HR, Admin, and the Executive Team Leader can edit the work order summary.');
+        abort_unless(Auth::user()?->can('work_orders.summary_manage'), 403, 'You do not have permission to edit the work order summary.');
     }
 }

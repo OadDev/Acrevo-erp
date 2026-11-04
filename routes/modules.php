@@ -345,9 +345,10 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::get('approval-requests/{approvalRequest}/pdf', [ApprovalRequestController::class, 'pdf'])->name('approval-requests.pdf');
         Route::get('approval-requests/{approvalRequest}/zip', [ApprovalRequestController::class, 'zip'])->name('approval-requests.zip');
     });
-    // Editing/removing an existing approval request record stays Admin-only
-    // (data-integrity action, not part of the raise/respond entry workflow).
-    Route::middleware('permission:work_orders.edit')->group(function () {
+    // Editing/removing an existing approval request record uses the same
+    // permission as raising/responding to one, so whoever can raise an
+    // approval request can also correct their own mistake in it.
+    Route::middleware('permission:work_orders.edit|approval_requests.manage')->group(function () {
         Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
         Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
     });
@@ -761,6 +762,12 @@ Route::middleware('permission:reports.view')->group(function () {
 Route::middleware('permission:users.view')->group(function () {
     Route::resource('admin/users', UserController::class)->except('show')->names('admin.users');
     Route::post('admin/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('admin.users.deactivate');
+});
+// Granting/revoking individual permissions on a user (on top of their role)
+// is its own, more sensitive action than editing name/email/role - gated by
+// the dedicated permissions.manage permission rather than users.view.
+Route::middleware('permission:permissions.manage')->group(function () {
+    Route::put('admin/users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('admin.users.permissions.update');
 });
 Route::middleware('permission:roles.view')->group(function () {
     Route::resource('admin/roles', RoleController::class)->except('show')->names('admin.roles');

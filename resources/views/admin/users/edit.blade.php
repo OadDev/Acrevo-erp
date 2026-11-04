@@ -52,4 +52,47 @@
             </div>
         </form>
     </x-card>
+
+    @can('permissions.manage')
+        <x-card class="mt-6 max-w-4xl">
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">Individual Permissions</h3>
+            <p class="mb-4 text-xs text-gray-400">
+                Grant this user extra permissions on top of their role, without creating a new role or reassigning them.
+                Permissions already granted by their <strong>{{ $user->getRoleNames()->first() ?? 'role' }}</strong> role are shown checked and locked below - untick a role here to remove those instead.
+            </p>
+            <form method="POST" action="{{ route('admin.users.permissions.update', $user) }}">
+                @csrf
+                @method('PUT')
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($permissions as $group => $items)
+                        <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ str_replace('_', ' ', $group) }}</p>
+                            <div class="space-y-1.5">
+                                @foreach ($items as $permission)
+                                    @php($grantedByRole = in_array($permission->name, $rolePermissionNames, true))
+                                    <label class="flex items-center gap-2 text-sm {{ $grantedByRole ? 'text-gray-400' : '' }}">
+                                        <input
+                                            type="checkbox"
+                                            name="permissions[]"
+                                            value="{{ $permission->name }}"
+                                            @checked($grantedByRole || in_array($permission->name, old('permissions', $directPermissionNames), true))
+                                            @disabled($grantedByRole)
+                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        >
+                                        {{ $permission->name }}
+                                        @if ($grantedByRole)
+                                            <span class="text-gray-400">(via role)</span>
+                                        @endif
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <x-primary-button>Save Individual Permissions</x-primary-button>
+                </div>
+            </form>
+        </x-card>
+    @endcan
 </x-app-layout>
