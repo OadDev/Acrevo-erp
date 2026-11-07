@@ -135,7 +135,7 @@ class TaskController extends Controller
             'description' => ['nullable', 'string'],
             'due_date' => ['required', 'date'],
             'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:20480'],
+            'attachments.*' => ['file', 'max:51200'],
         ]);
 
         $task = Task::create(collect($data)->except('attachments')->all() + [
@@ -173,7 +173,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'completion_notes' => ['required', 'string'],
             'proof' => ['nullable', 'array'],
-            'proof.*' => ['file', 'max:20480'],
+            'proof.*' => ['file', 'max:51200'],
         ]);
 
         $task->update([
@@ -186,7 +186,7 @@ class TaskController extends Controller
             try {
                 $task->addMedia($file)->toMediaCollection('proof');
             } catch (FileIsTooBig $e) {
-                return back()->withErrors(['proof' => 'One of the files is too large (max 20MB).']);
+                return back()->withErrors(['proof' => 'One of the files is too large (max 50MB).']);
             }
         }
 
@@ -246,7 +246,7 @@ class TaskController extends Controller
             'description' => ['nullable', 'string'],
             'due_date' => ['required', 'date'],
             'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:20480'],
+            'attachments.*' => ['file', 'max:51200'],
         ]);
 
         $task->update(collect($data)->except('attachments')->all());
@@ -275,7 +275,7 @@ class TaskController extends Controller
                 $task->addMedia($file)->toMediaCollection('attachments');
             }
         } catch (FileIsTooBig $e) {
-            return 'One of those files is too large (max 20MB).';
+            return 'One of those files is too large (max 50MB).';
         }
 
         return null;

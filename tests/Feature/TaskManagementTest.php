@@ -500,4 +500,38 @@ class TaskManagementTest extends TestCase
         $this->actingAs($admin)->get('/tasks')->assertOk()->assertSee('Admin Filter');
         $this->actingAs($sales)->get('/tasks')->assertOk()->assertDontSee('Admin Filter');
     }
+
+    /**
+     * Sir asked to raise the Common Task Assignment attachment limit from
+     * 20MB to 50MB. A 30MB file - previously rejected everywhere here -
+     * must now be accepted assigning, completing, and editing a task.
+     */
+    public function test_a_file_over_20mb_is_now_accepted_on_task_attachments_and_proof(): void
+    {
+        $admin = $this->admin();
+        $sales = $this->userWithRole('Sales', 'Sales Person');
+        $hr = $this->userWithRole('HR', 'HR Person');
+        $thirtyMb = 30 * 1024;
+
+        $this->actingAs($sales)->post('/tasks', [
+            'assigned_to' => $hr->id, 'title' => 'Review the attached drawing',
+            'due_date' => now()->addDay()->toDateString(),
+            'attachments' => [UploadedFile::fake()->create('drawing.pdf', $thirtyMb, 'application/pdf')],
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $task = Task::firstOrFail();
+        $this->assertSame(1, $task->getMedia('attachments')->count());
+
+        $this->actingAs($hr)->post("/tasks/{$task->id}/complete", [
+            'completion_notes' => 'Reviewed and filed',
+            'proof' => [UploadedFile::fake()->create('proof.pdf', $thirtyMb, 'application/pdf')],
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $this->assertSame(1, $task->fresh()->getMedia('proof')->count());
+
+        $this->actingAs($sales)->put("/tasks/{$task->id}", [
+            'assigned_to' => $hr->id, 'title' => 'Review the attached drawing',
+            'due_date' => now()->addDay()->toDateString(),
+            'attachments' => [UploadedFile::fake()->create('revised-drawing.pdf', $thirtyMb, 'application/pdf')],
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+        $this->assertSame(2, $task->fresh()->getMedia('attachments')->count());
+    }
 }
