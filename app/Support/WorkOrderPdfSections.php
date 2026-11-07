@@ -34,10 +34,13 @@ class WorkOrderPdfSections
      */
     private const PERMISSION_GATED_SECTIONS = [
         'overview' => 'work_orders.overview_view',
+        'checklist' => 'daily_checklist.view',
+        'progress' => 'daily_progress.view',
         'materials' => 'wo_materials.view',
         'manpower' => 'wo_manpower.view',
         'mb' => 'wo_measurement_book.view',
         'attendance' => 'wo_attendance.view',
+        'summary' => 'work_orders.summary_view',
         'ledger' => 'wo_ledger.view',
     ];
 

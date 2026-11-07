@@ -264,7 +264,7 @@ Route::middleware('permission:work_orders.edit')->group(function () {
     Route::patch('work-orders/{workOrder}/site', [WorkOrderController::class, 'updateSite'])->name('work-orders.site.update');
 });
 
-Route::middleware('permission:daily_progress.manage|work_orders.edit')->group(function () {
+Route::middleware('permission:daily_progress.edit|work_orders.edit')->group(function () {
     Route::post('work-orders/{workOrder}/submit-for-qc', [WorkOrderController::class, 'submitForQc'])->name('work-orders.submit-for-qc');
 });
 
@@ -274,24 +274,43 @@ Route::middleware('permission:daily_progress.manage|work_orders.edit')->group(fu
 |--------------------------------------------------------------------------
 */
 Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function () {
-    Route::middleware('permission:daily_checklist.manage')->group(function () {
+    // Daily Work with Checklist used to share one blanket
+    // daily_checklist.manage permission for everything - it's now four
+    // independently grantable permissions, so e.g. marking items done can
+    // be granted (via Edit) without also granting Delete.
+    Route::middleware('permission:daily_checklist.view')->group(function () {
         Route::get('checklists', [DailyChecklistController::class, 'index'])->name('checklists.index');
+    });
+    Route::middleware('permission:daily_checklist.create')->group(function () {
         Route::post('checklists', [DailyChecklistController::class, 'store'])->name('checklists.store');
+    });
+    Route::middleware('permission:daily_checklist.edit')->group(function () {
         Route::put('checklists/{checklist}', [DailyChecklistController::class, 'update'])->name('checklists.update');
-        Route::delete('checklists/{checklist}', [DailyChecklistController::class, 'destroy'])->name('checklists.destroy');
         Route::post('checklist-items/{item}/done', [DailyChecklistItemController::class, 'markDone'])->name('checklist-items.done');
+    });
+    Route::middleware('permission:daily_checklist.delete')->group(function () {
+        Route::delete('checklists/{checklist}', [DailyChecklistController::class, 'destroy'])->name('checklists.destroy');
         Route::delete('checklist-items/{item}', [DailyChecklistItemController::class, 'destroy'])->name('checklist-items.destroy');
         Route::delete('checklist-items/{item}/proof', [DailyChecklistItemController::class, 'destroyProof'])->name('checklist-items.proof.destroy');
     });
-    Route::middleware('permission:daily_progress.manage')->group(function () {
+    // Progress & Media used to share daily_progress.manage for the Daily
+    // Progress Report plus a separate media.upload for the Media Gallery/
+    // Details Upload section of the same tab - the two are now folded
+    // into one four-permission set covering the whole tab, since every
+    // role that held one always held the other too.
+    Route::middleware('permission:daily_progress.view')->group(function () {
         Route::get('progress', [DailyProgressController::class, 'index'])->name('progress.index');
+    });
+    Route::middleware('permission:daily_progress.create')->group(function () {
         Route::post('progress', [DailyProgressController::class, 'store'])->name('progress.store');
+        Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');
+    });
+    Route::middleware('permission:daily_progress.edit')->group(function () {
         Route::put('progress/{report}', [DailyProgressController::class, 'update'])->name('progress.update');
+    });
+    Route::middleware('permission:daily_progress.delete')->group(function () {
         Route::delete('progress/{report}', [DailyProgressController::class, 'destroy'])->name('progress.destroy');
         Route::delete('progress/{report}/media/{media}', [DailyProgressController::class, 'destroyMedia'])->name('progress.media.destroy');
-    });
-    Route::middleware('permission:media.upload')->group(function () {
-        Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');
         Route::delete('media/{media}', [WorkOrderMediaController::class, 'destroy'])->name('media.destroy');
     });
     // Material Inward / Daily Material Used Entry, Used Man Power (labour),
@@ -386,12 +405,19 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::delete('company-ledger/{companyLedger}/bill', [CompanyLedgerController::class, 'destroyBill'])->name('company-ledger.bill.destroy');
     Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
     Route::get('company-ledger/pdf', [CompanyLedgerController::class, 'pdf'])->name('company-ledger.pdf');
-    // Monthly Summary is entered by the office (Sales/HR/Admin, enforced in
-    // the controller), not the site team, so it also skips the wo_*
-    // permission middleware the other WO entry routes use.
-    Route::post('summary', [WorkOrderSummaryController::class, 'store'])->name('summary.store');
-    Route::put('summary/{summary}', [WorkOrderSummaryController::class, 'update'])->name('summary.update');
-    Route::delete('summary/{summary}', [WorkOrderSummaryController::class, 'destroy'])->name('summary.destroy');
+    // Monthly Summary is entered by the office (Sales/HR/Admin by default,
+    // enforced via its own four permissions below), not the site team, so
+    // it skips the wo_*/daily_* permission middleware the other WO entry
+    // routes use.
+    Route::middleware('permission:work_orders.summary_create')->group(function () {
+        Route::post('summary', [WorkOrderSummaryController::class, 'store'])->name('summary.store');
+    });
+    Route::middleware('permission:work_orders.summary_edit')->group(function () {
+        Route::put('summary/{summary}', [WorkOrderSummaryController::class, 'update'])->name('summary.update');
+    });
+    Route::middleware('permission:work_orders.summary_delete')->group(function () {
+        Route::delete('summary/{summary}', [WorkOrderSummaryController::class, 'destroy'])->name('summary.destroy');
+    });
     Route::middleware('permission:work_orders.edit|approval_requests.manage')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');

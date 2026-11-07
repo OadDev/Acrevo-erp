@@ -100,12 +100,16 @@
         <div x-show="tab === 'team'" x-cloak>
             @include('work-orders.tabs.team')
         </div>
-        <div x-show="tab === 'checklist'" x-cloak>
-            @include('work-orders.tabs.checklist')
-        </div>
-        <div x-show="tab === 'progress'" x-cloak>
-            @include('work-orders.tabs.progress')
-        </div>
+        @if (array_key_exists('checklist', $tabs))
+            <div x-show="tab === 'checklist'" x-cloak>
+                @include('work-orders.tabs.checklist')
+            </div>
+        @endif
+        @if (array_key_exists('progress', $tabs))
+            <div x-show="tab === 'progress'" x-cloak>
+                @include('work-orders.tabs.progress')
+            </div>
+        @endif
         @if (array_key_exists('materials', $tabs))
             <div x-show="tab === 'materials'" x-cloak>
                 @include('work-orders.tabs.materials')
@@ -126,9 +130,11 @@
                 @include('work-orders.tabs.attendance')
             </div>
         @endif
-        <div x-show="tab === 'summary'" x-cloak>
-            @include('work-orders.tabs.summary')
-        </div>
+        @if (array_key_exists('summary', $tabs))
+            <div x-show="tab === 'summary'" x-cloak>
+                @include('work-orders.tabs.summary')
+            </div>
+        @endif
         @if ($canSeeLedger)
             <div x-show="tab === 'ledger'" x-cloak>
                 @include('work-orders.tabs.ledger')

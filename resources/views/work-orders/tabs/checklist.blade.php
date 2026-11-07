@@ -15,17 +15,21 @@
                         @if ($total)
                             <span class="text-xs font-medium text-gray-500">{{ $done }}/{{ $total }} done</span>
                         @endif
-                        @can('daily_checklist.manage')
-                            <button type="button" @click="open === '{{ $checklist->id }}' ? open = null : open = '{{ $checklist->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                            <form method="POST" action="{{ route('work-orders.checklists.destroy', [$workOrder, $checklist]) }}" onsubmit="return confirm('Remove this daily work entry and all its items?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                            </form>
-                        @endif
+                        @canany(['daily_checklist.edit', 'daily_checklist.delete'])
+                            @can('daily_checklist.edit')
+                                <button type="button" @click="open === '{{ $checklist->id }}' ? open = null : open = '{{ $checklist->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                            @endcan
+                            @can('daily_checklist.delete')
+                                <form method="POST" action="{{ route('work-orders.checklists.destroy', [$workOrder, $checklist]) }}" onsubmit="return confirm('Remove this daily work entry and all its items?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                </form>
+                            @endcan
+                        @endcanany
                     </div>
                 </div>
-                @can('daily_checklist.manage')
+                @can('daily_checklist.edit')
                     @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
                     <form method="POST" action="{{ route('work-orders.checklists.update', [$workOrder, $checklist]) }}" x-show="open === '{{ $checklist->id }}'" x-cloak class="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
@@ -49,7 +53,7 @@
                                 <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                                     <x-icon name="check-circle" class="h-4 w-4 shrink-0 text-emerald-500" />
                                     <span class="flex-1 line-through decoration-gray-300">{{ $item->description }}</span>
-                                    @can('daily_checklist.manage')
+                                    @can('daily_checklist.delete')
                                         <form method="POST" action="{{ route('work-orders.checklist-items.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this checklist item?')">
                                             @csrf
                                             @method('DELETE')
@@ -70,7 +74,7 @@
                                         @endif
                                         <span class="text-xs font-medium text-indigo-600">View Proof</span>
                                     </a>
-                                    @can('daily_checklist.manage')
+                                    @can('daily_checklist.delete')
                                         <form method="POST" action="{{ route('work-orders.checklist-items.proof.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this proof? The item will go back to pending.')" class="mt-1">
                                             @csrf
                                             @method('DELETE')
@@ -82,7 +86,7 @@
                                 <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                     <x-icon name="clock" class="h-4 w-4 shrink-0 text-amber-500" />
                                     <span class="flex-1">{{ $item->description }}</span>
-                                    @can('daily_checklist.manage')
+                                    @can('daily_checklist.delete')
                                         <form method="POST" action="{{ route('work-orders.checklist-items.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this checklist item?')">
                                             @csrf
                                             @method('DELETE')
@@ -90,7 +94,7 @@
                                         </form>
                                     @endif
                                 </div>
-                                @can('daily_checklist.manage')
+                                @can('daily_checklist.edit')
                                     <form method="POST" action="{{ route('work-orders.checklist-items.done', [$workOrder, $item]) }}" enctype="multipart/form-data" class="mt-2 flex flex-wrap items-center gap-2">
                                         @csrf
                                         <label class="flex items-center gap-1.5 text-xs text-gray-500">
@@ -112,7 +116,7 @@
         @endforelse
     </div>
 
-    @can('daily_checklist.manage')
+    @can('daily_checklist.create')
         @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Add Daily Work</h3>

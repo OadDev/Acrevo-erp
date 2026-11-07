@@ -33,7 +33,7 @@ class DailyChecklistItemController extends Controller
 
     public function destroy(WorkOrder $workOrder, DailyChecklistItem $item): RedirectResponse
     {
-        $this->authorizeAnyPermission('daily_checklist.manage');
+        $this->authorizeAnyPermission('daily_checklist.delete');
 
         abort_unless($item->dailyChecklist->work_order_id === $workOrder->id, 404);
 
@@ -44,7 +44,7 @@ class DailyChecklistItemController extends Controller
 
     public function destroyProof(WorkOrder $workOrder, DailyChecklistItem $item): RedirectResponse
     {
-        $this->authorizeAnyPermission('daily_checklist.manage');
+        $this->authorizeAnyPermission('daily_checklist.delete');
 
         abort_unless($item->dailyChecklist->work_order_id === $workOrder->id, 404);
 

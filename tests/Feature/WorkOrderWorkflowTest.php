@@ -34,8 +34,8 @@ class WorkOrderWorkflowTest extends TestCase
     }
 
     // Has full wo_materials/wo_manpower/wo_measurement_book/wo_ledger/
-    // wo_attendance/daily_checklist.manage/etc. access to create entries,
-    // but is not Admin - used to prove edit/delete is refused.
+    // wo_attendance/daily_checklist/daily_progress/etc. access to create
+    // entries, but is not Admin - used to prove edit/delete is refused.
     // Call this only after admin() has already seeded roles/permissions in
     // the same test - reseeding here would duplicate the Role rows.
     private function executiveTeamLeader(): User

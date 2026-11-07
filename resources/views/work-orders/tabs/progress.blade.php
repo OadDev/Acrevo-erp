@@ -19,7 +19,7 @@
                             @endif
                         </a>
                         <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{{ Str::title(str_replace('_',' ',$item->collection_name)) }}</span>
-                        @can('media.upload')
+                        @can('daily_progress.delete')
                             <form method="POST" action="{{ route('work-orders.media.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this file?')" class="absolute right-1 top-1">
                                 @csrf
                                 @method('DELETE')
@@ -45,7 +45,7 @@
                         <div class="flex shrink-0 items-center gap-3 text-xs text-gray-400">
                             <span>{{ Str::title(str_replace('_', ' ', $item->collection_name)) }}</span>
                             <span>{{ $item->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</span>
-                            @can('media.upload')
+                            @can('daily_progress.delete')
                                 <form method="POST" action="{{ route('work-orders.media.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this file?')">
                                     @csrf
                                     @method('DELETE')
@@ -58,7 +58,7 @@
                     <p class="px-4 py-6 text-center text-sm text-gray-400">No files uploaded yet.</p>
                 @endforelse
             </div>
-            @can('media.upload')
+            @can('daily_progress.create')
                 <form method="POST" action="{{ route('work-orders.media.store', $workOrder) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
                     @csrf
                     <x-select-input name="collection" class="text-sm">
@@ -79,16 +79,20 @@
                 <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                     <div class="flex items-center justify-between">
                         <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }} — {{ $report->executiveTeam?->name ?? '—' }}</p>
-                        @can('daily_progress.manage')
+                        @canany(['daily_progress.edit', 'daily_progress.delete'])
                             <div class="flex items-center gap-2">
-                                <button type="button" @click="openReport === {{ $report->id }} ? openReport = null : openReport = {{ $report->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                                <form method="POST" action="{{ route('work-orders.progress.destroy', [$workOrder, $report]) }}" onsubmit="return confirm('Remove this progress report?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                                </form>
+                                @can('daily_progress.edit')
+                                    <button type="button" @click="openReport === {{ $report->id }} ? openReport = null : openReport = {{ $report->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                @endcan
+                                @can('daily_progress.delete')
+                                    <form method="POST" action="{{ route('work-orders.progress.destroy', [$workOrder, $report]) }}" onsubmit="return confirm('Remove this progress report?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @endcan
                             </div>
-                        @endif
+                        @endcanany
                     </div>
                     <p class="mt-1 text-gray-600 dark:text-gray-300"><span class="text-gray-400">Completed:</span> {{ $report->completed_work }}</p>
                     @if ($report->pending_work)<p class="text-gray-600 dark:text-gray-300"><span class="text-gray-400">Pending:</span> {{ $report->pending_work }}</p>@endif
@@ -108,7 +112,7 @@
                                             <div class="flex h-full w-full items-center justify-center"><x-icon name="file-text" class="h-5 w-5 text-gray-400" /></div>
                                         @endif
                                     </a>
-                                    @can('daily_progress.manage')
+                                    @can('daily_progress.delete')
                                         <form method="POST" action="{{ route('work-orders.progress.media.destroy', [$workOrder, $report, $item]) }}" onsubmit="return confirm('Remove this file?')" class="absolute right-1 top-1">
                                             @csrf
                                             @method('DELETE')
@@ -120,7 +124,7 @@
                         </div>
                     @endif
 
-                    @can('daily_progress.manage')
+                    @can('daily_progress.edit')
                         @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
                         <form method="POST" action="{{ route('work-orders.progress.update', [$workOrder, $report]) }}" enctype="multipart/form-data" x-show="openReport === {{ $report->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                             @csrf
@@ -152,7 +156,7 @@
     </div>
 
     <div class="space-y-6">
-        @can('daily_progress.manage')
+        @can('daily_progress.create')
             @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
             <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Submit Progress</h3>

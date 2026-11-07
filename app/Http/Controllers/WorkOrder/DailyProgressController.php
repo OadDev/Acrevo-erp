@@ -59,7 +59,7 @@ class DailyProgressController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, DailyProgressReport $report): RedirectResponse
     {
-        $this->authorizeAnyPermission('daily_progress.manage');
+        $this->authorizeAnyPermission('daily_progress.edit');
 
         abort_unless($report->work_order_id === $workOrder->id, 404);
 
@@ -85,7 +85,7 @@ class DailyProgressController extends Controller
 
     public function destroy(WorkOrder $workOrder, DailyProgressReport $report): RedirectResponse
     {
-        $this->authorizeAnyPermission('daily_progress.manage');
+        $this->authorizeAnyPermission('daily_progress.delete');
 
         abort_unless($report->work_order_id === $workOrder->id, 404);
 
@@ -96,7 +96,7 @@ class DailyProgressController extends Controller
 
     public function destroyMedia(WorkOrder $workOrder, DailyProgressReport $report, Media $media): RedirectResponse
     {
-        $this->authorizeAnyPermission('daily_progress.manage');
+        $this->authorizeAnyPermission('daily_progress.delete');
 
         abort_unless($report->work_order_id === $workOrder->id, 404);
         abort_unless((string) $media->model_id === (string) $report->id, 404);
