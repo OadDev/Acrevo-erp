@@ -1,5 +1,7 @@
 @php
-    $canEditSummary = auth()->user()->can('work_orders.summary_manage');
+    $canCreateSummary = auth()->user()->can('work_orders.summary_create');
+    $canEditSummary = auth()->user()->can('work_orders.summary_edit');
+    $canDeleteSummary = auth()->user()->can('work_orders.summary_delete');
 @endphp
 
 <x-card :padded="false" x-data="{ editSummary: null }">
@@ -16,7 +18,7 @@
                     <th class="px-4 py-2">Work Detail/Reason</th>
                     <th class="px-4 py-2 text-right">No of Days in Client Bear</th>
                     <th class="px-4 py-2 text-right">No of Remaining Construction Days</th>
-                    @if ($canEditSummary)
+                    @if ($canEditSummary || $canDeleteSummary)
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
@@ -32,14 +34,18 @@
                         <td class="px-4 py-2">{{ $entry->work_detail ?? '—' }}</td>
                         <td class="px-4 py-2 text-right text-gray-500">{{ $entry->client_bear_days ?? '—' }}</td>
                         <td class="px-4 py-2 text-right text-gray-500">{{ $entry->remaining_construction_days ?? '—' }}</td>
-                        @if ($canEditSummary)
+                        @if ($canEditSummary || $canDeleteSummary)
                             <td class="whitespace-nowrap px-4 py-2">
-                                <button type="button" @click="editSummary === {{ $entry->id }} ? editSummary = null : editSummary = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                                <form method="POST" action="{{ route('work-orders.summary.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this summary entry?')" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                                </form>
+                                @if ($canEditSummary)
+                                    <button type="button" @click="editSummary === {{ $entry->id }} ? editSummary = null : editSummary = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                @endif
+                                @if ($canDeleteSummary)
+                                    <form method="POST" action="{{ route('work-orders.summary.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this summary entry?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @endif
                             </td>
                         @endif
                     </tr>
@@ -72,7 +78,7 @@
             </tbody>
         </table>
     </div>
-    @if ($canEditSummary)
+    @if ($canCreateSummary)
         <form method="POST" action="{{ route('work-orders.summary.store', $workOrder) }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
             @csrf
             <x-text-input type="date" name="entry_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />

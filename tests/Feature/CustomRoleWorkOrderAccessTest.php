@@ -90,8 +90,8 @@ class CustomRoleWorkOrderAccessTest extends TestCase
     {
         $admin = $this->admin();
         $workOrder = $this->workOrder($admin);
-        // Only daily_checklist.manage - no wo_materials.edit.
-        $coordinator = $this->siteCoordinator(['daily_checklist.manage']);
+        // Only daily_checklist.edit - no wo_materials.edit.
+        $coordinator = $this->siteCoordinator(['daily_checklist.edit']);
 
         $material = $workOrder->materialEntries()->create([
             'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'unit' => 'Bags',
@@ -222,11 +222,11 @@ class CustomRoleWorkOrderAccessTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_work_orders_summary_manage_can_be_granted_to_a_custom_role_without_assigning_executive_team_leader(): void
+    public function test_work_orders_summary_permissions_can_be_granted_to_a_custom_role_without_assigning_executive_team_leader(): void
     {
         $admin = $this->admin();
         $workOrder = $this->workOrder($admin);
-        $coordinator = $this->siteCoordinator(['work_orders.summary_manage']);
+        $coordinator = $this->siteCoordinator(['work_orders.summary_view', 'work_orders.summary_create']);
 
         $this->actingAs($coordinator)->post("/work-orders/{$workOrder->id}/summary", [
             'entry_date' => '2026-08-01', 'status' => 'done', 'responsibility' => 'company',
@@ -382,5 +382,189 @@ class CustomRoleWorkOrderAccessTest extends TestCase
         ])->assertRedirect();
         $this->assertEquals(2000, $entry->fresh()->amount);
         $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/ledger/{$entry->id}")->assertRedirect();
+    }
+
+    public function test_daily_checklist_view_create_edit_and_delete_are_independently_grantable(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+        $team = ExecutiveTeam::create([
+            'team_number' => 'TEAM-'.uniqid(), 'name' => 'A Team', 'team_leader_id' => $admin->id,
+            'is_active' => true, 'created_by' => $admin->id,
+        ]);
+        WorkOrderExecutiveTeam::create([
+            'work_order_id' => $workOrder->id, 'executive_team_id' => $team->id,
+            'assigned_by' => $admin->id, 'assigned_at' => now(),
+        ]);
+
+        // View-only - can't create.
+        $viewer = $this->siteCoordinator(['work_orders.view', 'daily_checklist.view']);
+        $this->actingAs($viewer)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => 'Lay bricks',
+        ])->assertForbidden();
+
+        // Create-only.
+        $creatorRole = Role::create(['name' => 'Checklist Creator', 'guard_name' => 'web']);
+        $creatorRole->syncPermissions(['work_orders.view', 'daily_checklist.view', 'daily_checklist.create']);
+        $creator = User::create([
+            'name' => 'Checklist Creator', 'email' => 'checklistcreator+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $creator->syncRoles(['Checklist Creator']);
+
+        $this->actingAs($creator)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1', 'items' => 'Lay bricks',
+        ])->assertRedirect();
+        $checklist = $workOrder->fresh()->dailyChecklists()->firstOrFail();
+        $item = $checklist->checklistItems()->firstOrFail();
+
+        $this->actingAs($creator)->put("/work-orders/{$workOrder->id}/checklists/{$checklist->id}", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1 Updated',
+        ])->assertForbidden();
+        $this->actingAs($creator)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertForbidden();
+
+        // Edit+delete, no create - Edit also covers marking an item done,
+        // since that's an update to an already-created item, not a new one.
+        $editorRole = Role::create(['name' => 'Checklist Editor', 'guard_name' => 'web']);
+        $editorRole->syncPermissions(['work_orders.view', 'daily_checklist.view', 'daily_checklist.edit', 'daily_checklist.delete']);
+        $editor = User::create([
+            'name' => 'Checklist Editor', 'email' => 'checklisteditor+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $editor->syncRoles(['Checklist Editor']);
+
+        $this->actingAs($editor)->post("/work-orders/{$workOrder->id}/checklists", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 2', 'items' => 'Mix cement',
+        ])->assertForbidden();
+
+        $this->actingAs($editor)->put("/work-orders/{$workOrder->id}/checklists/{$checklist->id}", [
+            'executive_team_id' => $team->id, 'date' => now()->toDateString(), 'title' => 'Day 1 Updated',
+        ])->assertRedirect();
+        $this->assertSame('Day 1 Updated', $checklist->fresh()->title);
+
+        $this->actingAs($editor)->post("/work-orders/{$workOrder->id}/checklist-items/{$item->id}/done", [
+            'proof' => \Illuminate\Http\UploadedFile::fake()->image('proof.jpg'),
+        ])->assertRedirect();
+        $this->assertTrue($item->fresh()->is_done);
+
+        $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/checklists/{$checklist->id}")->assertRedirect();
+    }
+
+    public function test_daily_progress_view_create_edit_and_delete_are_independently_grantable(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+        $workOrder->update(['execution_way' => 'way_2']);
+
+        // View-only - can't create a progress report or upload a media file.
+        $viewer = $this->siteCoordinator(['work_orders.view', 'daily_progress.view']);
+        $this->actingAs($viewer)->post("/work-orders/{$workOrder->id}/progress", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering',
+        ])->assertForbidden();
+        $this->actingAs($viewer)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'images', 'file' => \Illuminate\Http\UploadedFile::fake()->image('site.jpg'),
+        ])->assertForbidden();
+
+        // Create-only - covers both the Daily Progress Report and the
+        // Media Gallery/Details Upload section of the same tab.
+        $creatorRole = Role::create(['name' => 'Progress Creator', 'guard_name' => 'web']);
+        $creatorRole->syncPermissions(['work_orders.view', 'daily_progress.view', 'daily_progress.create']);
+        $creator = User::create([
+            'name' => 'Progress Creator', 'email' => 'progresscreator+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $creator->syncRoles(['Progress Creator']);
+
+        $this->actingAs($creator)->post("/work-orders/{$workOrder->id}/progress", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering',
+        ])->assertRedirect();
+        $report = $workOrder->fresh()->dailyProgressReports()->firstOrFail();
+
+        $this->actingAs($creator)->post("/work-orders/{$workOrder->id}/media", [
+            'collection' => 'images', 'file' => \Illuminate\Http\UploadedFile::fake()->image('site.jpg'),
+        ])->assertRedirect();
+        $media = $workOrder->fresh()->getMedia('images')->first();
+        $this->assertNotNull($media);
+
+        $this->actingAs($creator)->put("/work-orders/{$workOrder->id}/progress/{$report->id}", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering updated',
+        ])->assertForbidden();
+        $this->actingAs($creator)->delete("/work-orders/{$workOrder->id}/media/{$media->id}")->assertForbidden();
+
+        // Edit+delete, no create.
+        $editorRole = Role::create(['name' => 'Progress Editor', 'guard_name' => 'web']);
+        $editorRole->syncPermissions(['work_orders.view', 'daily_progress.view', 'daily_progress.edit', 'daily_progress.delete']);
+        $editor = User::create([
+            'name' => 'Progress Editor', 'email' => 'progresseditor+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $editor->syncRoles(['Progress Editor']);
+
+        $this->actingAs($editor)->post("/work-orders/{$workOrder->id}/progress", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering again',
+        ])->assertForbidden();
+
+        $this->actingAs($editor)->put("/work-orders/{$workOrder->id}/progress/{$report->id}", [
+            'date' => now()->toDateString(), 'completed_work' => 'Plastering updated',
+        ])->assertRedirect();
+        $this->assertSame('Plastering updated', $report->fresh()->completed_work);
+
+        $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/media/{$media->id}")->assertRedirect();
+        $this->assertNull(\Spatie\MediaLibrary\MediaCollections\Models\Media::find($media->id));
+
+        $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/progress/{$report->id}")->assertRedirect();
+        $this->assertNull($workOrder->fresh()->dailyProgressReports()->find($report->id));
+    }
+
+    public function test_work_orders_summary_view_create_edit_and_delete_are_independently_grantable(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        // View-only - can't create.
+        $viewer = $this->siteCoordinator(['work_orders.view', 'work_orders.summary_view']);
+        $this->actingAs($viewer)->post("/work-orders/{$workOrder->id}/summary", [
+            'entry_date' => now()->toDateString(), 'status' => 'done', 'responsibility' => 'company',
+        ])->assertForbidden();
+
+        // Create-only.
+        $creatorRole = Role::create(['name' => 'Summary Creator', 'guard_name' => 'web']);
+        $creatorRole->syncPermissions(['work_orders.view', 'work_orders.summary_view', 'work_orders.summary_create']);
+        $creator = User::create([
+            'name' => 'Summary Creator', 'email' => 'summarycreator+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $creator->syncRoles(['Summary Creator']);
+
+        $this->actingAs($creator)->post("/work-orders/{$workOrder->id}/summary", [
+            'entry_date' => now()->toDateString(), 'status' => 'done', 'responsibility' => 'company',
+        ])->assertRedirect();
+        $entry = $workOrder->fresh()->summaries()->firstOrFail();
+
+        $this->actingAs($creator)->put("/work-orders/{$workOrder->id}/summary/{$entry->id}", [
+            'entry_date' => now()->toDateString(), 'status' => 'not_done', 'responsibility' => 'client',
+        ])->assertForbidden();
+        $this->actingAs($creator)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertForbidden();
+
+        // Edit+delete, no create.
+        $editorRole = Role::create(['name' => 'Summary Editor', 'guard_name' => 'web']);
+        $editorRole->syncPermissions(['work_orders.view', 'work_orders.summary_view', 'work_orders.summary_edit', 'work_orders.summary_delete']);
+        $editor = User::create([
+            'name' => 'Summary Editor', 'email' => 'summaryeditor+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $editor->syncRoles(['Summary Editor']);
+
+        $this->actingAs($editor)->post("/work-orders/{$workOrder->id}/summary", [
+            'entry_date' => now()->toDateString(), 'status' => 'done', 'responsibility' => 'company',
+        ])->assertForbidden();
+
+        $this->actingAs($editor)->put("/work-orders/{$workOrder->id}/summary/{$entry->id}", [
+            'entry_date' => now()->toDateString(), 'status' => 'not_done', 'responsibility' => 'client',
+        ])->assertRedirect();
+        $this->assertSame('not_done', $entry->fresh()->status);
+
+        $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertRedirect();
+        $this->assertNull($workOrder->fresh()->summaries()->find($entry->id));
     }
 }

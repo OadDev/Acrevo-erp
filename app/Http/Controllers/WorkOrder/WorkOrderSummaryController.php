@@ -12,7 +12,7 @@ class WorkOrderSummaryController extends Controller
 {
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
-        $this->authorizeSummaryEditors();
+        $this->authorizeAnyPermission('work_orders.summary_create');
 
         $data = $request->validate([
             'entry_date' => ['required', 'date'],
@@ -32,7 +32,7 @@ class WorkOrderSummaryController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, WorkOrderSummary $summary): RedirectResponse
     {
-        $this->authorizeSummaryEditors();
+        $this->authorizeAnyPermission('work_orders.summary_edit');
 
         abort_unless($summary->work_order_id === $workOrder->id, 404);
 
@@ -52,7 +52,7 @@ class WorkOrderSummaryController extends Controller
 
     public function destroy(WorkOrder $workOrder, WorkOrderSummary $summary): RedirectResponse
     {
-        $this->authorizeSummaryEditors();
+        $this->authorizeAnyPermission('work_orders.summary_delete');
 
         abort_unless($summary->work_order_id === $workOrder->id, 404);
 

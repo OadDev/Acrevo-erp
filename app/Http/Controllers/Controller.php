@@ -43,16 +43,4 @@ abstract class Controller
     {
         abort_unless(Auth::user()?->hasAnyRole(['Admin', 'Finance']), 403, 'Only Finance and Admin can access the company ledger.');
     }
-
-    /**
-     * The Monthly Summary log is entered by the office, not the site team -
-     * gated behind its own permission (granted to Sales, HR, and Executive
-     * Team Leader by default) rather than a hardcoded role list, so Admin
-     * can extend it to another role without assigning Executive Team
-     * Leader itself.
-     */
-    protected function authorizeSummaryEditors(): void
-    {
-        abort_unless(Auth::user()?->can('work_orders.summary_manage'), 403, 'You do not have permission to edit the work order summary.');
-    }
 }

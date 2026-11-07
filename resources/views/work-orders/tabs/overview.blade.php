@@ -138,7 +138,7 @@
 
         @if (in_array($workOrder->status, ['in_progress', 'rework_in_progress']))
             <div class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
-                @can('daily_progress.manage')
+                @canany(['daily_progress.edit', 'work_orders.edit'])
                     <form method="POST" action="{{ route('work-orders.submit-for-qc', $workOrder) }}" onsubmit="return confirm('Mark this work as completed and submit it for QC?')">
                         @csrf
                         <x-primary-button>Work Completed — Submit for QC</x-primary-button>
