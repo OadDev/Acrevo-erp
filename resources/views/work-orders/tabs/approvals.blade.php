@@ -29,7 +29,7 @@
                                 <a href="{{ route('work-orders.approval-requests.zip', [$workOrder, $approval]) }}" class="text-xs font-medium text-indigo-600 hover:underline">ZIP</a>
                             @endif
                         @endcanany
-                        @if (auth()->user()->hasRole('Admin'))
+                        @canany(['work_orders.edit', 'approval_requests.manage'])
                             <button type="button" @click="editApproval === '{{ $approval->id }}' ? editApproval = null : editApproval = '{{ $approval->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                             <form method="POST" action="{{ route('work-orders.approval-requests.destroy', [$workOrder, $approval]) }}" onsubmit="return confirm('Remove this approval request?')">
                                 @csrf
@@ -40,7 +40,7 @@
                     </div>
                 </div>
 
-                @if (auth()->user()->hasRole('Admin'))
+                @canany(['work_orders.edit', 'approval_requests.manage'])
                     <form method="POST" action="{{ route('work-orders.approval-requests.update', [$workOrder, $approval]) }}" x-show="editApproval === '{{ $approval->id }}'" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
                         @method('PUT')

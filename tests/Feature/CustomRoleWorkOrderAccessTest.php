@@ -103,6 +103,41 @@ class CustomRoleWorkOrderAccessTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_the_materials_tab_shows_the_edit_delete_buttons_only_to_a_role_with_site_records_manage(): void
+    {
+        // Regression test: the backend correction gate was switched from
+        // hasRole('Admin') to the site_records.manage permission, but the
+        // Blade view's Edit/Delete buttons (and the inline edit form) were
+        // still separately hardcoded to @if (hasRole('Admin')) - so a
+        // custom role granted the permission could successfully submit the
+        // update/delete request, but had no button in the UI to do it from.
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+        $workOrder->materialEntries()->create([
+            'entry_date' => now()->toDateString(), 'material_name' => 'Cement', 'unit' => 'Bags',
+            'quantity' => 10, 'rate' => 400, 'amount' => 4000, 'added_by' => $admin->id,
+        ]);
+
+        $withPermission = $this->siteCoordinator(['site_records.manage', 'work_orders.view']);
+        $this->actingAs($withPermission)->get("/work-orders/{$workOrder->id}?tab=materials")
+            ->assertOk()
+            ->assertSee('Edit')
+            ->assertSee('Delete');
+
+        $noAccessRole = Role::create(['name' => 'Office Viewer', 'guard_name' => 'web']);
+        $noAccessRole->syncPermissions(['work_orders.view']);
+        $withoutPermission = User::create([
+            'name' => 'No Access', 'email' => 'noaccess+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $withoutPermission->syncRoles(['Office Viewer']);
+
+        $this->actingAs($withoutPermission)->get("/work-orders/{$workOrder->id}?tab=materials")
+            ->assertOk()
+            ->assertDontSee('Edit')
+            ->assertDontSee('Delete');
+    }
+
     public function test_a_custom_role_granted_assigned_work_view_is_offered_as_a_team_leader_and_sees_its_assigned_work_order(): void
     {
         $admin = $this->admin();

@@ -70,7 +70,7 @@
                     <th class="px-4 py-2">Actual Time Taken</th>
                     <th class="px-4 py-2">Remark</th>
                     <th class="px-4 py-2 text-right">Amount</th>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
@@ -85,7 +85,7 @@
                         <td class="px-4 py-2 text-gray-500">{{ $entry->total_time_to_finish ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
                         <td class="px-4 py-2 text-right font-medium">₹{{ number_format($entry->amount, 2) }}</td>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('site_records.manage')
                             <td class="whitespace-nowrap px-4 py-2">
                                 <button type="button" @click="editLabour === {{ $entry->id }} ? editLabour = null : editLabour = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                                 <form method="POST" action="{{ route('work-orders.labour.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this man power entry?')" class="inline">
@@ -96,7 +96,7 @@
                             </td>
                         @endif
                     </tr>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <tr x-show="editLabour === {{ $entry->id }}" x-cloak>
                             <td colspan="8" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.labour.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">

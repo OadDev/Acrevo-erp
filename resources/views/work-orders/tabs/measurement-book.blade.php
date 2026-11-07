@@ -52,7 +52,7 @@
             <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                 <div class="flex items-center justify-between">
                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $mb->mb_no }} — {{ $mb->date->format('d M Y') }}</p>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <div class="flex items-center gap-2">
                             <button type="button" @click="editMb === {{ $mb->id }} ? editMb = null : editMb = {{ $mb->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                             <form method="POST" action="{{ route('work-orders.measurement-books.destroy', [$workOrder, $mb]) }}" onsubmit="return confirm('Remove this measurement book and all its items?')">
@@ -65,7 +65,7 @@
                 </div>
                 <p class="text-gray-500">{{ $mb->description }}</p>
 
-                @if (auth()->user()->hasRole('Admin'))
+                @can('site_records.manage')
                     <form method="POST" action="{{ route('work-orders.measurement-books.update', [$workOrder, $mb]) }}" x-show="editMb === {{ $mb->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
                         @method('PUT')
@@ -88,7 +88,7 @@
                                     <th class="py-1 pr-2">Unit</th>
                                     <th class="py-1 pr-2 text-right">Rate/Unit</th>
                                     <th class="py-1 pr-2 text-right">Total Amount</th>
-                                    @if (auth()->user()->hasRole('Admin'))
+                                    @can('site_records.manage')
                                         <th class="py-1 pr-2">Actions</th>
                                     @endif
                                 </tr>
@@ -104,7 +104,7 @@
                                         <td class="py-1 pr-2">{{ $item->unit }}</td>
                                         <td class="py-1 pr-2 text-right">₹{{ number_format($item->rate, 2) }}</td>
                                         <td class="py-1 pr-2 text-right">₹{{ number_format($item->amount, 2) }}</td>
-                                        @if (auth()->user()->hasRole('Admin'))
+                                        @can('site_records.manage')
                                             <td class="whitespace-nowrap py-1 pr-2">
                                                 <button type="button" @click="editItem === {{ $item->id }} ? editItem = null : editItem = {{ $item->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
                                                 <form method="POST" action="{{ route('work-orders.measurement-books.items.destroy', [$workOrder, $mb, $item]) }}" onsubmit="return confirm('Remove this work done entry?')" class="inline">
@@ -115,7 +115,7 @@
                                             </td>
                                         @endif
                                     </tr>
-                                    @if (auth()->user()->hasRole('Admin'))
+                                    @can('site_records.manage')
                                         <tr x-show="editItem === {{ $item->id }}" x-cloak>
                                             <td colspan="9" class="bg-gray-50 py-2 pr-2 dark:bg-gray-900">
                                                 <form method="POST" action="{{ route('work-orders.measurement-books.items.update', [$workOrder, $mb, $item]) }}" class="grid grid-cols-3 gap-2">

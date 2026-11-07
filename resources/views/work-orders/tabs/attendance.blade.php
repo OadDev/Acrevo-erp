@@ -48,7 +48,7 @@
                     <th class="px-4 py-2">Hours</th>
                     <th class="px-4 py-2 text-right">Salary</th>
                     <th class="px-4 py-2 text-right">Advance</th>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
@@ -65,7 +65,7 @@
                         <td class="px-4 py-2">{{ $attendance->hours_worked ?? '—' }}</td>
                         <td class="px-4 py-2 text-right">{{ $attendance->salary ? '₹'.number_format($attendance->salary, 2) : '—' }}</td>
                         <td class="px-4 py-2 text-right">{{ $attendance->advance ? '₹'.number_format($attendance->advance, 2) : '—' }}</td>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('site_records.manage')
                             <td class="whitespace-nowrap px-4 py-2">
                                 <button type="button" @click="editAttendance === {{ $attendance->id }} ? editAttendance = null : editAttendance = {{ $attendance->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
                                 <form method="POST" action="{{ route('work-orders.attendance.destroy', [$workOrder, $attendance]) }}" onsubmit="return confirm('Remove this attendance entry?')" class="inline">
@@ -76,7 +76,7 @@
                             </td>
                         @endif
                     </tr>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <tr x-show="editAttendance === {{ $attendance->id }}" x-cloak>
                             <td colspan="10" class="bg-gray-50 px-4 py-2 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.attendance.update', [$workOrder, $attendance]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
