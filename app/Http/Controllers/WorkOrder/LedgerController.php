@@ -59,7 +59,7 @@ class LedgerController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, Ledger $ledger): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_ledger.edit');
 
         abort_unless($ledger->work_order_id === $workOrder->id, 404);
 
@@ -97,7 +97,7 @@ class LedgerController extends Controller
 
     public function destroy(WorkOrder $workOrder, Ledger $ledger): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_ledger.delete');
 
         abort_unless($ledger->work_order_id === $workOrder->id, 404);
 
@@ -110,7 +110,7 @@ class LedgerController extends Controller
 
     public function destroyBill(WorkOrder $workOrder, Ledger $ledger): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_ledger.delete');
 
         abort_unless($ledger->work_order_id === $workOrder->id, 404);
 

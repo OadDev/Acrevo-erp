@@ -92,9 +92,11 @@
         <div x-show="tab === 'site'">
             @include('work-orders.tabs.site')
         </div>
-        <div x-show="tab === 'overview'" x-cloak>
-            @include('work-orders.tabs.overview')
-        </div>
+        @if (array_key_exists('overview', $tabs))
+            <div x-show="tab === 'overview'" x-cloak>
+                @include('work-orders.tabs.overview')
+            </div>
+        @endif
         <div x-show="tab === 'team'" x-cloak>
             @include('work-orders.tabs.team')
         </div>
@@ -104,18 +106,26 @@
         <div x-show="tab === 'progress'" x-cloak>
             @include('work-orders.tabs.progress')
         </div>
-        <div x-show="tab === 'materials'" x-cloak>
-            @include('work-orders.tabs.materials')
-        </div>
-        <div x-show="tab === 'manpower'" x-cloak>
-            @include('work-orders.tabs.manpower')
-        </div>
-        <div x-show="tab === 'mb'" x-cloak>
-            @include('work-orders.tabs.measurement-book')
-        </div>
-        <div x-show="tab === 'attendance'" x-cloak>
-            @include('work-orders.tabs.attendance')
-        </div>
+        @if (array_key_exists('materials', $tabs))
+            <div x-show="tab === 'materials'" x-cloak>
+                @include('work-orders.tabs.materials')
+            </div>
+        @endif
+        @if (array_key_exists('manpower', $tabs))
+            <div x-show="tab === 'manpower'" x-cloak>
+                @include('work-orders.tabs.manpower')
+            </div>
+        @endif
+        @if (array_key_exists('mb', $tabs))
+            <div x-show="tab === 'mb'" x-cloak>
+                @include('work-orders.tabs.measurement-book')
+            </div>
+        @endif
+        @if (array_key_exists('attendance', $tabs))
+            <div x-show="tab === 'attendance'" x-cloak>
+                @include('work-orders.tabs.attendance')
+            </div>
+        @endif
         <div x-show="tab === 'summary'" x-cloak>
             @include('work-orders.tabs.summary')
         </div>

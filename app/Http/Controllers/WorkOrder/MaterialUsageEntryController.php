@@ -28,7 +28,7 @@ class MaterialUsageEntryController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, MaterialUsageEntry $usage): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_materials.edit');
 
         abort_unless($usage->work_order_id === $workOrder->id, 404);
 
@@ -46,7 +46,7 @@ class MaterialUsageEntryController extends Controller
 
     public function destroy(WorkOrder $workOrder, MaterialUsageEntry $usage): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_materials.delete');
 
         abort_unless($usage->work_order_id === $workOrder->id, 404);
 

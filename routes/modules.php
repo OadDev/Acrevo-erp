@@ -248,7 +248,12 @@ Route::get('work-orders/{workOrder}/pdf/{section}', [WorkOrderPdfController::cla
 Route::get('work-orders/{workOrder}/zip', WorkOrderZipController::class)->name('work-orders.zip');
 Route::get('work-orders/{workOrder}/zip/{section}', [WorkOrderZipController::class, 'section'])->name('work-orders.zip.section');
 
-Route::middleware('permission:worker_assignment.manage|work_orders.edit')->group(function () {
+// Team/sub-contractor assignment and unassignment is restricted to
+// worker_assignment.manage alone (Admin + HR by default) - previously
+// work_orders.edit also granted it, which let any role with general WO
+// edit rights (e.g. Sales) unassign another user's team, a real
+// operational problem reported in production.
+Route::middleware('permission:worker_assignment.manage')->group(function () {
     Route::post('work-orders/{workOrder}/assign-team', [WorkOrderController::class, 'assignTeam'])->name('work-orders.assign-team');
     Route::delete('work-orders/{workOrder}/unassign-team/{assignment}', [WorkOrderController::class, 'unassignTeam'])->name('work-orders.unassign-team');
     Route::post('work-orders/{workOrder}/assign-sub-contractor', [WorkOrderController::class, 'assignSubContractor'])->name('work-orders.assign-sub-contractor');
@@ -289,43 +294,92 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
         Route::post('media', [WorkOrderMediaController::class, 'store'])->name('media.store');
         Route::delete('media/{media}', [WorkOrderMediaController::class, 'destroy'])->name('media.destroy');
     });
-    Route::middleware('permission:site_records.manage')->group(function () {
+    // Material Inward / Daily Material Used Entry, Used Man Power (labour),
+    // Measurement Book, Site Ledger, and Worker Attendance each used to
+    // share one blanket site_records.manage permission for everything -
+    // view, create, edit, and delete. They're now four independently
+    // grantable permissions per module, so a role or user can be given
+    // e.g. Measurement Book data entry without also getting Delete on the
+    // Site Ledger.
+    Route::middleware('permission:wo_materials.view')->group(function () {
         Route::get('materials', [MaterialEntryController::class, 'index'])->name('materials.index');
-        Route::post('materials', [MaterialEntryController::class, 'store'])->name('materials.store');
-        Route::put('materials/{material}', [MaterialEntryController::class, 'update'])->name('materials.update');
-        Route::delete('materials/{material}', [MaterialEntryController::class, 'destroy'])->name('materials.destroy');
         Route::get('materials/pdf', [MaterialEntryController::class, 'pdf'])->name('materials.pdf');
+    });
+    Route::middleware('permission:wo_materials.create')->group(function () {
+        Route::post('materials', [MaterialEntryController::class, 'store'])->name('materials.store');
         Route::post('material-usage', [MaterialUsageEntryController::class, 'store'])->name('material-usage.store');
+    });
+    Route::middleware('permission:wo_materials.edit')->group(function () {
+        Route::put('materials/{material}', [MaterialEntryController::class, 'update'])->name('materials.update');
         Route::put('material-usage/{usage}', [MaterialUsageEntryController::class, 'update'])->name('material-usage.update');
+    });
+    Route::middleware('permission:wo_materials.delete')->group(function () {
+        Route::delete('materials/{material}', [MaterialEntryController::class, 'destroy'])->name('materials.destroy');
         Route::delete('material-usage/{usage}', [MaterialUsageEntryController::class, 'destroy'])->name('material-usage.destroy');
+    });
+
+    Route::middleware('permission:wo_manpower.view')->group(function () {
         Route::get('labour', [LabourEntryController::class, 'index'])->name('labour.index');
+    });
+    Route::middleware('permission:wo_manpower.create')->group(function () {
         Route::post('labour', [LabourEntryController::class, 'store'])->name('labour.store');
+    });
+    Route::middleware('permission:wo_manpower.edit')->group(function () {
         Route::put('labour/{labour}', [LabourEntryController::class, 'update'])->name('labour.update');
+    });
+    Route::middleware('permission:wo_manpower.delete')->group(function () {
         Route::delete('labour/{labour}', [LabourEntryController::class, 'destroy'])->name('labour.destroy');
+    });
+
+    Route::middleware('permission:wo_measurement_book.view')->group(function () {
         Route::get('measurement-books', [MeasurementBookController::class, 'index'])->name('measurement-books.index');
+    });
+    Route::middleware('permission:wo_measurement_book.create')->group(function () {
         Route::post('measurement-books', [MeasurementBookController::class, 'store'])->name('measurement-books.store');
-        Route::put('measurement-books/{measurementBook}', [MeasurementBookController::class, 'update'])->name('measurement-books.update');
-        Route::delete('measurement-books/{measurementBook}', [MeasurementBookController::class, 'destroy'])->name('measurement-books.destroy');
         Route::post('measurement-books/{measurementBook}/items', [MeasurementBookItemController::class, 'store'])->name('measurement-books.items.store');
+    });
+    Route::middleware('permission:wo_measurement_book.edit')->group(function () {
+        Route::put('measurement-books/{measurementBook}', [MeasurementBookController::class, 'update'])->name('measurement-books.update');
         Route::put('measurement-books/{measurementBook}/items/{item}', [MeasurementBookItemController::class, 'update'])->name('measurement-books.items.update');
+    });
+    Route::middleware('permission:wo_measurement_book.delete')->group(function () {
+        Route::delete('measurement-books/{measurementBook}', [MeasurementBookController::class, 'destroy'])->name('measurement-books.destroy');
         Route::delete('measurement-books/{measurementBook}/items/{item}', [MeasurementBookItemController::class, 'destroy'])->name('measurement-books.items.destroy');
+    });
+
+    Route::middleware('permission:wo_ledger.view')->group(function () {
         Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
-        Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
-        Route::put('ledger/{ledger}', [LedgerController::class, 'update'])->name('ledger.update');
-        Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
-        Route::delete('ledger/{ledger}/bill', [LedgerController::class, 'destroyBill'])->name('ledger.bill.destroy');
         Route::get('ledger/export', [LedgerController::class, 'export'])->name('ledger.export');
         Route::get('ledger/pdf', [LedgerController::class, 'pdf'])->name('ledger.pdf');
-        Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
-        Route::put('attendance/{attendance}', [WorkOrderAttendanceController::class, 'update'])->name('attendance.update');
-        Route::delete('attendance/{attendance}', [WorkOrderAttendanceController::class, 'destroy'])->name('attendance.destroy');
+    });
+    Route::middleware('permission:wo_ledger.create')->group(function () {
+        Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+    });
+    Route::middleware('permission:wo_ledger.edit')->group(function () {
+        Route::put('ledger/{ledger}', [LedgerController::class, 'update'])->name('ledger.update');
+    });
+    Route::middleware('permission:wo_ledger.delete')->group(function () {
+        Route::delete('ledger/{ledger}', [LedgerController::class, 'destroy'])->name('ledger.destroy');
+        Route::delete('ledger/{ledger}/bill', [LedgerController::class, 'destroyBill'])->name('ledger.bill.destroy');
+    });
+
+    Route::middleware('permission:wo_attendance.view')->group(function () {
         Route::get('attendance/pdf', [WorkOrderAttendanceController::class, 'pdf'])->name('attendance.pdf');
+    });
+    Route::middleware('permission:wo_attendance.create')->group(function () {
+        Route::post('attendance', [WorkOrderAttendanceController::class, 'store'])->name('attendance.store');
+    });
+    Route::middleware('permission:wo_attendance.edit')->group(function () {
+        Route::put('attendance/{attendance}', [WorkOrderAttendanceController::class, 'update'])->name('attendance.update');
+    });
+    Route::middleware('permission:wo_attendance.delete')->group(function () {
+        Route::delete('attendance/{attendance}', [WorkOrderAttendanceController::class, 'destroy'])->name('attendance.destroy');
     });
     // Company Ledger tracks the company's own expenses against a work order
     // and is restricted to Finance and Admin only (enforced in the
     // controller) - it deliberately has no permission:* middleware here,
-    // since Finance doesn't hold the site_records.manage permission the
-    // other WO entry routes use.
+    // keeping it independent of the wo_* Site Ledger permissions the other
+    // WO entry routes use.
     Route::post('company-ledger', [CompanyLedgerController::class, 'store'])->name('company-ledger.store');
     Route::put('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'update'])->name('company-ledger.update');
     Route::delete('company-ledger/{companyLedger}', [CompanyLedgerController::class, 'destroy'])->name('company-ledger.destroy');
@@ -333,8 +387,8 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::get('company-ledger/export', [CompanyLedgerController::class, 'export'])->name('company-ledger.export');
     Route::get('company-ledger/pdf', [CompanyLedgerController::class, 'pdf'])->name('company-ledger.pdf');
     // Monthly Summary is entered by the office (Sales/HR/Admin, enforced in
-    // the controller), not the site team, so it also skips the
-    // site_records.manage middleware the other WO entry routes use.
+    // the controller), not the site team, so it also skips the wo_*
+    // permission middleware the other WO entry routes use.
     Route::post('summary', [WorkOrderSummaryController::class, 'store'])->name('summary.store');
     Route::put('summary/{summary}', [WorkOrderSummaryController::class, 'update'])->name('summary.update');
     Route::delete('summary/{summary}', [WorkOrderSummaryController::class, 'destroy'])->name('summary.destroy');

@@ -48,9 +48,9 @@
                     <th class="px-4 py-2">Hours</th>
                     <th class="px-4 py-2 text-right">Salary</th>
                     <th class="px-4 py-2 text-right">Advance</th>
-                    @can('site_records.manage')
+                    @canany(['wo_attendance.edit', 'wo_attendance.delete'])
                         <th class="px-4 py-2">Actions</th>
-                    @endif
+                    @endcanany
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -65,18 +65,22 @@
                         <td class="px-4 py-2">{{ $attendance->hours_worked ?? '—' }}</td>
                         <td class="px-4 py-2 text-right">{{ $attendance->salary ? '₹'.number_format($attendance->salary, 2) : '—' }}</td>
                         <td class="px-4 py-2 text-right">{{ $attendance->advance ? '₹'.number_format($attendance->advance, 2) : '—' }}</td>
-                        @can('site_records.manage')
+                        @canany(['wo_attendance.edit', 'wo_attendance.delete'])
                             <td class="whitespace-nowrap px-4 py-2">
-                                <button type="button" @click="editAttendance === {{ $attendance->id }} ? editAttendance = null : editAttendance = {{ $attendance->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
-                                <form method="POST" action="{{ route('work-orders.attendance.destroy', [$workOrder, $attendance]) }}" onsubmit="return confirm('Remove this attendance entry?')" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="ml-2 font-medium text-rose-600 hover:underline">Delete</button>
-                                </form>
+                                @can('wo_attendance.edit')
+                                    <button type="button" @click="editAttendance === {{ $attendance->id }} ? editAttendance = null : editAttendance = {{ $attendance->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
+                                @endcan
+                                @can('wo_attendance.delete')
+                                    <form method="POST" action="{{ route('work-orders.attendance.destroy', [$workOrder, $attendance]) }}" onsubmit="return confirm('Remove this attendance entry?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-2 font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @endcan
                             </td>
-                        @endif
+                        @endcanany
                     </tr>
-                    @can('site_records.manage')
+                    @can('wo_attendance.edit')
                         <tr x-show="editAttendance === {{ $attendance->id }}" x-cloak>
                             <td colspan="10" class="bg-gray-50 px-4 py-2 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.attendance.update', [$workOrder, $attendance]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -105,7 +109,7 @@
             </tbody>
         </table>
     </div>
-    @can('site_records.manage')
+    @can('wo_attendance.create')
         <form method="POST" action="{{ route('work-orders.attendance.store', $workOrder) }}" class="grid grid-cols-2 gap-3 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4 lg:grid-cols-9">
             @csrf
             <x-select-input name="employee_id" class="col-span-2 text-sm" required>

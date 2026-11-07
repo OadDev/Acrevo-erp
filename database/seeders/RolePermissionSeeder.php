@@ -32,7 +32,7 @@ class RolePermissionSeeder extends Seeder
             'site_visits.view', 'site_visits.create', 'site_visits.edit',
             'quotations.view', 'quotations.create', 'quotations.edit', 'quotations.send', 'quotations.approve',
             'work_orders.view', 'work_orders.create', 'work_orders.edit', 'work_orders.cancel',
-            'work_orders.summary_manage',
+            'work_orders.summary_manage', 'work_orders.overview_view',
             'ongoing_sites.view', 'completed_sites.view',
         ],
         'hr' => [
@@ -47,9 +47,30 @@ class RolePermissionSeeder extends Seeder
             'assigned_work.view',
             'daily_checklist.manage',
             'daily_progress.manage',
-            'site_records.manage',
             'media.upload',
             'approval_requests.manage',
+        ],
+        // These replace the old single site_records.manage permission -
+        // each WO sub-module (except Overview, Approval Requests, and
+        // Tickets, which have their own dedicated permissions above/below)
+        // now has independently grantable View/Create/Edit/Delete
+        // permissions, so a role or user can be given e.g. data entry on
+        // Measurement Books without also getting Delete on the Site
+        // Ledger.
+        'wo_materials' => [
+            'wo_materials.view', 'wo_materials.create', 'wo_materials.edit', 'wo_materials.delete',
+        ],
+        'wo_manpower' => [
+            'wo_manpower.view', 'wo_manpower.create', 'wo_manpower.edit', 'wo_manpower.delete',
+        ],
+        'wo_measurement_book' => [
+            'wo_measurement_book.view', 'wo_measurement_book.create', 'wo_measurement_book.edit', 'wo_measurement_book.delete',
+        ],
+        'wo_ledger' => [
+            'wo_ledger.view', 'wo_ledger.create', 'wo_ledger.edit', 'wo_ledger.delete',
+        ],
+        'wo_attendance' => [
+            'wo_attendance.view', 'wo_attendance.create', 'wo_attendance.edit', 'wo_attendance.delete',
         ],
         'qc' => [
             'qc.view', 'qc.perform', 'qc.reports.view',
@@ -164,6 +185,15 @@ class RolePermissionSeeder extends Seeder
             'proforma_invoices' => ['proforma_invoices.view', 'proforma_invoices.create', 'proforma_invoices.edit', 'proforma_invoices.convert', 'proforma_invoices.download_pdf'],
             'tax_invoices' => ['tax_invoices.view', 'tax_invoices.create', 'tax_invoices.edit', 'tax_invoices.download_pdf'],
             'delivery_challans' => ['delivery_challans.view', 'delivery_challans.create', 'delivery_challans.edit', 'delivery_challans.download_pdf'],
+            // View-only on every WO sub-module by default - same read access
+            // Sales already had before these were split out of
+            // site_records.manage. Admin can grant Create/Edit/Delete on a
+            // specific module per role or per user from here on.
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_ledger' => ['wo_ledger.view'],
+            'wo_attendance' => ['wo_attendance.view'],
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
@@ -174,18 +204,31 @@ class RolePermissionSeeder extends Seeder
         ],
         'HR' => [
             'hr' => '*',
-            'sales' => ['work_orders.view', 'work_orders.summary_manage'],
+            'sales' => ['work_orders.view', 'work_orders.summary_manage', 'work_orders.overview_view'],
             'reports' => ['reports.view'],
             'admin' => ['global_search.use'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_ledger' => ['wo_ledger.view'],
+            'wo_attendance' => ['wo_attendance.view'],
         ],
         'Executive Team Leader' => [
             'executive' => '*',
             'tickets' => ['tickets.view', 'tickets.create'],
-            'sales' => ['work_orders.view', 'work_orders.summary_manage'],
+            'sales' => ['work_orders.view', 'work_orders.summary_manage', 'work_orders.overview_view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // Full data-entry + correction rights on every WO sub-module -
+            // same net access the old blanket site_records.manage gave this
+            // role, now as five independently revocable permissions.
+            'wo_materials' => '*',
+            'wo_manpower' => '*',
+            'wo_measurement_book' => '*',
+            'wo_ledger' => '*',
+            'wo_attendance' => '*',
             // View + update status only, scoped in the controller to assets
             // currently at a work order this Team Leader leads - no create,
             // edit, approve, delete, or restore.
@@ -211,24 +254,42 @@ class RolePermissionSeeder extends Seeder
         ],
         'Worker' => [
             'executive' => ['assigned_work.view', 'daily_checklist.manage', 'daily_progress.manage', 'media.upload'],
+            'sales' => ['work_orders.overview_view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            // View-only, same read access a Worker already had on these
+            // tabs before they were split out of site_records.manage - no
+            // Site Ledger, which carries company/client cost figures a
+            // field worker doesn't need to see.
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_attendance' => ['wo_attendance.view'],
         ],
         'QC Officer' => [
             'qc' => '*',
-            'sales' => ['work_orders.view'],
+            'sales' => ['work_orders.view', 'work_orders.overview_view'],
             'tickets' => ['tickets.view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_attendance' => ['wo_attendance.view'],
         ],
         'Finance' => [
             'finance' => '*',
             'hr' => ['payroll.view'],
             'reports' => '*',
             'management' => ['client_records.view'],
-            'sales' => ['work_orders.view'],
+            'sales' => ['work_orders.view', 'work_orders.overview_view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_ledger' => ['wo_ledger.view'],
+            'wo_attendance' => ['wo_attendance.view'],
             // Finance owns billing documents end to end, including delete
             // (correcting a wrongly-issued Tax Invoice) and the Item price
             // catalog - but not Company Profile setup, which stays
@@ -243,11 +304,16 @@ class RolePermissionSeeder extends Seeder
             'legal' => ['legal.view'],
             'audit' => ['audit.view'],
             'management' => '*',
-            'sales' => ['work_orders.view', 'ongoing_sites.view', 'completed_sites.view'],
+            'sales' => ['work_orders.view', 'ongoing_sites.view', 'completed_sites.view', 'work_orders.overview_view'],
             'tickets' => ['tickets.view'],
             'reports' => '*',
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_ledger' => ['wo_ledger.view'],
+            'wo_attendance' => ['wo_attendance.view'],
             // Create + edit, but no assets.approve - edits go through the
             // AssetChangeRequest queue instead of applying immediately.
             // No delete/restore/update_status either.
@@ -290,9 +356,14 @@ class RolePermissionSeeder extends Seeder
             'audit' => ['audit.view', 'audit.manage'],
             'finance' => ['finance.view'],
             'reports' => ['reports.view'],
-            'sales' => ['work_orders.view'],
+            'sales' => ['work_orders.view', 'work_orders.overview_view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_ledger' => ['wo_ledger.view'],
+            'wo_attendance' => ['wo_attendance.view'],
         ],
         // Deliberately scoped to Progress & Media only - no daily_checklist.manage,
         // site_records.manage, approval_requests.manage, or tickets.create, so a
@@ -301,9 +372,16 @@ class RolePermissionSeeder extends Seeder
         // Team Leader (or Admin/Sales/HR for Monthly Summary).
         'Sub Contractor' => [
             'executive' => ['assigned_work.view', 'daily_progress.manage', 'media.upload'],
+            'sales' => ['work_orders.overview_view'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
             'subcontractor_portal' => '*',
+            // View-only, same read access a Sub Contractor already had on
+            // these tabs before they were split out of site_records.manage.
+            'wo_materials' => ['wo_materials.view'],
+            'wo_manpower' => ['wo_manpower.view'],
+            'wo_measurement_book' => ['wo_measurement_book.view'],
+            'wo_attendance' => ['wo_attendance.view'],
         ],
         'Client' => [
             'client_portal' => '*',
@@ -329,6 +407,11 @@ class RolePermissionSeeder extends Seeder
             'sales' => '*',
             'hr' => '*',
             'executive' => '*',
+            'wo_materials' => '*',
+            'wo_manpower' => '*',
+            'wo_measurement_book' => '*',
+            'wo_ledger' => '*',
+            'wo_attendance' => '*',
             'qc' => '*',
             'tickets' => '*',
             'finance' => '*',

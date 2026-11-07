@@ -37,7 +37,7 @@ class LabourEntryController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, LabourEntry $labour): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_manpower.edit');
 
         abort_unless($labour->work_order_id === $workOrder->id, 404);
 
@@ -60,7 +60,7 @@ class LabourEntryController extends Controller
 
     public function destroy(WorkOrder $workOrder, LabourEntry $labour): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_manpower.delete');
 
         abort_unless($labour->work_order_id === $workOrder->id, 404);
 

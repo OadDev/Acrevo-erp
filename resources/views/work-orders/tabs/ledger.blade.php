@@ -101,9 +101,9 @@
                     <th class="px-4 py-2 text-right">Balance</th>
                     <th class="px-4 py-2">Bill</th>
                     <th class="px-4 py-2">Remark</th>
-                    @can('site_records.manage')
+                    @canany(['wo_ledger.edit', 'wo_ledger.delete'])
                         <th class="px-4 py-2">Actions</th>
-                    @endif
+                    @endcanany
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -122,28 +122,32 @@
                                 <a href="{{ $entry->getFirstMediaUrl('bill') }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
                                     <x-icon name="paperclip" class="h-3.5 w-3.5" /> Bill
                                 </a>
-                                @can('site_records.manage')
+                                @can('wo_ledger.delete')
                                     <form method="POST" action="{{ route('work-orders.ledger.bill.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this bill?')" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button class="ml-1 text-xs text-rose-600 hover:underline">✕</button>
                                     </form>
-                                @endif
+                                @endcan
                             @endif
                         </td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
-                        @can('site_records.manage')
+                        @canany(['wo_ledger.edit', 'wo_ledger.delete'])
                             <td class="whitespace-nowrap px-4 py-2">
-                                <button type="button" @click="editLedger === {{ $entry->id }} ? editLedger = null : editLedger = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                                <form method="POST" action="{{ route('work-orders.ledger.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this ledger entry? Balances will be recalculated.')" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                                </form>
+                                @can('wo_ledger.edit')
+                                    <button type="button" @click="editLedger === {{ $entry->id }} ? editLedger = null : editLedger = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                @endcan
+                                @can('wo_ledger.delete')
+                                    <form method="POST" action="{{ route('work-orders.ledger.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this ledger entry? Balances will be recalculated.')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @endcan
                             </td>
-                        @endif
+                        @endcanany
                     </tr>
-                    @can('site_records.manage')
+                    @can('wo_ledger.edit')
                         <tr x-show="editLedger === {{ $entry->id }}" x-cloak>
                             <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.ledger.update', [$workOrder, $entry]) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -180,7 +184,7 @@
             </tbody>
         </table>
     </div>
-    @can('site_records.manage')
+    @can('wo_ledger.create')
         <form method="POST" action="{{ route('work-orders.ledger.store', $workOrder) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
             @csrf
             <x-text-input type="date" name="entry_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />

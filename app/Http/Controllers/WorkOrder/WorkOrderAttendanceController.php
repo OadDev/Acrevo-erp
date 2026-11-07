@@ -55,7 +55,7 @@ class WorkOrderAttendanceController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, Attendance $attendance): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_attendance.edit');
 
         abort_unless($attendance->work_order_id === $workOrder->id, 404);
 
@@ -95,7 +95,7 @@ class WorkOrderAttendanceController extends Controller
 
     public function destroy(WorkOrder $workOrder, Attendance $attendance): RedirectResponse
     {
-        $this->authorizeAnyPermission('site_records.manage');
+        $this->authorizeAnyPermission('wo_attendance.delete');
 
         abort_unless($attendance->work_order_id === $workOrder->id, 404);
 
