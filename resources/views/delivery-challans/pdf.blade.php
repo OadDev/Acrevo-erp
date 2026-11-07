@@ -63,7 +63,7 @@
         </tr>
         <tr>
             <td>Date: {{ $deliveryChallan->challan_date->format('d-M-Y') }}</td>
-            <td></td>
+            <td>Vehicle: {{ $deliveryChallan->vehicle_details ?: '—' }}</td>
         </tr>
     </table>
 

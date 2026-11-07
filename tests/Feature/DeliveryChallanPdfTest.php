@@ -97,4 +97,31 @@ class DeliveryChallanPdfTest extends TestCase
         $response = $this->actingAs($admin)->get(route('delivery-challans.pdf', $deliveryChallan));
         $response->assertOk();
     }
+
+    public function test_vehicle_details_can_be_recorded_and_appear_on_the_show_page_and_pdf(): void
+    {
+        $admin = $this->admin();
+        $company = Company::create([
+            'name' => 'Acme Builders', 'code' => 'ACME',
+            'tax_regime' => 'gst', 'currency' => 'INR', 'is_active' => true,
+        ]);
+        $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)->post(route('delivery-challans.store'), [
+            'company_id' => $company->id, 'client_id' => $client->id,
+            'challan_date' => now()->toDateString(), 'vehicle_details' => 'TN 01 AB 1234',
+            'items' => [['name' => 'Steel Sheets', 'unit' => 'Nos', 'quantity' => 10]],
+        ])->assertRedirect();
+
+        $deliveryChallan = DeliveryChallan::firstOrFail();
+        $this->assertSame('TN 01 AB 1234', $deliveryChallan->vehicle_details);
+
+        $this->actingAs($admin)->get(route('delivery-challans.show', $deliveryChallan))
+            ->assertOk()
+            ->assertSee('TN 01 AB 1234');
+
+        $deliveryChallan->load('items', 'company', 'client');
+        $html = view('delivery-challans.pdf', compact('deliveryChallan'))->render();
+        $this->assertStringContainsString('TN 01 AB 1234', $html);
+    }
 }
