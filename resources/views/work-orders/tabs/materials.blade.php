@@ -79,7 +79,7 @@
                     <th class="px-4 py-2">Supplier Details</th>
                     <th class="px-4 py-2">Delivery Vehicle Details</th>
                     <th class="px-4 py-2">Remarks</th>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
@@ -97,7 +97,7 @@
                         <td class="px-4 py-2 text-gray-500">{{ $entry->vendor ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->delivery_vehicle_details ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remarks ?? '—' }}</td>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('site_records.manage')
                             <td class="whitespace-nowrap px-4 py-2">
                                 <button type="button" @click="editMaterial === {{ $entry->id }} ? editMaterial = null : editMaterial = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                                 <form method="POST" action="{{ route('work-orders.materials.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this material inward entry?')" class="inline">
@@ -108,7 +108,7 @@
                             </td>
                         @endif
                     </tr>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <tr x-show="editMaterial === {{ $entry->id }}" x-cloak>
                             <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.materials.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -171,7 +171,7 @@
                     <th class="px-4 py-2">Material Name</th>
                     <th class="px-4 py-2">Nos</th>
                     <th class="px-4 py-2">Unit</th>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
@@ -183,7 +183,7 @@
                         <td class="px-4 py-2">{{ $entry->material_name }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->quantity }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->unit }}</td>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('site_records.manage')
                             <td class="whitespace-nowrap px-4 py-2">
                                 <button type="button" @click="editUsage === {{ $entry->id }} ? editUsage = null : editUsage = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                                 <form method="POST" action="{{ route('work-orders.material-usage.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this daily usage entry?')" class="inline">
@@ -194,7 +194,7 @@
                             </td>
                         @endif
                     </tr>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <tr x-show="editUsage === {{ $entry->id }}" x-cloak>
                             <td colspan="5" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.material-usage.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">

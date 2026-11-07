@@ -101,7 +101,7 @@
                     <th class="px-4 py-2 text-right">Balance</th>
                     <th class="px-4 py-2">Bill</th>
                     <th class="px-4 py-2">Remark</th>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <th class="px-4 py-2">Actions</th>
                     @endif
                 </tr>
@@ -122,7 +122,7 @@
                                 <a href="{{ $entry->getFirstMediaUrl('bill') }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
                                     <x-icon name="paperclip" class="h-3.5 w-3.5" /> Bill
                                 </a>
-                                @if (auth()->user()->hasRole('Admin'))
+                                @can('site_records.manage')
                                     <form method="POST" action="{{ route('work-orders.ledger.bill.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this bill?')" class="inline">
                                         @csrf
                                         @method('DELETE')
@@ -132,7 +132,7 @@
                             @endif
                         </td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remark ?? '—' }}</td>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('site_records.manage')
                             <td class="whitespace-nowrap px-4 py-2">
                                 <button type="button" @click="editLedger === {{ $entry->id }} ? editLedger = null : editLedger = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                                 <form method="POST" action="{{ route('work-orders.ledger.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this ledger entry? Balances will be recalculated.')" class="inline">
@@ -143,7 +143,7 @@
                             </td>
                         @endif
                     </tr>
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('site_records.manage')
                         <tr x-show="editLedger === {{ $entry->id }}" x-cloak>
                             <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.ledger.update', [$workOrder, $entry]) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-2 sm:grid-cols-4">

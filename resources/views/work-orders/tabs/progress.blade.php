@@ -19,7 +19,7 @@
                             @endif
                         </a>
                         <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">{{ Str::title(str_replace('_',' ',$item->collection_name)) }}</span>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('media.upload')
                             <form method="POST" action="{{ route('work-orders.media.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this file?')" class="absolute right-1 top-1">
                                 @csrf
                                 @method('DELETE')
@@ -45,7 +45,7 @@
                         <div class="flex shrink-0 items-center gap-3 text-xs text-gray-400">
                             <span>{{ Str::title(str_replace('_', ' ', $item->collection_name)) }}</span>
                             <span>{{ $item->created_at->timezone('Asia/Kolkata')->format('d M Y') }}</span>
-                            @if (auth()->user()->hasRole('Admin'))
+                            @can('media.upload')
                                 <form method="POST" action="{{ route('work-orders.media.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this file?')">
                                     @csrf
                                     @method('DELETE')
@@ -79,7 +79,7 @@
                 <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                     <div class="flex items-center justify-between">
                         <p class="font-medium text-gray-800 dark:text-gray-200">{{ $report->date->format('d M Y') }} — {{ $report->executiveTeam?->name ?? '—' }}</p>
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('daily_progress.manage')
                             <div class="flex items-center gap-2">
                                 <button type="button" @click="openReport === {{ $report->id }} ? openReport = null : openReport = {{ $report->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                                 <form method="POST" action="{{ route('work-orders.progress.destroy', [$workOrder, $report]) }}" onsubmit="return confirm('Remove this progress report?')">
@@ -108,7 +108,7 @@
                                             <div class="flex h-full w-full items-center justify-center"><x-icon name="file-text" class="h-5 w-5 text-gray-400" /></div>
                                         @endif
                                     </a>
-                                    @if (auth()->user()->hasRole('Admin'))
+                                    @can('daily_progress.manage')
                                         <form method="POST" action="{{ route('work-orders.progress.media.destroy', [$workOrder, $report, $item]) }}" onsubmit="return confirm('Remove this file?')" class="absolute right-1 top-1">
                                             @csrf
                                             @method('DELETE')
@@ -120,7 +120,7 @@
                         </div>
                     @endif
 
-                    @if (auth()->user()->hasRole('Admin'))
+                    @can('daily_progress.manage')
                         @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
                         <form method="POST" action="{{ route('work-orders.progress.update', [$workOrder, $report]) }}" enctype="multipart/form-data" x-show="openReport === {{ $report->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                             @csrf
