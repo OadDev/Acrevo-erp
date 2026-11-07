@@ -37,6 +37,10 @@
                     <x-input-label value="Delivery Time" />
                     <x-text-input name="delivery_time" placeholder="e.g. 10:00 AM" class="mt-1 block w-full" value="{{ old('delivery_time', $dc->delivery_time ?? '') }}" />
                 </div>
+                <div>
+                    <x-input-label value="Vehicle Details" />
+                    <x-text-input name="vehicle_details" placeholder="e.g. TN 01 AB 1234" class="mt-1 block w-full" value="{{ old('vehicle_details', $dc->vehicle_details ?? '') }}" />
+                </div>
                 @if ($dc)
                     <div>
                         <x-input-label value="Status" />

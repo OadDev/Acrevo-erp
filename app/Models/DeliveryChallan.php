@@ -21,7 +21,7 @@ class DeliveryChallan extends Model
     protected $sequenceColumn = 'challan_no';
 
     protected $fillable = [
-        'company_id', 'client_id', 'challan_no', 'challan_date', 'delivery_time',
+        'company_id', 'client_id', 'challan_no', 'challan_date', 'delivery_time', 'vehicle_details',
         'shipping_name', 'shipping_address', 'shipping_phone', 'shipping_email', 'shipping_tax_id',
         'terms_and_conditions', 'status',
         'received_by_name', 'received_by_comment', 'received_by_date',

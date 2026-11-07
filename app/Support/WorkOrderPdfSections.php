@@ -28,6 +28,19 @@ class WorkOrderPdfSections
         'tickets' => 'Tickets',
     ];
 
+    /**
+     * Each WO sub-module section whose tab/export visibility is gated by
+     * its own dedicated permission, independently of the others.
+     */
+    private const PERMISSION_GATED_SECTIONS = [
+        'overview' => 'work_orders.overview_view',
+        'materials' => 'wo_materials.view',
+        'manpower' => 'wo_manpower.view',
+        'mb' => 'wo_measurement_book.view',
+        'attendance' => 'wo_attendance.view',
+        'ledger' => 'wo_ledger.view',
+    ];
+
     public static function forUser($user): array
     {
         $sections = self::SECTIONS;
@@ -36,8 +49,10 @@ class WorkOrderPdfSections
             unset($sections['company-ledger']);
         }
 
-        if ($user && $user->hasRole('QC Officer') && ! $user->hasAnyRole(['Admin', 'Finance'])) {
-            unset($sections['ledger']);
+        foreach (self::PERMISSION_GATED_SECTIONS as $section => $permission) {
+            if (! $user || ! $user->can($permission)) {
+                unset($sections[$section]);
+            }
         }
 
         return $sections;

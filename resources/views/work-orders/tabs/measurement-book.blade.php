@@ -52,20 +52,24 @@
             <div class="border-b border-gray-100 py-3 text-sm last:border-0 dark:border-gray-800">
                 <div class="flex items-center justify-between">
                     <p class="font-medium text-gray-800 dark:text-gray-200">{{ $mb->mb_no }} — {{ $mb->date->format('d M Y') }}</p>
-                    @can('site_records.manage')
+                    @canany(['wo_measurement_book.edit', 'wo_measurement_book.delete'])
                         <div class="flex items-center gap-2">
-                            <button type="button" @click="editMb === {{ $mb->id }} ? editMb = null : editMb = {{ $mb->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                            <form method="POST" action="{{ route('work-orders.measurement-books.destroy', [$workOrder, $mb]) }}" onsubmit="return confirm('Remove this measurement book and all its items?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                            </form>
+                            @can('wo_measurement_book.edit')
+                                <button type="button" @click="editMb === {{ $mb->id }} ? editMb = null : editMb = {{ $mb->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                            @endcan
+                            @can('wo_measurement_book.delete')
+                                <form method="POST" action="{{ route('work-orders.measurement-books.destroy', [$workOrder, $mb]) }}" onsubmit="return confirm('Remove this measurement book and all its items?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                </form>
+                            @endcan
                         </div>
-                    @endif
+                    @endcanany
                 </div>
                 <p class="text-gray-500">{{ $mb->description }}</p>
 
-                @can('site_records.manage')
+                @can('wo_measurement_book.edit')
                     <form method="POST" action="{{ route('work-orders.measurement-books.update', [$workOrder, $mb]) }}" x-show="editMb === {{ $mb->id }}" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
                         @method('PUT')
@@ -88,9 +92,9 @@
                                     <th class="py-1 pr-2">Unit</th>
                                     <th class="py-1 pr-2 text-right">Rate/Unit</th>
                                     <th class="py-1 pr-2 text-right">Total Amount</th>
-                                    @can('site_records.manage')
+                                    @canany(['wo_measurement_book.edit', 'wo_measurement_book.delete'])
                                         <th class="py-1 pr-2">Actions</th>
-                                    @endif
+                                    @endcanany
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -104,18 +108,22 @@
                                         <td class="py-1 pr-2">{{ $item->unit }}</td>
                                         <td class="py-1 pr-2 text-right">₹{{ number_format($item->rate, 2) }}</td>
                                         <td class="py-1 pr-2 text-right">₹{{ number_format($item->amount, 2) }}</td>
-                                        @can('site_records.manage')
+                                        @canany(['wo_measurement_book.edit', 'wo_measurement_book.delete'])
                                             <td class="whitespace-nowrap py-1 pr-2">
-                                                <button type="button" @click="editItem === {{ $item->id }} ? editItem = null : editItem = {{ $item->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
-                                                <form method="POST" action="{{ route('work-orders.measurement-books.items.destroy', [$workOrder, $mb, $item]) }}" onsubmit="return confirm('Remove this work done entry?')" class="inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button class="ml-2 font-medium text-rose-600 hover:underline">Delete</button>
-                                                </form>
+                                                @can('wo_measurement_book.edit')
+                                                    <button type="button" @click="editItem === {{ $item->id }} ? editItem = null : editItem = {{ $item->id }}" class="font-medium text-indigo-600 hover:underline">Edit</button>
+                                                @endcan
+                                                @can('wo_measurement_book.delete')
+                                                    <form method="POST" action="{{ route('work-orders.measurement-books.items.destroy', [$workOrder, $mb, $item]) }}" onsubmit="return confirm('Remove this work done entry?')" class="inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button class="ml-2 font-medium text-rose-600 hover:underline">Delete</button>
+                                                    </form>
+                                                @endcan
                                             </td>
-                                        @endif
+                                        @endcanany
                                     </tr>
-                                    @can('site_records.manage')
+                                    @can('wo_measurement_book.edit')
                                         <tr x-show="editItem === {{ $item->id }}" x-cloak>
                                             <td colspan="9" class="bg-gray-50 py-2 pr-2 dark:bg-gray-900">
                                                 <form method="POST" action="{{ route('work-orders.measurement-books.items.update', [$workOrder, $mb, $item]) }}" class="grid grid-cols-3 gap-2">
@@ -149,7 +157,7 @@
                     @endif
                 </div>
 
-                @can('site_records.manage')
+                @can('wo_measurement_book.create')
                     <details class="mt-2">
                         <summary class="cursor-pointer text-xs font-medium text-indigo-600">+ Add work done entry</summary>
                         <form method="POST" action="{{ route('work-orders.measurement-books.items.store', [$workOrder, $mb]) }}" class="mt-2 grid grid-cols-3 gap-2">
@@ -170,7 +178,7 @@
             <x-empty-state icon="file-text" title="No work done recorded yet" />
         @endforelse
 
-        @can('site_records.manage')
+        @can('wo_measurement_book.create')
             <form method="POST" action="{{ route('work-orders.measurement-books.store', $workOrder) }}" class="mt-4 space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
                 @csrf
                 <x-textarea-input name="description" rows="2" class="w-full" placeholder="Description" required></x-textarea-input>

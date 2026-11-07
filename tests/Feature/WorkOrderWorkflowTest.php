@@ -33,8 +33,9 @@ class WorkOrderWorkflowTest extends TestCase
         return $admin;
     }
 
-    // Has full site_records.manage / daily_checklist.manage / etc. access to
-    // create entries, but is not Admin - used to prove edit/delete is refused.
+    // Has full wo_materials/wo_manpower/wo_measurement_book/wo_ledger/
+    // wo_attendance/daily_checklist.manage/etc. access to create entries,
+    // but is not Admin - used to prove edit/delete is refused.
     // Call this only after admin() has already seeded roles/permissions in
     // the same test - reseeding here would duplicate the Role rows.
     private function executiveTeamLeader(): User
@@ -2035,12 +2036,13 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertSame(0, $workOrder->fresh()->timeSchedules()->count());
     }
 
-    public function test_a_role_with_site_records_manage_can_correct_a_material_entry_but_one_without_it_cannot(): void
+    public function test_a_role_with_wo_materials_edit_and_delete_can_correct_a_material_entry_but_one_without_it_cannot(): void
     {
-        // A role holding site_records.manage (e.g. the Executive Team
-        // Leader, or any custom role an Admin grants it to) can now correct
-        // its own mistaken entries, not just Admin - correction used to be
-        // hardcoded to the Admin role regardless of permissions.
+        // A role holding wo_materials.edit/wo_materials.delete (e.g. the
+        // Executive Team Leader, or any custom role an Admin grants it to)
+        // can now correct its own mistaken entries, not just Admin -
+        // correction used to be hardcoded to the Admin role regardless of
+        // permissions.
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
         $enquiry = Enquiry::create(['client_id' => $client->id, 'service_type' => 'S', 'contact_name' => 'C', 'contact_phone' => '1', 'status' => 'new', 'source' => 'website', 'created_by' => $admin->id]);
@@ -2120,8 +2122,8 @@ class WorkOrderWorkflowTest extends TestCase
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
         $unauthorized = $this->sales();
-        // A role holding site_records.manage - not just Admin - can now
-        // correct ledger entries too.
+        // A role holding wo_ledger.edit/wo_ledger.delete - not just Admin -
+        // can now correct ledger entries too.
         $teamLeader = $this->executiveTeamLeader();
 
         $this->actingAs($admin)->post("/work-orders/{$workOrder->id}/ledger", [
@@ -2154,7 +2156,7 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertEquals(-2000, $second->fresh()->balance);
     }
 
-    public function test_a_role_with_site_records_manage_can_edit_and_remove_a_measurement_book_item_but_one_without_it_cannot(): void
+    public function test_a_role_with_wo_measurement_book_edit_and_delete_can_edit_and_remove_a_measurement_book_item_but_one_without_it_cannot(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -2220,7 +2222,7 @@ class WorkOrderWorkflowTest extends TestCase
         $this->assertNull(\App\Models\QcInspection::find($inspection->id));
     }
 
-    public function test_a_role_with_site_records_manage_can_edit_or_remove_a_work_order_attendance_entry_but_one_without_it_cannot(): void
+    public function test_a_role_with_wo_attendance_edit_and_delete_can_edit_or_remove_a_work_order_attendance_entry_but_one_without_it_cannot(): void
     {
         $admin = $this->admin();
         $client = Client::create(['name' => 'C', 'email' => 'c@example.com', 'phone' => '1', 'is_active' => true, 'created_by' => $admin->id]);
@@ -2248,7 +2250,7 @@ class WorkOrderWorkflowTest extends TestCase
         $this->actingAs($unauthorized)->delete("/work-orders/{$workOrder->id}/attendance/{$attendance->id}")->assertForbidden();
 
         // Marked Present by mistake - the Team Leader (who holds
-        // site_records.manage, same as Admin) corrects it to Absent.
+        // wo_attendance.edit, same as Admin) corrects it to Absent.
         $this->actingAs($teamLeader)->put("/work-orders/{$workOrder->id}/attendance/{$attendance->id}", [
             'date' => now()->toDateString(), 'status' => 'absent',
         ])->assertRedirect();

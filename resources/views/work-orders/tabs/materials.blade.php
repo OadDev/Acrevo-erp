@@ -79,9 +79,9 @@
                     <th class="px-4 py-2">Supplier Details</th>
                     <th class="px-4 py-2">Delivery Vehicle Details</th>
                     <th class="px-4 py-2">Remarks</th>
-                    @can('site_records.manage')
+                    @canany(['wo_materials.edit', 'wo_materials.delete'])
                         <th class="px-4 py-2">Actions</th>
-                    @endif
+                    @endcanany
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -97,18 +97,22 @@
                         <td class="px-4 py-2 text-gray-500">{{ $entry->vendor ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->delivery_vehicle_details ?? '—' }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->remarks ?? '—' }}</td>
-                        @can('site_records.manage')
+                        @canany(['wo_materials.edit', 'wo_materials.delete'])
                             <td class="whitespace-nowrap px-4 py-2">
-                                <button type="button" @click="editMaterial === {{ $entry->id }} ? editMaterial = null : editMaterial = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                                <form method="POST" action="{{ route('work-orders.materials.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this material inward entry?')" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                                </form>
+                                @can('wo_materials.edit')
+                                    <button type="button" @click="editMaterial === {{ $entry->id }} ? editMaterial = null : editMaterial = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                @endcan
+                                @can('wo_materials.delete')
+                                    <form method="POST" action="{{ route('work-orders.materials.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this material inward entry?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @endcan
                             </td>
-                        @endif
+                        @endcanany
                     </tr>
-                    @can('site_records.manage')
+                    @can('wo_materials.edit')
                         <tr x-show="editMaterial === {{ $entry->id }}" x-cloak>
                             <td colspan="11" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.materials.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -138,7 +142,7 @@
             </tbody>
         </table>
     </div>
-    @can('site_records.manage')
+    @can('wo_materials.create')
         <form method="POST" action="{{ route('work-orders.materials.store', $workOrder) }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-3">
             @csrf
             <x-text-input type="date" name="entry_date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />
@@ -171,9 +175,9 @@
                     <th class="px-4 py-2">Material Name</th>
                     <th class="px-4 py-2">Nos</th>
                     <th class="px-4 py-2">Unit</th>
-                    @can('site_records.manage')
+                    @canany(['wo_materials.edit', 'wo_materials.delete'])
                         <th class="px-4 py-2">Actions</th>
-                    @endif
+                    @endcanany
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -183,18 +187,22 @@
                         <td class="px-4 py-2">{{ $entry->material_name }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->quantity }}</td>
                         <td class="px-4 py-2 text-gray-500">{{ $entry->unit }}</td>
-                        @can('site_records.manage')
+                        @canany(['wo_materials.edit', 'wo_materials.delete'])
                             <td class="whitespace-nowrap px-4 py-2">
-                                <button type="button" @click="editUsage === {{ $entry->id }} ? editUsage = null : editUsage = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                                <form method="POST" action="{{ route('work-orders.material-usage.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this daily usage entry?')" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                                </form>
+                                @can('wo_materials.edit')
+                                    <button type="button" @click="editUsage === {{ $entry->id }} ? editUsage = null : editUsage = {{ $entry->id }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                @endcan
+                                @can('wo_materials.delete')
+                                    <form method="POST" action="{{ route('work-orders.material-usage.destroy', [$workOrder, $entry]) }}" onsubmit="return confirm('Remove this daily usage entry?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="ml-2 text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @endcan
                             </td>
-                        @endif
+                        @endcanany
                     </tr>
-                    @can('site_records.manage')
+                    @can('wo_materials.edit')
                         <tr x-show="editUsage === {{ $entry->id }}" x-cloak>
                             <td colspan="5" class="bg-gray-50 px-4 py-3 dark:bg-gray-900">
                                 <form method="POST" action="{{ route('work-orders.material-usage.update', [$workOrder, $entry]) }}" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -215,7 +223,7 @@
             </tbody>
         </table>
     </div>
-    @can('site_records.manage')
+    @can('wo_materials.create')
         <form method="POST" action="{{ route('work-orders.material-usage.store', $workOrder) }}" class="grid grid-cols-2 gap-2 border-t border-gray-100 p-4 dark:border-gray-800 sm:grid-cols-4">
             @csrf
             <x-text-input type="date" name="date" value="{{ now()->format('Y-m-d') }}" class="text-sm" required />

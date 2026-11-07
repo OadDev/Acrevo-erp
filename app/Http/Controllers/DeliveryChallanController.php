@@ -116,6 +116,7 @@ class DeliveryChallanController extends Controller
             'client_id' => ['required', 'exists:clients,id'],
             'challan_date' => ['required', 'date'],
             'delivery_time' => ['nullable', 'string', 'max:50'],
+            'vehicle_details' => ['nullable', 'string', 'max:255'],
             'shipping_name' => ['nullable', 'string', 'max:255'],
             'shipping_address' => ['nullable', 'string'],
             'shipping_phone' => ['nullable', 'string', 'max:30'],

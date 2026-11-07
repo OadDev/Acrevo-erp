@@ -35,6 +35,9 @@
                 <div class="font-medium text-gray-800 dark:text-gray-200">{{ $deliveryChallan->shipping_name ?: $deliveryChallan->client?->name }}</div>
                 <div class="text-gray-500">{{ $deliveryChallan->shipping_address ?: $deliveryChallan->client?->address }}</div>
                 <div class="text-gray-500">Date: {{ $deliveryChallan->challan_date->format('d M Y') }} @if($deliveryChallan->delivery_time) · {{ $deliveryChallan->delivery_time }} @endif</div>
+                @if ($deliveryChallan->vehicle_details)
+                    <div class="text-gray-500">Vehicle: {{ $deliveryChallan->vehicle_details }}</div>
+                @endif
             </dl>
         </x-card>
     </div>

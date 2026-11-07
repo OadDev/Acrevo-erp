@@ -10,13 +10,13 @@
                     </div>
                     @if (! $assignment->unassigned_at)
                         <x-badge status="active" color="emerald" />
-                        @canany(['worker_assignment.manage', 'work_orders.edit'])
+                        @can('worker_assignment.manage')
                             <form method="POST" action="{{ route('work-orders.unassign-sub-contractor', [$workOrder, $assignment]) }}">
                                 @csrf
                                 @method('DELETE')
                                 <button class="ml-2 text-xs text-rose-500 hover:underline">Unassign</button>
                             </form>
-                        @endcanany
+                        @endcan
                     @else
                         <x-badge status="cancelled" />
                     @endif
@@ -26,7 +26,7 @@
             @endforelse
         </x-card>
 
-        @canany(['worker_assignment.manage', 'work_orders.edit'])
+        @can('worker_assignment.manage')
             <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Assign a Sub-Contractor</h3>
                 <form method="POST" action="{{ route('work-orders.assign-sub-contractor', $workOrder) }}" class="space-y-3">
@@ -40,7 +40,7 @@
                     <x-primary-button class="w-full justify-center">Assign Sub-Contractor</x-primary-button>
                 </form>
             </x-card>
-        @endcanany
+        @endcan
     @endif
 
     {{-- Shown for every execution method - a Way 2 (Sub-Contractor) work
@@ -57,13 +57,13 @@
                 </div>
                 @if (! $assignment->unassigned_at)
                     <x-badge status="active" color="emerald" />
-                    @canany(['worker_assignment.manage', 'work_orders.edit'])
+                    @can('worker_assignment.manage')
                         <form method="POST" action="{{ route('work-orders.unassign-team', [$workOrder, $assignment]) }}">
                             @csrf
                             @method('DELETE')
                             <button class="ml-2 text-xs text-rose-500 hover:underline">Unassign</button>
                         </form>
-                    @endcanany
+                    @endcan
                 @else
                     <x-badge status="cancelled" />
                 @endif
@@ -73,7 +73,7 @@
         @endforelse
     </x-card>
 
-    @canany(['worker_assignment.manage', 'work_orders.edit'])
+    @can('worker_assignment.manage')
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Assign a Team</h3>
             <form method="POST" action="{{ route('work-orders.assign-team', $workOrder) }}" class="space-y-3">
@@ -87,5 +87,5 @@
                 <x-primary-button class="w-full justify-center">Assign Team</x-primary-button>
             </form>
         </x-card>
-    @endcanany
+    @endcan
 </div>
