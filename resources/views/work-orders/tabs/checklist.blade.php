@@ -15,7 +15,7 @@
                         @if ($total)
                             <span class="text-xs font-medium text-gray-500">{{ $done }}/{{ $total }} done</span>
                         @endif
-                        @if (auth()->user()->hasRole('Admin'))
+                        @can('daily_checklist.manage')
                             <button type="button" @click="open === '{{ $checklist->id }}' ? open = null : open = '{{ $checklist->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
                             <form method="POST" action="{{ route('work-orders.checklists.destroy', [$workOrder, $checklist]) }}" onsubmit="return confirm('Remove this daily work entry and all its items?')">
                                 @csrf
@@ -25,7 +25,7 @@
                         @endif
                     </div>
                 </div>
-                @if (auth()->user()->hasRole('Admin'))
+                @can('daily_checklist.manage')
                     @php $activeTeams = $workOrder->executiveTeams->whereNull('unassigned_at'); @endphp
                     <form method="POST" action="{{ route('work-orders.checklists.update', [$workOrder, $checklist]) }}" x-show="open === '{{ $checklist->id }}'" x-cloak class="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
@@ -49,7 +49,7 @@
                                 <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                                     <x-icon name="check-circle" class="h-4 w-4 shrink-0 text-emerald-500" />
                                     <span class="flex-1 line-through decoration-gray-300">{{ $item->description }}</span>
-                                    @if (auth()->user()->hasRole('Admin'))
+                                    @can('daily_checklist.manage')
                                         <form method="POST" action="{{ route('work-orders.checklist-items.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this checklist item?')">
                                             @csrf
                                             @method('DELETE')
@@ -70,7 +70,7 @@
                                         @endif
                                         <span class="text-xs font-medium text-indigo-600">View Proof</span>
                                     </a>
-                                    @if (auth()->user()->hasRole('Admin'))
+                                    @can('daily_checklist.manage')
                                         <form method="POST" action="{{ route('work-orders.checklist-items.proof.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this proof? The item will go back to pending.')" class="mt-1">
                                             @csrf
                                             @method('DELETE')
@@ -82,7 +82,7 @@
                                 <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                     <x-icon name="clock" class="h-4 w-4 shrink-0 text-amber-500" />
                                     <span class="flex-1">{{ $item->description }}</span>
-                                    @if (auth()->user()->hasRole('Admin'))
+                                    @can('daily_checklist.manage')
                                         <form method="POST" action="{{ route('work-orders.checklist-items.destroy', [$workOrder, $item]) }}" onsubmit="return confirm('Remove this checklist item?')">
                                             @csrf
                                             @method('DELETE')

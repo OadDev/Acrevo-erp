@@ -1,5 +1,5 @@
 @php
-    $canEditSummary = auth()->user()->hasAnyRole(['Admin', 'Sales', 'HR', 'Executive Team Leader']);
+    $canEditSummary = auth()->user()->can('work_orders.summary_manage');
 @endphp
 
 <x-card :padded="false" x-data="{ editSummary: null }">
