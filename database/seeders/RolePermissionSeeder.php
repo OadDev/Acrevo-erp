@@ -88,7 +88,8 @@ class RolePermissionSeeder extends Seeder
             'qc.view', 'qc.perform', 'qc.reports.view',
         ],
         'tickets' => [
-            'tickets.view', 'tickets.create', 'tickets.manage',
+            'tickets.all_view', 'tickets.assigned_view', 'tickets.assigned_create',
+            'tickets.assigned_manage', 'tickets.assigned_edit', 'tickets.assigned_remove',
         ],
         'finance' => [
             'finance.view', 'finance.manage',
@@ -241,7 +242,10 @@ class RolePermissionSeeder extends Seeder
         ],
         'Executive Team Leader' => [
             'executive' => '*',
-            'tickets' => ['tickets.view', 'tickets.create'],
+            // Global view (same as before), create/comment/edit scoped to
+            // their own assigned Work Orders - no remove, same restriction
+            // this role always had.
+            'tickets' => ['tickets.all_view', 'tickets.assigned_create', 'tickets.assigned_manage', 'tickets.assigned_edit'],
             'sales' => [
                 'work_orders.view', 'work_orders.overview_view',
                 'work_orders.summary_view', 'work_orders.summary_create', 'work_orders.summary_edit', 'work_orders.summary_delete',
@@ -309,7 +313,10 @@ class RolePermissionSeeder extends Seeder
         'QC Officer' => [
             'qc' => '*',
             'sales' => ['work_orders.view', 'work_orders.overview_view', 'work_orders.summary_view'],
-            'tickets' => ['tickets.view'],
+            // Global view (same as before) plus comment - this role could
+            // already comment on any ticket under the old view-gated
+            // comments route, so this preserves that net access.
+            'tickets' => ['tickets.all_view', 'tickets.assigned_manage'],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
             'wo_materials' => ['wo_materials.view'],
@@ -351,7 +358,10 @@ class RolePermissionSeeder extends Seeder
             'audit' => ['audit.view'],
             'management' => '*',
             'sales' => ['work_orders.view', 'ongoing_sites.view', 'completed_sites.view', 'work_orders.overview_view', 'work_orders.summary_view'],
-            'tickets' => ['tickets.view'],
+            // Global view (same as before) plus comment - this role could
+            // already comment on any ticket under the old view-gated
+            // comments route, so this preserves that net access.
+            'tickets' => ['tickets.all_view', 'tickets.assigned_manage'],
             'reports' => '*',
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
@@ -419,10 +429,10 @@ class RolePermissionSeeder extends Seeder
         ],
         // Deliberately scoped to Progress & Media only - no daily_checklist
         // create/edit/delete, site_records.manage, approval_requests
-        // create/edit/delete, or tickets.create, so a Sub Contractor cannot
-        // enter Daily Work/Checklist, Materials, Manpower, M.Book, Ledger,
-        // Approval Requests, or Tickets. Those stay with the Executive Team
-        // Leader (or Admin/Sales/HR for Monthly Summary).
+        // create/edit/delete, or any ticket permission, so a Sub Contractor
+        // cannot enter Daily Work/Checklist, Materials, Manpower, M.Book,
+        // Ledger, Approval Requests, or Tickets. Those stay with the
+        // Executive Team Leader (or Admin/Sales/HR for Monthly Summary).
         'Sub Contractor' => [
             'executive' => ['assigned_work.view'],
             'sales' => ['work_orders.overview_view', 'work_orders.summary_view'],

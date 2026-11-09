@@ -83,6 +83,8 @@ class TicketAttachmentTest extends TestCase
         $admin = $this->admin();
         $workOrder = $this->workOrder($admin);
         $creator = $this->user('Sales');
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team', 'team_leader_id' => $creator->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
 
         $ticket = Ticket::create([
             'work_order_id' => $workOrder->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'Delay issue',

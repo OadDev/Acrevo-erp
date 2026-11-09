@@ -12,7 +12,6 @@ use App\Support\Pdf;
 use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
@@ -123,7 +122,7 @@ class TicketController extends Controller
 
     public function destroy(Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->isManageableBy(Auth::user()), 403, 'You can only manage tickets for your assigned Work Orders.');
+        $this->authorize('delete', $ticket);
 
         $workOrder = $ticket->workOrder;
 
@@ -156,6 +155,8 @@ class TicketController extends Controller
 
     public function addComment(Request $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorize('comment', $ticket);
+
         $data = $request->validate([
             'comment' => ['required', 'string'],
             'files' => ['nullable', 'array'],
@@ -177,7 +178,7 @@ class TicketController extends Controller
 
     public function updateStatus(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->isManageableBy($request->user()), 403, 'You can only manage tickets for your assigned Work Orders.');
+        $this->authorize('manageStatus', $ticket);
 
         $data = $request->validate(['status' => ['required', 'in:open,in_progress,resolved,closed']]);
 

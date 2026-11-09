@@ -13,20 +13,20 @@
                 @can('update', $ticket)
                     <x-link-button :href="route('tickets.edit', $ticket)" variant="secondary">Edit</x-link-button>
                 @endcan
-                @if ($ticket->isManageableBy(auth()->user()))
+                @can('delete', $ticket)
                     <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
                         @csrf
                         @method('DELETE')
                         <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
                     </form>
-                @endif
+                @endcan
                 @can('lock', $ticket)
                     <form method="POST" action="{{ route('tickets.lock', $ticket) }}" onsubmit="return confirm('Mark this ticket uneditable? This cannot be undone.')">
                         @csrf
                         <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Mark Uneditable</button>
                     </form>
                 @endcan
-                @if ($ticket->isManageableBy(auth()->user()))
+                @can('manageStatus', $ticket)
                     <form method="POST" action="{{ route('tickets.status', $ticket) }}" class="flex items-center gap-2">
                         @csrf
                         <x-select-input name="status" onchange="this.form.submit()" class="text-sm">
@@ -35,7 +35,7 @@
                             @endforeach
                         </x-select-input>
                     </form>
-                @endif
+                @endcan
             </x-slot>
         </x-page-header>
     </x-slot>
@@ -75,15 +75,17 @@
 
             <x-card>
                 <h3 class="mb-4 text-sm font-semibold text-gray-500">Comments</h3>
-                <form method="POST" action="{{ route('tickets.comments.store', $ticket) }}" enctype="multipart/form-data" class="mb-4 space-y-2">
-                    @csrf
-                    <div class="flex gap-2">
-                        <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
-                        <x-primary-button>Post</x-primary-button>
-                    </div>
-                    <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="block w-full text-xs">
-                    @error('files')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
-                </form>
+                @can('comment', $ticket)
+                    <form method="POST" action="{{ route('tickets.comments.store', $ticket) }}" enctype="multipart/form-data" class="mb-4 space-y-2">
+                        @csrf
+                        <div class="flex gap-2">
+                            <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
+                            <x-primary-button>Post</x-primary-button>
+                        </div>
+                        <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="block w-full text-xs">
+                        @error('files')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </form>
+                @endcan
                 <div class="space-y-3">
                     @forelse ($ticket->comments as $comment)
                         <div class="border-l-2 border-indigo-200 pl-3 text-sm dark:border-indigo-500/30">
