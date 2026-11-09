@@ -35,8 +35,17 @@ class TicketPolicy
     }
 
     // Comment/reply - discussion only, no edit/delete rights.
+    // tickets.all_view is global visibility *and* the ability to comment
+    // on anything it can see, unscoped - it's meant to be the single
+    // "sees and can direct every ticket company-wide" permission, not
+    // read-only. tickets.assigned_manage alone stays scoped to this
+    // ticket's work order, same as before.
     public function comment(User $user, Ticket $ticket): bool
     {
+        if ($user->can('tickets.all_view')) {
+            return true;
+        }
+
         return $user->can('tickets.assigned_manage') && $ticket->hasAssignedWorkOrderFor($user);
     }
 

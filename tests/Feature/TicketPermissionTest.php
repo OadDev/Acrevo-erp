@@ -104,22 +104,24 @@ class TicketPermissionTest extends TestCase
         $this->actingAs($fieldUser)->get('/tickets')->assertForbidden();
     }
 
-    public function test_tickets_all_view_shows_the_sidebar_menu_and_every_ticket(): void
+    public function test_tickets_all_view_shows_the_sidebar_menu_every_ticket_and_lets_it_comment_on_any_of_them(): void
     {
         $this->seedRoles();
         $admin = $this->user('Admin');
         $workOrderOne = $this->workOrder($admin);
         $workOrderTwo = $this->workOrder($admin);
 
-        Ticket::create([
+        $ticketOne = Ticket::create([
             'work_order_id' => $workOrderOne->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'On WO one',
             'raised_by_type' => 'internal', 'raised_by' => $admin->id, 'status' => 'open',
         ]);
-        Ticket::create([
+        $ticketTwo = Ticket::create([
             'work_order_id' => $workOrderTwo->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'On WO two',
             'raised_by_type' => 'internal', 'raised_by' => $admin->id, 'status' => 'open',
         ]);
 
+        // Deliberately only tickets.all_view - not assigned to either work
+        // order at all.
         $viewer = $this->customRole('All Ticket Viewer', ['tickets.all_view']);
 
         $this->actingAs($viewer)->get('/dashboard')->assertOk()->assertSee(route('tickets.index'));
@@ -127,6 +129,17 @@ class TicketPermissionTest extends TestCase
             ->assertOk()
             ->assertSee('On WO one')
             ->assertSee('On WO two');
+
+        // all_view is "sees and can direct every ticket company-wide" - the
+        // comment box is available, and posting one works, on both tickets,
+        // with no assignment to either.
+        $this->actingAs($viewer)->get("/tickets/{$ticketOne->id}")->assertOk()->assertSee('Add a comment', false);
+        $this->actingAs($viewer)->post("/tickets/{$ticketOne->id}/comments", ['comment' => 'Checking in on WO one'])
+            ->assertRedirect();
+        $this->actingAs($viewer)->post("/tickets/{$ticketTwo->id}/comments", ['comment' => 'Checking in on WO two'])
+            ->assertRedirect();
+        $this->assertSame(1, $ticketOne->fresh()->comments()->count());
+        $this->assertSame(1, $ticketTwo->fresh()->comments()->count());
     }
 
     public function test_tickets_assigned_view_only_shows_tickets_from_the_users_assigned_work_orders(): void
@@ -204,7 +217,11 @@ class TicketPermissionTest extends TestCase
             'raised_by_type' => 'internal', 'raised_by' => $admin->id, 'status' => 'open',
         ]);
 
-        $commenter = $this->customRole('Ticket Commenter', ['tickets.all_view', 'tickets.assigned_manage']);
+        // tickets.assigned_view (not all_view) alongside assigned_manage -
+        // all_view would let it comment unscoped, which isn't what this
+        // test is checking; assigned_view still lets it open the ticket
+        // once assigned, without affecting assigned_manage's own scoping.
+        $commenter = $this->customRole('Ticket Commenter', ['tickets.assigned_view', 'tickets.assigned_manage']);
 
         // Not assigned yet - comment is forbidden even with the permission.
         $this->actingAs($commenter)->post("/tickets/{$ticket->id}/comments", ['comment' => 'Too early'])

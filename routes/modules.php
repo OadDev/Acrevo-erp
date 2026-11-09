@@ -563,7 +563,10 @@ Route::middleware('permission:tickets.all_view|tickets.assigned_view')->group(fu
     Route::get('tickets/{ticket}/pdf', [TicketController::class, 'pdf'])->name('tickets.pdf');
     Route::get('tickets/{ticket}/zip', [TicketController::class, 'zip'])->name('tickets.zip');
 });
-Route::middleware('permission:tickets.assigned_manage')->group(function () {
+// Commenting needs either tickets.all_view (global - comment on anything
+// the global viewer can see) or tickets.assigned_manage (scoped to this
+// ticket's work order) - TicketPolicy::comment() decides which applies.
+Route::middleware('permission:tickets.all_view|tickets.assigned_manage')->group(function () {
     Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
 });
 Route::middleware('permission:tickets.assigned_edit')->group(function () {
