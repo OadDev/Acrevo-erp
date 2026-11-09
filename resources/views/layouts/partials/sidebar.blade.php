@@ -126,7 +126,7 @@
                 </x-nav-group>
             @endcan
 
-            @can('tickets.view')
+            @can('tickets.all_view')
                 <x-nav-group label="Support">
                     <x-nav-link :href="route('tickets.index')" :active="request()->routeIs('tickets.*')" icon="ticket">Tickets</x-nav-link>
                 </x-nav-group>

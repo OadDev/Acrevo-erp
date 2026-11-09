@@ -105,7 +105,7 @@ class DashboardController extends Controller
             ];
         }
 
-        if ($user->can('tickets.view') && ! isset($widgets['management'])) {
+        if ($user->can('tickets.all_view') && ! isset($widgets['management'])) {
             $widgets['tickets'] = [
                 'label' => 'Support',
                 'cards' => [

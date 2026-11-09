@@ -188,12 +188,12 @@ class WorkOrder extends Model implements HasMedia
             || $this->subContractors()->whereNull('unassigned_at')->where('user_id', $user->id)->exists();
     }
 
-    // tickets.create lets a user raise a ticket at all; this additionally
-    // scopes it to work orders they're assigned to - Admin bypasses, same
-    // as every other assignment-scoped check in the app.
+    // tickets.assigned_create lets a user raise a ticket at all; this
+    // additionally scopes it to work orders they're assigned to - Admin
+    // bypasses, same as every other assignment-scoped check in the app.
     public function canHaveTicketRaisedBy(User $user): bool
     {
-        return $user->can('tickets.create') && ($user->hasRole('Admin') || $this->isAssignedToUser($user));
+        return $user->can('tickets.assigned_create') && ($user->hasRole('Admin') || $this->isAssignedToUser($user));
     }
 
     public function dailyChecklists(): HasMany

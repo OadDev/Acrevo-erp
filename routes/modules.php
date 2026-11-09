@@ -539,23 +539,42 @@ Route::middleware('permission:qc.view')->group(function () {
 | Tickets
 |--------------------------------------------------------------------------
 */
-Route::middleware('permission:tickets.view')->group(function () {
-    Route::resource('tickets', TicketController::class)->except('destroy');
-    Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
-    Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
-    Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
+// View, Create, Manage (comment), Edit, and Remove are six independent
+// permissions - each route group below requires only the one permission
+// that actually governs it, so e.g. a role holding Create and Manage but
+// not View can still raise tickets and comment (previously every ticket
+// route, including store and comments.store, was nested under a single
+// tickets.view-gated group, so a role without View got a 403 on Create/
+// Manage actions too even though it held those permissions). Per-ticket/
+// per-work-order scoping for the *.assigned_* permissions is enforced in
+// the controller via TicketPolicy and WorkOrder::canHaveTicketRaisedBy -
+// Admin bypasses all of it, same as every other assignment-scoped rule.
+Route::middleware('permission:tickets.all_view')->group(function () {
+    Route::get('tickets', [TicketController::class, 'index'])->name('tickets.index');
+});
+Route::middleware('permission:tickets.assigned_create')->group(function () {
+    Route::get('tickets/create', [TicketController::class, 'create'])->name('tickets.create');
+    Route::post('tickets', [TicketController::class, 'store'])->name('tickets.store');
+});
+// Viewing a specific ticket (show/pdf/zip) needs either view permission -
+// TicketPolicy::view() decides per-ticket which one actually applies.
+Route::middleware('permission:tickets.all_view|tickets.assigned_view')->group(function () {
+    Route::get('tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::get('tickets/{ticket}/pdf', [TicketController::class, 'pdf'])->name('tickets.pdf');
     Route::get('tickets/{ticket}/zip', [TicketController::class, 'zip'])->name('tickets.zip');
 });
-// Create (store, inside the tickets.view group above) and Manage are both
-// further scoped in the controller/model to work orders the user is
-// actually assigned to (Ticket::isManageableBy / WorkOrder::
-// canHaveTicketRaisedBy) - Admin bypasses. tickets.status moved in here
-// since it's a Manage-level action (previously only hidden in the UI, not
-// enforced at the route).
-Route::middleware('permission:tickets.manage')->group(function () {
-    Route::delete('tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
+Route::middleware('permission:tickets.assigned_manage')->group(function () {
+    Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
+});
+Route::middleware('permission:tickets.assigned_edit')->group(function () {
+    Route::get('tickets/{ticket}/edit', [TicketController::class, 'edit'])->name('tickets.edit');
+    Route::put('tickets/{ticket}', [TicketController::class, 'update'])->name('tickets.update');
     Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
+    Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
+    Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
+});
+Route::middleware('permission:tickets.assigned_remove')->group(function () {
+    Route::delete('tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
 });
 
 /*

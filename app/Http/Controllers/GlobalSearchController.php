@@ -43,7 +43,7 @@ class GlobalSearchController extends Controller
                 );
             }
 
-            if ($user->can('tickets.view')) {
+            if ($user->can('tickets.all_view')) {
                 $results = $results->merge(
                     Ticket::query()
                         ->where(fn ($q) => $q->where('title', 'like', "%{$query}%")

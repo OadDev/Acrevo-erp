@@ -26,7 +26,7 @@
                             <th class="px-5 py-3">Priority</th>
                             <th class="px-5 py-3">Assigned To</th>
                             <th class="px-5 py-3">Status</th>
-                            @can('tickets.manage')
+                            @can('tickets.assigned_remove')
                                 <th class="px-5 py-3"></th>
                             @endcan
                         </tr>
@@ -43,15 +43,15 @@
                                 <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'"><x-badge :status="$ticket->priority" /></td>
                                 <td class="cursor-pointer px-5 py-3 text-sm text-gray-600 dark:text-gray-300" onclick="window.location='{{ route('tickets.show', $ticket) }}'">{{ $ticket->assignedTo?->name ?? '—' }}</td>
                                 <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'"><x-badge :status="$ticket->status" /></td>
-                                @can('tickets.manage')
+                                @can('tickets.assigned_remove')
                                     <td class="px-5 py-3 text-right">
-                                        @if ($ticket->isManageableBy(auth()->user()))
+                                        @can('delete', $ticket)
                                             <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="text-sm font-medium text-rose-600 hover:underline">Remove</button>
                                             </form>
-                                        @endif
+                                        @endcan
                                     </td>
                                 @endcan
                             </tr>
