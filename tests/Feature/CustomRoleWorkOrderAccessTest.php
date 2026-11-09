@@ -567,4 +567,62 @@ class CustomRoleWorkOrderAccessTest extends TestCase
         $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/summary/{$entry->id}")->assertRedirect();
         $this->assertNull($workOrder->fresh()->summaries()->find($entry->id));
     }
+
+    public function test_approval_requests_view_create_edit_and_delete_are_independently_grantable(): void
+    {
+        $admin = $this->admin();
+        $workOrder = $this->workOrder($admin);
+
+        // View-only - can't create, and the tab is visible but has no form.
+        $viewer = $this->siteCoordinator(['work_orders.view', 'approval_requests.view']);
+        $this->actingAs($viewer)->get("/work-orders/{$workOrder->id}?tab=approvals")
+            ->assertOk()->assertSee('Approval Requests')->assertDontSee('Request Client Approval');
+        $this->actingAs($viewer)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Need extra material',
+        ])->assertForbidden();
+
+        // Create-only - no edit/delete/respond/pdf/zip.
+        $creatorRole = Role::create(['name' => 'Approval Creator', 'guard_name' => 'web']);
+        $creatorRole->syncPermissions(['work_orders.view', 'approval_requests.view', 'approval_requests.create']);
+        $creator = User::create([
+            'name' => 'Approval Creator', 'email' => 'approvalcreator+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $creator->syncRoles(['Approval Creator']);
+
+        $this->actingAs($creator)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Need extra material',
+        ])->assertRedirect();
+        $approval = $workOrder->fresh()->approvalRequests()->firstOrFail();
+
+        $this->actingAs($creator)->put("/work-orders/{$workOrder->id}/approval-requests/{$approval->id}", [
+            'title' => 'Renamed', 'description' => null,
+        ])->assertForbidden();
+        $this->actingAs($creator)->get(route('work-orders.approval-requests.pdf', [$workOrder, $approval]))->assertForbidden();
+        $this->actingAs($creator)->delete("/work-orders/{$workOrder->id}/approval-requests/{$approval->id}")->assertForbidden();
+
+        // Edit+delete, no create.
+        $editorRole = Role::create(['name' => 'Approval Editor', 'guard_name' => 'web']);
+        $editorRole->syncPermissions(['work_orders.view', 'approval_requests.view', 'approval_requests.edit', 'approval_requests.delete']);
+        $editor = User::create([
+            'name' => 'Approval Editor', 'email' => 'approvaleditor+'.uniqid().'@example.com',
+            'password' => bcrypt('password'), 'department_id' => Department::first()->id, 'is_active' => true,
+        ]);
+        $editor->syncRoles(['Approval Editor']);
+
+        $this->actingAs($editor)->post("/work-orders/{$workOrder->id}/approval-requests", [
+            'title' => 'Another request',
+        ])->assertForbidden();
+
+        $this->actingAs($editor)->put("/work-orders/{$workOrder->id}/approval-requests/{$approval->id}", [
+            'title' => 'Renamed', 'description' => null,
+        ])->assertRedirect();
+        $this->assertSame('Renamed', $approval->fresh()->title);
+
+        $this->actingAs($editor)->get(route('work-orders.approval-requests.pdf', [$workOrder, $approval]))
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($editor)->delete("/work-orders/{$workOrder->id}/approval-requests/{$approval->id}")->assertRedirect();
+        $this->assertNull($workOrder->fresh()->approvalRequests()->find($approval->id));
+    }
 }

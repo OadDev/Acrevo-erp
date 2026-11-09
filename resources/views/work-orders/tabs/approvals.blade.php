@@ -1,6 +1,6 @@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3" x-data="{ editApproval: null }">
     <div class="space-y-3 lg:col-span-2">
-        @canany(['work_orders.edit', 'approval_requests.manage'])
+        @can('approval_requests.edit')
             @if ($workOrder->approvalRequests->where('status', 'approved')->isNotEmpty())
                 <div class="flex justify-end">
                     <a href="{{ route('work-orders.approval-requests.approved-pdf', $workOrder) }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500">
@@ -8,7 +8,7 @@
                     </a>
                 </div>
             @endif
-        @endcanany
+        @endcan
 
         @forelse ($workOrder->approvalRequests as $approval)
             <x-card>
@@ -23,24 +23,28 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <x-badge :status="$approval->status" />
-                        @canany(['work_orders.edit', 'approval_requests.manage'])
+                        @can('approval_requests.edit')
                             <a href="{{ route('work-orders.approval-requests.pdf', [$workOrder, $approval]) }}" class="text-xs font-medium text-indigo-600 hover:underline">PDF</a>
                             @if ($approval->getMedia('attachment')->isNotEmpty())
                                 <a href="{{ route('work-orders.approval-requests.zip', [$workOrder, $approval]) }}" class="text-xs font-medium text-indigo-600 hover:underline">ZIP</a>
                             @endif
+                        @endcan
+                        @canany(['approval_requests.edit', 'approval_requests.delete'])
+                            @can('approval_requests.edit')
+                                <button type="button" @click="editApproval === '{{ $approval->id }}' ? editApproval = null : editApproval = '{{ $approval->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                            @endcan
+                            @can('approval_requests.delete')
+                                <form method="POST" action="{{ route('work-orders.approval-requests.destroy', [$workOrder, $approval]) }}" onsubmit="return confirm('Remove this approval request?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
+                                </form>
+                            @endcan
                         @endcanany
-                        @canany(['work_orders.edit', 'approval_requests.manage'])
-                            <button type="button" @click="editApproval === '{{ $approval->id }}' ? editApproval = null : editApproval = '{{ $approval->id }}'" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
-                            <form method="POST" action="{{ route('work-orders.approval-requests.destroy', [$workOrder, $approval]) }}" onsubmit="return confirm('Remove this approval request?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="text-xs font-medium text-rose-600 hover:underline">Delete</button>
-                            </form>
-                        @endif
                     </div>
                 </div>
 
-                @canany(['work_orders.edit', 'approval_requests.manage'])
+                @can('approval_requests.edit')
                     <form method="POST" action="{{ route('work-orders.approval-requests.update', [$workOrder, $approval]) }}" x-show="editApproval === '{{ $approval->id }}'" x-cloak class="mt-2 space-y-2 rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
                         @csrf
                         @method('PUT')
@@ -72,7 +76,7 @@
                         @endif
                     </div>
                 @elseif ($approval->direction === 'client_to_company')
-                    @canany(['work_orders.edit', 'approval_requests.manage'])
+                    @can('approval_requests.edit')
                         <form method="POST" action="{{ route('work-orders.approval-requests.respond', [$workOrder, $approval]) }}" class="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
                             @csrf
                             <div class="flex-1">
@@ -82,7 +86,7 @@
                             <button name="status" value="approved" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Approve</button>
                             <button name="status" value="rejected" class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Reject</button>
                         </form>
-                    @endcanany
+                    @endcan
                 @else
                     <p class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-800">Awaiting the client's response.</p>
                 @endif
@@ -92,7 +96,7 @@
         @endforelse
     </div>
 
-    @canany(['work_orders.edit', 'approval_requests.manage'])
+    @can('approval_requests.create')
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Request Client Approval</h3>
             <form method="POST" action="{{ route('work-orders.approval-requests.store', $workOrder) }}" enctype="multipart/form-data" class="space-y-3">
@@ -112,5 +116,5 @@
                 <x-primary-button class="w-full justify-center">Send to Client</x-primary-button>
             </form>
         </x-card>
-    @endcanany
+    @endcan
 </div>

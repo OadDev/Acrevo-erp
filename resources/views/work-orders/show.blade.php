@@ -148,9 +148,11 @@
         <div x-show="tab === 'qc'" x-cloak>
             @include('work-orders.tabs.qc')
         </div>
-        <div x-show="tab === 'approvals'" x-cloak>
-            @include('work-orders.tabs.approvals')
-        </div>
+        @if (array_key_exists('approvals', $tabs))
+            <div x-show="tab === 'approvals'" x-cloak>
+                @include('work-orders.tabs.approvals')
+            </div>
+        @endif
         <div x-show="tab === 'tickets'" x-cloak>
             @include('work-orders.tabs.tickets')
         </div>

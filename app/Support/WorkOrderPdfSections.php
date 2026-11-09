@@ -42,6 +42,7 @@ class WorkOrderPdfSections
         'attendance' => 'wo_attendance.view',
         'summary' => 'work_orders.summary_view',
         'ledger' => 'wo_ledger.view',
+        'approvals' => 'approval_requests.view',
     ];
 
     public static function forUser($user): array

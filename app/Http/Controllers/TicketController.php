@@ -12,6 +12,7 @@ use App\Support\Pdf;
 use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
@@ -49,6 +50,8 @@ class TicketController extends Controller
     public function create(Request $request): View
     {
         $workOrder = WorkOrder::with('client')->findOrFail($request->get('work_order_id'));
+        abort_unless($workOrder->canHaveTicketRaisedBy($request->user()), 403, 'You can only raise tickets for your assigned Work Orders.');
+
         $departments = Department::orderBy('name')->get();
         $assignees = User::orderBy('name')->get();
 
@@ -58,6 +61,10 @@ class TicketController extends Controller
     public function store(TicketRequest $request): RedirectResponse
     {
         $data = $request->validated();
+
+        $workOrder = WorkOrder::findOrFail($data['work_order_id']);
+        abort_unless($workOrder->canHaveTicketRaisedBy($request->user()), 403, 'You can only raise tickets for your assigned Work Orders.');
+
         $data['description'] = RichText::sanitize($data['description'] ?? null);
 
         $ticket = Ticket::create($data + [
@@ -116,6 +123,8 @@ class TicketController extends Controller
 
     public function destroy(Ticket $ticket): RedirectResponse
     {
+        abort_unless($ticket->isManageableBy(Auth::user()), 403, 'You can only manage tickets for your assigned Work Orders.');
+
         $workOrder = $ticket->workOrder;
 
         $ticket->delete();
@@ -168,6 +177,8 @@ class TicketController extends Controller
 
     public function updateStatus(Request $request, Ticket $ticket): RedirectResponse
     {
+        abort_unless($ticket->isManageableBy($request->user()), 403, 'You can only manage tickets for your assigned Work Orders.');
+
         $data = $request->validate(['status' => ['required', 'in:open,in_progress,resolved,closed']]);
 
         $ticket->update($data + [

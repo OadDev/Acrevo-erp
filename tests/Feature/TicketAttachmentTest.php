@@ -6,9 +6,11 @@ use App\Models\Client;
 use App\Models\ClientLogin;
 use App\Models\Department;
 use App\Models\Enquiry;
+use App\Models\ExecutiveTeam;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderExecutiveTeam;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -58,6 +60,8 @@ class TicketAttachmentTest extends TestCase
         $admin = $this->admin();
         $workOrder = $this->workOrder($admin);
         $sales = $this->user('Sales');
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team', 'team_leader_id' => $sales->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
 
         $response = $this->actingAs($sales)->post('/tickets', [
             'work_order_id' => $workOrder->id, 'type' => 'quality', 'priority' => 'medium', 'title' => 'Cracked tile',

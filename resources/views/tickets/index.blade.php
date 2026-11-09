@@ -45,11 +45,13 @@
                                 <td class="cursor-pointer px-5 py-3" onclick="window.location='{{ route('tickets.show', $ticket) }}'"><x-badge :status="$ticket->status" /></td>
                                 @can('tickets.manage')
                                     <td class="px-5 py-3 text-right">
-                                        <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="text-sm font-medium text-rose-600 hover:underline">Remove</button>
-                                        </form>
+                                        @if ($ticket->isManageableBy(auth()->user()))
+                                            <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="text-sm font-medium text-rose-600 hover:underline">Remove</button>
+                                            </form>
+                                        @endif
                                     </td>
                                 @endcan
                             </tr>

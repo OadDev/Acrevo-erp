@@ -151,9 +151,9 @@
             <div class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
                 <h4 class="mb-2 text-sm font-semibold text-gray-500">Client Actions</h4>
                 <div class="flex flex-wrap gap-2">
-                    @can('tickets.create')
+                    @if ($workOrder->canHaveTicketRaisedBy(auth()->user()))
                         <x-link-button :href="route('tickets.create', ['work_order_id' => $workOrder->id])" variant="secondary">Raise a Ticket</x-link-button>
-                    @endcan
+                    @endif
                     @can('work_orders.edit')
                         <form method="POST" action="{{ route('work-orders.complete', $workOrder) }}" class="inline">
                             @csrf
