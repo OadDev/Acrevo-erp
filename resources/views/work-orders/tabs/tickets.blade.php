@@ -17,10 +17,10 @@
         @endforelse
     </div>
 
-    @can('tickets.create')
+    @if ($workOrder->canHaveTicketRaisedBy(auth()->user()))
         <x-card>
             <h3 class="mb-4 text-sm font-semibold text-gray-500">Raise a Ticket</h3>
             <x-link-button :href="route('tickets.create', ['work_order_id' => $workOrder->id])" class="w-full justify-center">New Ticket</x-link-button>
         </x-card>
-    @endcan
+    @endif
 </div>

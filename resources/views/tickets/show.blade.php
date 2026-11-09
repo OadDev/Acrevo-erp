@@ -13,20 +13,20 @@
                 @can('update', $ticket)
                     <x-link-button :href="route('tickets.edit', $ticket)" variant="secondary">Edit</x-link-button>
                 @endcan
-                @can('tickets.manage')
+                @if ($ticket->isManageableBy(auth()->user()))
                     <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Remove this ticket? This cannot be undone.')">
                         @csrf
                         @method('DELETE')
                         <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Remove</button>
                     </form>
-                @endcan
+                @endif
                 @can('lock', $ticket)
                     <form method="POST" action="{{ route('tickets.lock', $ticket) }}" onsubmit="return confirm('Mark this ticket uneditable? This cannot be undone.')">
                         @csrf
                         <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10">Mark Uneditable</button>
                     </form>
                 @endcan
-                @can('tickets.manage')
+                @if ($ticket->isManageableBy(auth()->user()))
                     <form method="POST" action="{{ route('tickets.status', $ticket) }}" class="flex items-center gap-2">
                         @csrf
                         <x-select-input name="status" onchange="this.form.submit()" class="text-sm">
@@ -35,7 +35,7 @@
                             @endforeach
                         </x-select-input>
                     </form>
-                @endcan
+                @endif
             </x-slot>
         </x-page-header>
     </x-slot>

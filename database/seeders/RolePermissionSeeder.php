@@ -46,7 +46,9 @@ class RolePermissionSeeder extends Seeder
         ],
         'executive' => [
             'assigned_work.view',
-            'approval_requests.manage',
+        ],
+        'approval_requests' => [
+            'approval_requests.view', 'approval_requests.create', 'approval_requests.edit', 'approval_requests.delete',
         ],
         // Daily Work with Checklist, and Progress & Media (which also
         // covers the WO Media Gallery/Details Upload, previously its own
@@ -206,6 +208,10 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => ['wo_attendance.view'],
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => ['daily_progress.view'],
+            // Sales already does all of this today via work_orders.edit's
+            // old OR-fallback - granted directly now that the fallback is
+            // gone, so net access is unchanged.
+            'approval_requests' => '*',
         ],
         'Marketing' => [
             'sales' => ['enquiries.view', 'enquiries.create', 'enquiries.edit', 'site_visits.view'],
@@ -231,6 +237,7 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => ['wo_attendance.view'],
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => ['daily_progress.view'],
+            'approval_requests' => ['approval_requests.view'],
         ],
         'Executive Team Leader' => [
             'executive' => '*',
@@ -276,6 +283,9 @@ class RolePermissionSeeder extends Seeder
             // leads - no work_schedules.manage, updating progress/dates is
             // Admin's call for now.
             'work_schedules' => ['work_schedules.view_site', 'work_schedules.view_details', 'work_schedules.view_dates', 'work_schedules.view_progress'],
+            // Same net access the 'executive' group's old bundled
+            // approval_requests.manage gave this role.
+            'approval_requests' => '*',
         ],
         'Worker' => [
             'executive' => ['assigned_work.view'],
@@ -294,6 +304,7 @@ class RolePermissionSeeder extends Seeder
             // daily_progress.manage/media.upload bundle gave this role.
             'daily_checklist' => '*',
             'daily_progress' => '*',
+            'approval_requests' => ['approval_requests.view'],
         ],
         'QC Officer' => [
             'qc' => '*',
@@ -307,6 +318,7 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => ['wo_attendance.view'],
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => ['daily_progress.view'],
+            'approval_requests' => ['approval_requests.view'],
         ],
         'Finance' => [
             'finance' => '*',
@@ -323,6 +335,7 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => ['wo_attendance.view'],
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => ['daily_progress.view'],
+            'approval_requests' => ['approval_requests.view'],
             // Finance owns billing documents end to end, including delete
             // (correcting a wrongly-issued Tax Invoice) and the Item price
             // catalog - but not Company Profile setup, which stays
@@ -349,6 +362,7 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => ['wo_attendance.view'],
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => ['daily_progress.view'],
+            'approval_requests' => ['approval_requests.view'],
             // Create + edit, but no assets.approve - edits go through the
             // AssetChangeRequest queue instead of applying immediately.
             // No delete/restore/update_status either.
@@ -401,13 +415,14 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => ['wo_attendance.view'],
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => ['daily_progress.view'],
+            'approval_requests' => ['approval_requests.view'],
         ],
         // Deliberately scoped to Progress & Media only - no daily_checklist
-        // create/edit/delete, site_records.manage, approval_requests.manage,
-        // or tickets.create, so a Sub Contractor cannot enter Daily Work/
-        // Checklist, Materials, Manpower, M.Book, Ledger, Approval Requests,
-        // or Tickets. Those stay with the Executive Team Leader (or
-        // Admin/Sales/HR for Monthly Summary).
+        // create/edit/delete, site_records.manage, approval_requests
+        // create/edit/delete, or tickets.create, so a Sub Contractor cannot
+        // enter Daily Work/Checklist, Materials, Manpower, M.Book, Ledger,
+        // Approval Requests, or Tickets. Those stay with the Executive Team
+        // Leader (or Admin/Sales/HR for Monthly Summary).
         'Sub Contractor' => [
             'executive' => ['assigned_work.view'],
             'sales' => ['work_orders.overview_view', 'work_orders.summary_view'],
@@ -425,6 +440,7 @@ class RolePermissionSeeder extends Seeder
             // old daily_progress.manage/media.upload bundle gave this role.
             'daily_checklist' => ['daily_checklist.view'],
             'daily_progress' => '*',
+            'approval_requests' => ['approval_requests.view'],
         ],
         'Client' => [
             'client_portal' => '*',
@@ -457,6 +473,7 @@ class RolePermissionSeeder extends Seeder
             'wo_attendance' => '*',
             'daily_checklist' => '*',
             'daily_progress' => '*',
+            'approval_requests' => '*',
             'qc' => '*',
             'tickets' => '*',
             'finance' => '*',

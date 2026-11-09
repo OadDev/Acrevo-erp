@@ -418,18 +418,20 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:work_orders.summary_delete')->group(function () {
         Route::delete('summary/{summary}', [WorkOrderSummaryController::class, 'destroy'])->name('summary.destroy');
     });
-    Route::middleware('permission:work_orders.edit|approval_requests.manage')->group(function () {
+    Route::middleware('permission:approval_requests.create')->group(function () {
         Route::post('approval-requests', [ApprovalRequestController::class, 'store'])->name('approval-requests.store');
+    });
+    // Responding, editing, and downloading an existing approval request
+    // record all use the Edit permission - whoever can correct an entry
+    // can also approve/reject it and pull its PDF/ZIP.
+    Route::middleware('permission:approval_requests.edit')->group(function () {
         Route::post('approval-requests/{approvalRequest}/respond', [ApprovalRequestController::class, 'respond'])->name('approval-requests.respond');
+        Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
         Route::get('approval-requests/approved-pdf', [ApprovalRequestController::class, 'approvedPdf'])->name('approval-requests.approved-pdf');
         Route::get('approval-requests/{approvalRequest}/pdf', [ApprovalRequestController::class, 'pdf'])->name('approval-requests.pdf');
         Route::get('approval-requests/{approvalRequest}/zip', [ApprovalRequestController::class, 'zip'])->name('approval-requests.zip');
     });
-    // Editing/removing an existing approval request record uses the same
-    // permission as raising/responding to one, so whoever can raise an
-    // approval request can also correct their own mistake in it.
-    Route::middleware('permission:work_orders.edit|approval_requests.manage')->group(function () {
-        Route::put('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'update'])->name('approval-requests.update');
+    Route::middleware('permission:approval_requests.delete')->group(function () {
         Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
     });
 
@@ -540,14 +542,20 @@ Route::middleware('permission:qc.view')->group(function () {
 Route::middleware('permission:tickets.view')->group(function () {
     Route::resource('tickets', TicketController::class)->except('destroy');
     Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
-    Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
     Route::post('tickets/{ticket}/lock', [TicketController::class, 'lock'])->name('tickets.lock');
     Route::delete('tickets/{ticket}/media/{media}', [TicketController::class, 'destroyMedia'])->name('tickets.media.destroy');
     Route::get('tickets/{ticket}/pdf', [TicketController::class, 'pdf'])->name('tickets.pdf');
     Route::get('tickets/{ticket}/zip', [TicketController::class, 'zip'])->name('tickets.zip');
 });
+// Create (store, inside the tickets.view group above) and Manage are both
+// further scoped in the controller/model to work orders the user is
+// actually assigned to (Ticket::isManageableBy / WorkOrder::
+// canHaveTicketRaisedBy) - Admin bypasses. tickets.status moved in here
+// since it's a Manage-level action (previously only hidden in the UI, not
+// enforced at the route).
 Route::middleware('permission:tickets.manage')->group(function () {
     Route::delete('tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
+    Route::post('tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
 });
 
 /*

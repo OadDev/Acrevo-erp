@@ -89,4 +89,16 @@ class Ticket extends Model implements HasMedia
     {
         return $this->created_at->timezone('Asia/Kolkata')->format('d-M-Y, h:i A').' IST';
     }
+
+    // tickets.manage lets a user manage tickets at all; this additionally
+    // scopes it to tickets whose work order they're assigned to - Admin
+    // bypasses, same as every other assignment-scoped check in the app.
+    public function isManageableBy(User $user): bool
+    {
+        if (! $user->can('tickets.manage')) {
+            return false;
+        }
+
+        return $user->hasRole('Admin') || ($this->workOrder && $this->workOrder->isAssignedToUser($user));
+    }
 }

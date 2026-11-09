@@ -171,6 +171,31 @@ class WorkOrder extends Model implements HasMedia
         return $this->hasMany(WorkOrderSubContractor::class);
     }
 
+    // Mirrors WorkOrderPolicy::view()'s assigned_work.view branch: an
+    // Executive Team member/leader, or a Sub-Contractor, currently assigned
+    // to this work order. Used to scope ticket Create/Manage to the work
+    // orders a user is actually assigned to, independently of whether they
+    // can otherwise view/edit the work order.
+    public function isAssignedToUser(User $user): bool
+    {
+        return $this->executiveTeams()
+            ->whereNull('unassigned_at')
+            ->whereHas('executiveTeam.members', fn ($q) => $q->where('employee_id', $user->employee?->id))
+            ->exists()
+            || $this->executiveTeams()->whereNull('unassigned_at')
+                ->whereHas('executiveTeam', fn ($q) => $q->where('team_leader_id', $user->id))
+                ->exists()
+            || $this->subContractors()->whereNull('unassigned_at')->where('user_id', $user->id)->exists();
+    }
+
+    // tickets.create lets a user raise a ticket at all; this additionally
+    // scopes it to work orders they're assigned to - Admin bypasses, same
+    // as every other assignment-scoped check in the app.
+    public function canHaveTicketRaisedBy(User $user): bool
+    {
+        return $user->can('tickets.create') && ($user->hasRole('Admin') || $this->isAssignedToUser($user));
+    }
+
     public function dailyChecklists(): HasMany
     {
         // Ordered by entry date (not insertion order), so a backdated entry

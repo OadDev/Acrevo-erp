@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\Client;
 use App\Models\Department;
 use App\Models\Enquiry;
+use App\Models\ExecutiveTeam;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderExecutiveTeam;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -41,6 +43,12 @@ class TicketPermissionTest extends TestCase
             'client_id' => $client->id, 'title' => 'WO', 'priority' => 'medium',
             'enquiry_id' => $enquiry->id, 'type' => 'new', 'status' => 'in_progress', 'created_by' => $admin->id,
         ]);
+    }
+
+    private function assignAsTeamLeader(WorkOrder $workOrder, User $user, User $admin): void
+    {
+        $team = ExecutiveTeam::create(['team_number' => 'ET-'.uniqid(), 'name' => 'Team', 'team_leader_id' => $user->id, 'is_active' => true]);
+        WorkOrderExecutiveTeam::create(['work_order_id' => $workOrder->id, 'executive_team_id' => $team->id, 'assigned_by' => $admin->id, 'assigned_at' => now()]);
     }
 
     public function test_sales_and_executive_tl_can_edit_a_client_raised_ticket_until_locked(): void
@@ -115,6 +123,7 @@ class TicketPermissionTest extends TestCase
         $admin = $this->user('Admin');
         $workOrder = $this->workOrder($admin);
         $sales = $this->user('Sales');
+        $this->assignAsTeamLeader($workOrder, $sales, $admin);
 
         $ticket = Ticket::create([
             'work_order_id' => $workOrder->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'Removable',
@@ -144,5 +153,85 @@ class TicketPermissionTest extends TestCase
         $this->actingAs($execTl)->get("/tickets/{$ticket->id}")->assertOk()->assertDontSee('Remove');
         $this->actingAs($execTl)->delete("/tickets/{$ticket->id}")->assertForbidden();
         $this->assertNull($ticket->fresh()->deleted_at);
+    }
+
+    public function test_tickets_create_is_scoped_to_the_users_assigned_work_orders(): void
+    {
+        $this->seedRoles();
+        $admin = $this->user('Admin');
+        $workOrder = $this->workOrder($admin);
+        $sales = $this->user('Sales');
+
+        // Sales holds tickets.create, but isn't assigned to this work order.
+        $this->actingAs($sales)->get("/tickets/create?work_order_id={$workOrder->id}")->assertForbidden();
+        $this->actingAs($sales)->post('/tickets', [
+            'work_order_id' => $workOrder->id, 'type' => 'quality', 'priority' => 'medium', 'title' => 'Cracked tile',
+        ])->assertForbidden();
+        $this->assertSame(0, Ticket::where('title', 'Cracked tile')->count());
+
+        $this->assignAsTeamLeader($workOrder, $sales, $admin);
+
+        $this->actingAs($sales)->get("/tickets/create?work_order_id={$workOrder->id}")->assertOk();
+        $this->actingAs($sales)->post('/tickets', [
+            'work_order_id' => $workOrder->id, 'type' => 'quality', 'priority' => 'medium', 'title' => 'Cracked tile',
+        ])->assertRedirect();
+        $this->assertSame(1, Ticket::where('title', 'Cracked tile')->count());
+
+        // Admin bypasses the assignment check entirely.
+        $otherWorkOrder = $this->workOrder($admin);
+        $this->actingAs($admin)->post('/tickets', [
+            'work_order_id' => $otherWorkOrder->id, 'type' => 'quality', 'priority' => 'medium', 'title' => 'Admin raised',
+        ])->assertRedirect();
+    }
+
+    public function test_tickets_manage_is_scoped_to_the_users_assigned_work_orders(): void
+    {
+        $this->seedRoles();
+        $admin = $this->user('Admin');
+        $workOrder = $this->workOrder($admin);
+        $sales = $this->user('Sales');
+
+        $ticket = Ticket::create([
+            'work_order_id' => $workOrder->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'Unassigned WO ticket',
+            'raised_by_type' => 'internal', 'raised_by' => $admin->id, 'status' => 'open',
+        ]);
+
+        // Sales holds tickets.manage, but isn't assigned to this ticket's work order.
+        $this->actingAs($sales)->get("/tickets/{$ticket->id}")->assertOk()->assertDontSee('Remove');
+        $this->actingAs($sales)->post("/tickets/{$ticket->id}/status", ['status' => 'in_progress'])->assertForbidden();
+        $this->actingAs($sales)->delete("/tickets/{$ticket->id}")->assertForbidden();
+        $this->assertNull($ticket->fresh()->deleted_at);
+
+        $this->assignAsTeamLeader($workOrder, $sales, $admin);
+
+        $this->actingAs($sales)->post("/tickets/{$ticket->id}/status", ['status' => 'in_progress'])->assertRedirect();
+        $this->assertSame('in_progress', $ticket->fresh()->status);
+        $this->actingAs($sales)->delete("/tickets/{$ticket->id}")->assertRedirect('/tickets');
+        $this->assertNotNull($ticket->fresh()->deleted_at);
+    }
+
+    public function test_tickets_view_still_shows_tickets_from_every_work_order_regardless_of_assignment(): void
+    {
+        $this->seedRoles();
+        $admin = $this->user('Admin');
+        $workOrderOne = $this->workOrder($admin);
+        $workOrderTwo = $this->workOrder($admin);
+        $sales = $this->user('Sales');
+
+        Ticket::create([
+            'work_order_id' => $workOrderOne->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'On an unassigned WO',
+            'raised_by_type' => 'internal', 'raised_by' => $admin->id, 'status' => 'open',
+        ]);
+        Ticket::create([
+            'work_order_id' => $workOrderTwo->id, 'type' => 'delay', 'priority' => 'medium', 'title' => 'On another unassigned WO',
+            'raised_by_type' => 'internal', 'raised_by' => $admin->id, 'status' => 'open',
+        ]);
+
+        // Sales is assigned to neither work order, but tickets.view stays
+        // unrestricted - this role sees every ticket, same as before.
+        $this->actingAs($sales)->get('/tickets')
+            ->assertOk()
+            ->assertSee('On an unassigned WO')
+            ->assertSee('On another unassigned WO');
     }
 }

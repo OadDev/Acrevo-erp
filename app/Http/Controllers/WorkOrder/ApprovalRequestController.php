@@ -32,6 +32,8 @@ class ApprovalRequestController extends Controller
 
     public function store(Request $request, WorkOrder $workOrder): RedirectResponse
     {
+        $this->authorizeAnyPermission('approval_requests.create');
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -56,6 +58,8 @@ class ApprovalRequestController extends Controller
 
     public function respond(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
     {
+        $this->authorizeAnyPermission('approval_requests.edit');
+
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
         abort_unless($approvalRequest->direction === 'client_to_company', 403, 'This request is awaiting the client\'s response, not ours.');
         abort_unless($approvalRequest->status === 'pending', 422, 'This request has already been responded to.');
@@ -75,7 +79,7 @@ class ApprovalRequestController extends Controller
 
     public function update(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
     {
-        $this->authorizeAnyPermission('work_orders.edit', 'approval_requests.manage');
+        $this->authorizeAnyPermission('approval_requests.edit');
 
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
@@ -94,7 +98,7 @@ class ApprovalRequestController extends Controller
 
     public function destroy(WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
     {
-        $this->authorizeAnyPermission('work_orders.edit', 'approval_requests.manage');
+        $this->authorizeAnyPermission('approval_requests.delete');
 
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
@@ -105,6 +109,8 @@ class ApprovalRequestController extends Controller
 
     public function pdf(WorkOrder $workOrder, ApprovalRequest $approvalRequest)
     {
+        $this->authorizeAnyPermission('approval_requests.edit');
+
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
         $approvalRequest->load(['workOrder.client', 'requestedBy', 'requestedByClient', 'respondedBy', 'media']);
@@ -116,6 +122,8 @@ class ApprovalRequestController extends Controller
 
     public function zip(WorkOrder $workOrder, ApprovalRequest $approvalRequest, WorkOrderZipExporter $exporter): BinaryFileResponse
     {
+        $this->authorizeAnyPermission('approval_requests.edit');
+
         abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
 
         $zipPath = sys_get_temp_dir().'/approval-zip-'.Str::random(20).'.zip';
@@ -133,6 +141,8 @@ class ApprovalRequestController extends Controller
 
     public function approvedPdf(WorkOrder $workOrder)
     {
+        $this->authorizeAnyPermission('approval_requests.edit');
+
         $approvalRequests = $workOrder->approvalRequests()
             ->where('status', 'approved')
             ->with(['requestedBy', 'requestedByClient', 'respondedBy', 'media'])
