@@ -216,6 +216,7 @@ Route::middleware('permission:work_schedules.view_site')->group(function () {
 Route::middleware('permission:work_schedules.manage')->group(function () {
     Route::post('sites/{site}/work-schedule', [SiteWorkScheduleController::class, 'store'])->name('sites.work-schedule.store');
     Route::put('sites/{site}/work-schedule/{workSchedule}', [SiteWorkScheduleController::class, 'update'])->name('sites.work-schedule.update');
+    Route::patch('sites/{site}/work-schedule/{workSchedule}/move', [SiteWorkScheduleController::class, 'move'])->name('sites.work-schedule.move');
     Route::delete('sites/{site}/work-schedule/{workSchedule}', [SiteWorkScheduleController::class, 'destroy'])->name('sites.work-schedule.destroy');
 });
 

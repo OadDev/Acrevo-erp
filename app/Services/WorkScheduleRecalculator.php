@@ -22,11 +22,14 @@ use Illuminate\Support\Carbon;
  *     revised_end_date - so an early or late actual completion
  *     automatically reflows whatever depends on it.
  *
- * A schedule may only depend on a schedule with a smaller id (enforced in
- * SiteWorkScheduleController's validation), which makes the dependency
- * graph a DAG by construction - processing in ascending id order always
- * resolves a dependency before the row that needs it, in one pass, with
- * no cycle risk.
+ * A schedule may only depend on a schedule with a smaller sequence_order
+ * (enforced in SiteWorkScheduleController's validation and re-checked by
+ * WorkScheduleSequencer::renumber() on every insert/move), which makes the
+ * dependency graph a DAG by construction - processing in ascending
+ * sequence_order always resolves a dependency before the row that needs
+ * it, in one pass, with no cycle risk. sequence_order (not id) is what an
+ * admin can freely insert into or rearrange without deleting any row, so
+ * it - not creation order - is the graph's ordering.
  *
  * original_* fields are never touched here - only set once, at creation.
  */
@@ -34,7 +37,7 @@ class WorkScheduleRecalculator
 {
     public static function recalculate(Site $site): void
     {
-        $schedules = $site->workSchedules()->orderBy('id')->get()->keyBy('id');
+        $schedules = $site->workSchedules()->orderBy('sequence_order')->get()->keyBy('id');
 
         foreach ($schedules as $schedule) {
             if ($schedule->schedule_mode === 'depends_on' && $schedule->depends_on_schedule_id && $schedules->has($schedule->depends_on_schedule_id)) {

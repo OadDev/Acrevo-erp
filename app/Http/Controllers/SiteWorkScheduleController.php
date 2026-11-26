@@ -8,9 +8,11 @@ use App\Models\SiteWorkSchedule;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\WorkScheduleRecalculator;
+use App\Services\WorkScheduleSequencer;
 use App\Support\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SiteWorkScheduleController extends Controller
@@ -111,6 +113,13 @@ class SiteWorkScheduleController extends Controller
             'depends_on_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
             'lag_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'start_date' => ['nullable', 'date'],
+            // Where to slot the new work into the existing sequence -
+            // null means "at the end", same as before this field existed.
+            // Any other work on this site may be picked, regardless of
+            // whether it was added before or after this one: the chosen
+            // position is what WorkScheduleSequencer::renumber() validates
+            // dependencies against, not creation order.
+            'insert_before_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
         ]);
 
         $mode = $hasExisting ? $data['schedule_mode'] : 'independent';
@@ -122,26 +131,42 @@ class SiteWorkScheduleController extends Controller
             return back()->withErrors(['start_date' => 'A start date is required for an independent work.'])->withInput();
         }
 
-        $sequenceOrder = ($site->workSchedules()->max('sequence_order') ?? 0) + 1;
+        $insertBeforeId = $data['insert_before_schedule_id'] ?? null;
+        if ($insertBeforeId !== null) {
+            abort_unless($site->workSchedules()->whereKey($insertBeforeId)->exists(), 422, 'That work is no longer on this site.');
+        }
+
         $placeholder = $data['start_date'] ?? now()->toDateString();
 
-        $schedule = $site->workSchedules()->create([
-            'sequence_order' => $sequenceOrder,
-            'work_name' => $data['work_name'],
-            'work_details' => $data['work_details'] ?? null,
-            'executive_team_id' => $data['executive_team_id'] ?? null,
-            'schedule_mode' => $mode,
-            'depends_on_schedule_id' => $mode === 'depends_on' ? $data['depends_on_schedule_id'] : null,
-            'lag_days' => $data['lag_days'] ?? 0,
-            'revised_duration_days' => $data['duration_days'],
-            'original_duration_days' => $data['duration_days'],
-            'revised_start_date' => $placeholder,
-            'revised_end_date' => $placeholder,
-            'original_start_date' => $placeholder,
-            'original_end_date' => $placeholder,
-            'status' => 'not_started',
-            'created_by' => $request->user()->id,
-        ]);
+        $schedule = DB::transaction(function () use ($site, $data, $mode, $placeholder, $insertBeforeId, $request) {
+            $schedule = $site->workSchedules()->create([
+                'sequence_order' => ($site->workSchedules()->max('sequence_order') ?? 0) + 1,
+                'work_name' => $data['work_name'],
+                'work_details' => $data['work_details'] ?? null,
+                'executive_team_id' => $data['executive_team_id'] ?? null,
+                'schedule_mode' => $mode,
+                'depends_on_schedule_id' => $mode === 'depends_on' ? $data['depends_on_schedule_id'] : null,
+                'lag_days' => $data['lag_days'] ?? 0,
+                'revised_duration_days' => $data['duration_days'],
+                'original_duration_days' => $data['duration_days'],
+                'revised_start_date' => $placeholder,
+                'revised_end_date' => $placeholder,
+                'original_start_date' => $placeholder,
+                'original_end_date' => $placeholder,
+                'status' => 'not_started',
+                'created_by' => $request->user()->id,
+            ]);
+
+            WorkScheduleSequencer::renumber(
+                $site,
+                WorkScheduleSequencer::orderedIdsWithMoveTo($site, $schedule->id, $insertBeforeId)
+            );
+
+            $schedule->refresh();
+            WorkScheduleSequencer::rewireSuccessorAfterInsert($site, $schedule);
+
+            return $schedule;
+        });
 
         WorkScheduleRecalculator::recalculate($site);
 
@@ -152,6 +177,38 @@ class SiteWorkScheduleController extends Controller
         ])->save();
 
         return back()->with('success', 'Work schedule added.');
+    }
+
+    /**
+     * Relocates an existing work to a different point in the sequence -
+     * "insert a new work anywhere" and "rearrange the sequence whenever
+     * required" both end up here, since moving is just inserting a row
+     * that already exists. Never deletes or recreates anything, so
+     * progress, status, and actual dates on every work are untouched.
+     */
+    public function move(Request $request, Site $site, SiteWorkSchedule $workSchedule): RedirectResponse
+    {
+        $this->authorizeSite($request->user(), $site);
+        abort_unless($workSchedule->site_id === $site->id, 404);
+
+        $data = $request->validate([
+            'before_schedule_id' => ['nullable', 'integer', 'exists:site_work_schedules,id'],
+        ]);
+
+        $beforeId = $data['before_schedule_id'] ?? null;
+        abort_if($beforeId === $workSchedule->id, 422, 'A work cannot be moved before itself.');
+        if ($beforeId !== null) {
+            abort_unless($site->workSchedules()->whereKey($beforeId)->exists(), 422, 'That work is no longer on this site.');
+        }
+
+        WorkScheduleSequencer::renumber(
+            $site,
+            WorkScheduleSequencer::orderedIdsWithMoveTo($site, $workSchedule->id, $beforeId)
+        );
+
+        WorkScheduleRecalculator::recalculate($site);
+
+        return back()->with('success', 'Work schedule reordered.');
     }
 
     public function update(Request $request, Site $site, SiteWorkSchedule $workSchedule): RedirectResponse
@@ -194,7 +251,7 @@ class SiteWorkScheduleController extends Controller
 
             abort_unless($dependency, 422, 'Pick a work on this site for this work to depend on.');
             abort_if($dependsOnId === $workSchedule->id, 422, 'A work cannot depend on itself.');
-            abort_if($dependency->id > $workSchedule->id, 422, 'A work can only depend on a work that was added before it.');
+            abort_if($dependency->sequence_order > $workSchedule->sequence_order, 422, 'A work can only depend on a work that comes before it in the sequence.');
         } elseif (empty($data['start_date']) && $workSchedule->schedule_mode !== 'independent') {
             return back()->withErrors(['start_date' => 'A start date is required for an independent work.'])->withInput();
         }
