@@ -90,6 +90,18 @@
                         </div>
                     </div>
                 @endif
+                @if ($schedules->isNotEmpty())
+                    <div class="sm:col-span-2 lg:col-span-2">
+                        <x-input-label value="Insert Position" />
+                        <x-select-input name="insert_before_schedule_id" class="mt-1 block w-full">
+                            <option value="">At the end</option>
+                            @foreach ($schedules as $existing)
+                                <option value="{{ $existing->id }}">Before: {{ $existing->work_name }}</option>
+                            @endforeach
+                        </x-select-input>
+                        <p class="mt-1 text-xs text-gray-400">Later works shift down automatically - nothing is deleted or recreated.</p>
+                    </div>
+                @endif
                 <div class="sm:col-span-2 lg:col-span-4">
                     <x-input-label for="work_details" value="Notes (optional)" />
                     <textarea id="work_details" name="work_details" rows="2" class="mt-1 block w-full rounded-lg border-gray-200 text-sm dark:border-gray-700 dark:bg-gray-800"></textarea>
@@ -194,6 +206,7 @@
                                 @can('work_schedules.manage')
                                     <td class="px-4 py-3 text-right whitespace-nowrap">
                                         <button type="button" x-data x-on:click="$dispatch('open-modal', 'edit-schedule-{{ $schedule->id }}')" class="text-xs font-medium text-indigo-600 hover:underline">Edit</button>
+                                        <button type="button" x-data x-on:click="$dispatch('open-modal', 'move-schedule-{{ $schedule->id }}')" class="ml-2 text-xs font-medium text-gray-500 hover:underline">Move</button>
                                         <form method="POST" action="{{ route('sites.work-schedule.destroy', [$site, $schedule]) }}" class="inline" onsubmit="return confirm('Remove this work schedule item? Later works will be recalculated.')">
                                             @csrf
                                             @method('DELETE')
@@ -211,7 +224,27 @@
 
     @can('work_schedules.manage')
         @foreach ($schedules as $schedule)
-            @php $priorSchedules = $schedules->filter(fn ($s) => $s->id < $schedule->id); @endphp
+            @php $priorSchedules = $schedules->filter(fn ($s) => $s->sequence_order < $schedule->sequence_order); @endphp
+            <x-modal :name="'move-schedule-'.$schedule->id" max-width="sm">
+                <form method="POST" action="{{ route('sites.work-schedule.move', [$site, $schedule]) }}" class="p-6">
+                    @csrf
+                    @method('PATCH')
+                    <h3 class="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Move — {{ $schedule->work_name }}</h3>
+                    <x-input-label value="Move To" />
+                    <x-select-input name="before_schedule_id" class="mt-1 block w-full">
+                        <option value="">At the end</option>
+                        @foreach ($schedules as $other)
+                            @continue($other->id === $schedule->id)
+                            <option value="{{ $other->id }}">Before: {{ $other->work_name }}</option>
+                        @endforeach
+                    </x-select-input>
+                    <p class="mt-2 text-xs text-gray-400">Other works shift to make room - nothing is deleted, so progress and actual dates stay as recorded. If anything here still depends on a work that would end up after it, you'll need to fix that dependency first.</p>
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button type="button" x-data x-on:click="$dispatch('close-modal', 'move-schedule-{{ $schedule->id }}')" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
+                        <x-primary-button type="submit">Move</x-primary-button>
+                    </div>
+                </form>
+            </x-modal>
             <x-modal :name="'edit-schedule-'.$schedule->id" max-width="lg">
                 <form method="POST" action="{{ route('sites.work-schedule.update', [$site, $schedule]) }}" class="p-6" x-data="{ mode: '{{ $schedule->schedule_mode }}' }">
                     @csrf
