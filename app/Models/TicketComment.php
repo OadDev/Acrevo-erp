@@ -23,11 +23,11 @@ class TicketComment extends Model implements HasMedia
         return LogOptions::defaults()->logFillable()->logOnlyDirty()->dontSubmitEmptyLogs();
     }
 
-    protected $fillable = ['ticket_id', 'user_id', 'comment', 'is_internal'];
+    protected $fillable = ['ticket_id', 'user_id', 'comment', 'is_internal', 'edited_at'];
 
     protected function casts(): array
     {
-        return ['is_internal' => 'boolean'];
+        return ['is_internal' => 'boolean', 'edited_at' => 'datetime'];
     }
 
     public function ticket(): BelongsTo
@@ -38,5 +38,10 @@ class TicketComment extends Model implements HasMedia
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function isEdited(): bool
+    {
+        return $this->edited_at !== null;
     }
 }

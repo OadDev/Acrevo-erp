@@ -47,19 +47,13 @@
                 </form>
                 <div class="space-y-3">
                     @forelse ($ticket->comments->where('is_internal', false) as $comment)
-                        <div class="border-l-2 border-indigo-200 pl-3 text-sm dark:border-indigo-500/30">
-                            <p class="text-gray-700 dark:text-gray-300">{{ $comment->comment }}</p>
-                            @if ($comment->getMedia('attachments')->isNotEmpty())
-                                <div class="mt-1 flex flex-wrap gap-2">
-                                    @foreach ($comment->getMedia('attachments') as $attachment)
-                                        <a href="{{ $attachment->getUrl() }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
-                                            <x-icon name="paperclip" class="h-3 w-3" /> {{ $attachment->file_name }}
-                                        </a>
-                                    @endforeach
-                                </div>
-                            @endif
-                            <p class="text-xs text-gray-400">{{ $comment->user?->name ?? 'Team' }} · {{ $comment->created_at->diffForHumans() }}</p>
-                        </div>
+                        <x-comment-thread-item
+                            :comment="$comment"
+                            client-label="Team"
+                            :update-url="route('portal.tickets.comments.update', [$ticket, $comment])"
+                            :destroy-url="route('portal.tickets.comments.destroy', [$ticket, $comment])"
+                            :media-destroy-urls="$comment->getMedia('attachments')->mapWithKeys(fn ($m) => [$m->id => route('portal.tickets.comments.media.destroy', [$ticket, $comment, $m])])"
+                        />
                     @empty
                         <p class="text-sm text-gray-400">No comments yet.</p>
                     @endforelse

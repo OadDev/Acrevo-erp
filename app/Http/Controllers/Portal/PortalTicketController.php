@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
+use App\Models\TicketComment;
 use App\Models\WorkOrder;
 use App\Support\RichText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class PortalTicketController extends Controller
 {
@@ -99,5 +101,60 @@ class PortalTicketController extends Controller
         }
 
         return back()->with('success', 'Comment added.');
+    }
+
+    public function updateComment(Request $request, Ticket $ticket, TicketComment $comment): RedirectResponse
+    {
+        $this->authorize('update', $comment);
+        abort_unless($comment->ticket_id === $ticket->id, 404);
+
+        $data = $request->validate([
+            'comment' => ['required', 'string'],
+            'remove_media_ids' => ['nullable', 'array'],
+            'remove_media_ids.*' => ['integer'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
+        ]);
+
+        $comment->update(['comment' => $data['comment'], 'edited_at' => now()]);
+
+        if (! empty($data['remove_media_ids']) || ! empty($data['files'])) {
+            $this->authorize('manageAttachments', $comment);
+        }
+
+        foreach ($data['remove_media_ids'] ?? [] as $mediaId) {
+            $comment->media->firstWhere('id', (int) $mediaId)?->delete();
+        }
+
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $comment->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
+        }
+
+        return back()->with('success', 'Comment updated.');
+    }
+
+    public function destroyComment(Ticket $ticket, TicketComment $comment): RedirectResponse
+    {
+        $this->authorize('delete', $comment);
+        abort_unless($comment->ticket_id === $ticket->id, 404);
+
+        $comment->delete();
+
+        return back()->with('success', 'Comment removed.');
+    }
+
+    public function destroyCommentMedia(Ticket $ticket, TicketComment $comment, Media $media): RedirectResponse
+    {
+        $this->authorize('deleteAttachment', $comment);
+        abort_unless($comment->ticket_id === $ticket->id, 404);
+        abort_unless((string) $media->model_id === (string) $comment->id && $media->model_type === TicketComment::class, 404);
+
+        $media->delete();
+
+        return back()->with('success', 'Attachment removed.');
     }
 }

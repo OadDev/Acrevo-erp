@@ -39,6 +39,7 @@ class PortalWorkOrderController extends Controller
             'dailyChecklists',
             'dailyChecklists.checklistItems.media',
             'approvalRequests.requestedBy', 'approvalRequests.requestedByClient', 'approvalRequests.respondedBy', 'approvalRequests.media', 'approvalRequests.workOrder.client',
+            'approvalRequests.comments.user', 'approvalRequests.comments.media',
             'summaries',
             'ledgers' => fn ($q) => $q->orderBy('entry_date'),
             'measurementBooks' => fn ($q) => $q->where('type', 'actual')->orderBy('date'),
