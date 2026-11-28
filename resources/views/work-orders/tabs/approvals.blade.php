@@ -90,6 +90,33 @@
                 @else
                     <p class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-800">Awaiting the client's response.</p>
                 @endif
+
+                <div class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Discussion</p>
+                    <div class="space-y-2">
+                        @forelse ($approval->comments as $comment)
+                            <x-comment-thread-item
+                                :comment="$comment"
+                                :update-url="route('work-orders.approval-requests.comments.update', [$workOrder, $approval, $comment])"
+                                :destroy-url="route('work-orders.approval-requests.comments.destroy', [$workOrder, $approval, $comment])"
+                                :media-destroy-urls="$comment->getMedia('attachments')->mapWithKeys(fn ($m) => [$m->id => route('work-orders.approval-requests.comments.media.destroy', [$workOrder, $approval, $comment, $m])])"
+                            />
+                        @empty
+                            <p class="text-sm text-gray-400">No comments yet.</p>
+                        @endforelse
+                    </div>
+                    @can('approval_requests.edit')
+                        <form method="POST" action="{{ route('work-orders.approval-requests.comments.store', [$workOrder, $approval]) }}" enctype="multipart/form-data" class="mt-3 space-y-2">
+                            @csrf
+                            <div class="flex gap-2">
+                                <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
+                                <x-primary-button>Post</x-primary-button>
+                            </div>
+                            <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="block w-full text-xs">
+                            @error('files')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+                        </form>
+                    @endcan
+                </div>
             </x-card>
         @empty
             <x-empty-state icon="file-text" title="No approval requests yet" />

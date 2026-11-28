@@ -49,6 +49,8 @@ class RolePermissionSeeder extends Seeder
         ],
         'approval_requests' => [
             'approval_requests.view', 'approval_requests.create', 'approval_requests.edit', 'approval_requests.delete',
+            'approval_requests.comments.edit', 'approval_requests.comments.delete',
+            'approval_requests.comment_attachments.edit', 'approval_requests.comment_attachments.delete',
         ],
         // Daily Work with Checklist, and Progress & Media (which also
         // covers the WO Media Gallery/Details Upload, previously its own
@@ -90,6 +92,8 @@ class RolePermissionSeeder extends Seeder
         'tickets' => [
             'tickets.all_view', 'tickets.assigned_view', 'tickets.assigned_create',
             'tickets.assigned_manage', 'tickets.assigned_edit', 'tickets.assigned_remove',
+            'tickets.comments.edit', 'tickets.comments.delete',
+            'tickets.comment_attachments.edit', 'tickets.comment_attachments.delete',
         ],
         'finance' => [
             'finance.view', 'finance.manage',
@@ -245,7 +249,11 @@ class RolePermissionSeeder extends Seeder
             // Global view (same as before), create/comment/edit scoped to
             // their own assigned Work Orders - no remove, same restriction
             // this role always had.
-            'tickets' => ['tickets.all_view', 'tickets.assigned_create', 'tickets.assigned_manage', 'tickets.assigned_edit'],
+            'tickets' => [
+                'tickets.all_view', 'tickets.assigned_create', 'tickets.assigned_manage', 'tickets.assigned_edit',
+                'tickets.comments.edit', 'tickets.comments.delete',
+                'tickets.comment_attachments.edit', 'tickets.comment_attachments.delete',
+            ],
             'sales' => [
                 'work_orders.view', 'work_orders.overview_view',
                 'work_orders.summary_view', 'work_orders.summary_create', 'work_orders.summary_edit', 'work_orders.summary_delete',
@@ -316,7 +324,11 @@ class RolePermissionSeeder extends Seeder
             // Global view (same as before) plus comment - this role could
             // already comment on any ticket under the old view-gated
             // comments route, so this preserves that net access.
-            'tickets' => ['tickets.all_view', 'tickets.assigned_manage'],
+            'tickets' => [
+                'tickets.all_view', 'tickets.assigned_manage',
+                'tickets.comments.edit', 'tickets.comments.delete',
+                'tickets.comment_attachments.edit', 'tickets.comment_attachments.delete',
+            ],
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],
             'wo_materials' => ['wo_materials.view'],
@@ -361,7 +373,11 @@ class RolePermissionSeeder extends Seeder
             // Global view (same as before) plus comment - this role could
             // already comment on any ticket under the old view-gated
             // comments route, so this preserves that net access.
-            'tickets' => ['tickets.all_view', 'tickets.assigned_manage'],
+            'tickets' => [
+                'tickets.all_view', 'tickets.assigned_manage',
+                'tickets.comments.edit', 'tickets.comments.delete',
+                'tickets.comment_attachments.edit', 'tickets.comment_attachments.delete',
+            ],
             'reports' => '*',
             'tasks' => ['tasks.view', 'tasks.create'],
             'chat' => ['chat.access'],

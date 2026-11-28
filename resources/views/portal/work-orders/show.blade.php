@@ -516,6 +516,32 @@
                                 <x-icon name="download" class="h-3.5 w-3.5" /> Download Attachments (ZIP)
                             </a>
                         @endif
+
+                        <div class="mt-2 border-t border-gray-100 pt-2 dark:border-gray-800">
+                            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Discussion</p>
+                            <div class="space-y-2">
+                                @forelse ($approval->comments as $comment)
+                                    <x-comment-thread-item
+                                        :comment="$comment"
+                                        client-label="Team"
+                                        :update-url="route('portal.work-orders.approval-requests.comments.update', [$workOrder, $approval, $comment])"
+                                        :destroy-url="route('portal.work-orders.approval-requests.comments.destroy', [$workOrder, $approval, $comment])"
+                                        :media-destroy-urls="$comment->getMedia('attachments')->mapWithKeys(fn ($m) => [$m->id => route('portal.work-orders.approval-requests.comments.media.destroy', [$workOrder, $approval, $comment, $m])])"
+                                    />
+                                @empty
+                                    <p class="text-xs text-gray-400">No comments yet.</p>
+                                @endforelse
+                            </div>
+                            <form method="POST" action="{{ route('portal.work-orders.approval-requests.comments.store', [$workOrder, $approval]) }}" enctype="multipart/form-data" class="mt-2 space-y-2">
+                                @csrf
+                                <div class="flex gap-2">
+                                    <x-text-input name="comment" class="flex-1" placeholder="Add a comment..." required />
+                                    <x-primary-button>Post</x-primary-button>
+                                </div>
+                                <input type="file" name="files[]" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.mp4,.mov,.avi" class="block w-full text-xs">
+                                @error('files')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+                            </form>
+                        </div>
                     </div>
                 @empty
                     <p class="text-sm text-gray-400">No approval requests yet.</p>

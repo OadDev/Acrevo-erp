@@ -4,6 +4,7 @@ namespace App\Http\Controllers\WorkOrder;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalRequestComment;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderZipExporter;
 use App\Support\Pdf;
@@ -12,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileIsTooBig;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
 
@@ -94,6 +96,89 @@ class ApprovalRequestController extends Controller
         ]);
 
         return back()->with('success', 'Approval request updated.');
+    }
+
+    public function addComment(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse
+    {
+        $this->authorizeAnyPermission('approval_requests.edit');
+
+        abort_unless($approvalRequest->work_order_id === $workOrder->id, 404);
+
+        $data = $request->validate([
+            'comment' => ['required', 'string'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
+        ]);
+
+        $comment = $approvalRequest->comments()->create([
+            'comment' => $data['comment'],
+            'user_id' => $request->user()->id,
+        ]);
+
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $comment->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
+        }
+
+        return back()->with('success', 'Comment added.');
+    }
+
+    public function updateComment(Request $request, WorkOrder $workOrder, ApprovalRequest $approvalRequest, ApprovalRequestComment $comment): RedirectResponse
+    {
+        abort_unless($comment->approval_request_id === $approvalRequest->id && $approvalRequest->work_order_id === $workOrder->id, 404);
+        $this->authorize('update', $comment);
+
+        $data = $request->validate([
+            'comment' => ['required', 'string'],
+            'remove_media_ids' => ['nullable', 'array'],
+            'remove_media_ids.*' => ['integer'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:20480', 'mimes:jpg,jpeg,png,pdf,doc,docx,mp4,mov,avi'],
+        ]);
+
+        $comment->update(['comment' => $data['comment'], 'edited_at' => now()]);
+
+        if (! empty($data['remove_media_ids']) || ! empty($data['files'])) {
+            $this->authorize('manageAttachments', $comment);
+        }
+
+        foreach ($data['remove_media_ids'] ?? [] as $mediaId) {
+            $comment->media->firstWhere('id', (int) $mediaId)?->delete();
+        }
+
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $comment->addMedia($file)->toMediaCollection('attachments');
+            }
+        } catch (FileIsTooBig $e) {
+            return back()->withErrors(['files' => 'One of those files is too large (max 20MB).']);
+        }
+
+        return back()->with('success', 'Comment updated.');
+    }
+
+    public function destroyComment(WorkOrder $workOrder, ApprovalRequest $approvalRequest, ApprovalRequestComment $comment): RedirectResponse
+    {
+        abort_unless($comment->approval_request_id === $approvalRequest->id && $approvalRequest->work_order_id === $workOrder->id, 404);
+        $this->authorize('delete', $comment);
+
+        $comment->delete();
+
+        return back()->with('success', 'Comment removed.');
+    }
+
+    public function destroyCommentMedia(WorkOrder $workOrder, ApprovalRequest $approvalRequest, ApprovalRequestComment $comment, Media $media): RedirectResponse
+    {
+        abort_unless($comment->approval_request_id === $approvalRequest->id && $approvalRequest->work_order_id === $workOrder->id, 404);
+        $this->authorize('deleteAttachment', $comment);
+        abort_unless((string) $media->model_id === (string) $comment->id && $media->model_type === ApprovalRequestComment::class, 404);
+
+        $media->delete();
+
+        return back()->with('success', 'Attachment removed.');
     }
 
     public function destroy(WorkOrder $workOrder, ApprovalRequest $approvalRequest): RedirectResponse

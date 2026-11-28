@@ -435,6 +435,24 @@ Route::prefix('work-orders/{workOrder}')->name('work-orders.')->group(function (
     Route::middleware('permission:approval_requests.delete')->group(function () {
         Route::delete('approval-requests/{approvalRequest}', [ApprovalRequestController::class, 'destroy'])->name('approval-requests.destroy');
     });
+    // Discussion on an Approval Request - posting needs the same Edit
+    // permission as responding/correcting the request itself. Editing/
+    // removing a comment (or its attachments) afterwards is always scoped
+    // to the commenter's own comment via ApprovalRequestCommentPolicy;
+    // these permissions just gate whether the ability exists for this
+    // role at all.
+    Route::middleware('permission:approval_requests.edit')->group(function () {
+        Route::post('approval-requests/{approvalRequest}/comments', [ApprovalRequestController::class, 'addComment'])->name('approval-requests.comments.store');
+    });
+    Route::middleware('permission:approval_requests.comments.edit|approval_requests.comment_attachments.edit')->group(function () {
+        Route::put('approval-requests/{approvalRequest}/comments/{comment}', [ApprovalRequestController::class, 'updateComment'])->name('approval-requests.comments.update');
+    });
+    Route::middleware('permission:approval_requests.comments.delete')->group(function () {
+        Route::delete('approval-requests/{approvalRequest}/comments/{comment}', [ApprovalRequestController::class, 'destroyComment'])->name('approval-requests.comments.destroy');
+    });
+    Route::middleware('permission:approval_requests.comment_attachments.delete')->group(function () {
+        Route::delete('approval-requests/{approvalRequest}/comments/{comment}/media/{media}', [ApprovalRequestController::class, 'destroyCommentMedia'])->name('approval-requests.comments.media.destroy');
+    });
 
     // Work Order-wise Equipment (Phase 6): current equipment at this site,
     // plus the broader Movement/Repair/Missing history that touched it -
@@ -569,6 +587,18 @@ Route::middleware('permission:tickets.all_view|tickets.assigned_view')->group(fu
 // ticket's work order) - TicketPolicy::comment() decides which applies.
 Route::middleware('permission:tickets.all_view|tickets.assigned_manage')->group(function () {
     Route::post('tickets/{ticket}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
+});
+// Editing/removing a comment (or its attachments) is always scoped to the
+// commenter's own comment - TicketCommentPolicy enforces that - these
+// permissions just gate whether the ability exists for this role at all.
+Route::middleware('permission:tickets.comments.edit|tickets.comment_attachments.edit')->group(function () {
+    Route::put('tickets/{ticket}/comments/{comment}', [TicketController::class, 'updateComment'])->name('tickets.comments.update');
+});
+Route::middleware('permission:tickets.comments.delete')->group(function () {
+    Route::delete('tickets/{ticket}/comments/{comment}', [TicketController::class, 'destroyComment'])->name('tickets.comments.destroy');
+});
+Route::middleware('permission:tickets.comment_attachments.delete')->group(function () {
+    Route::delete('tickets/{ticket}/comments/{comment}/media/{media}', [TicketController::class, 'destroyCommentMedia'])->name('tickets.comments.media.destroy');
 });
 Route::middleware('permission:tickets.assigned_edit')->group(function () {
     Route::get('tickets/{ticket}/edit', [TicketController::class, 'edit'])->name('tickets.edit');
@@ -925,11 +955,18 @@ Route::middleware('permission:client_portal.access')->prefix('portal')->name('po
     Route::get('work-orders/{workOrder}/approval-requests/approved-pdf', [PortalApprovalRequestController::class, 'approvedPdf'])->name('work-orders.approval-requests.approved-pdf');
     Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/pdf', [PortalApprovalRequestController::class, 'pdf'])->name('work-orders.approval-requests.pdf');
     Route::get('work-orders/{workOrder}/approval-requests/{approvalRequest}/zip', [PortalApprovalRequestController::class, 'zip'])->name('work-orders.approval-requests.zip');
+    Route::post('work-orders/{workOrder}/approval-requests/{approvalRequest}/comments', [PortalApprovalRequestController::class, 'addComment'])->name('work-orders.approval-requests.comments.store');
+    Route::put('work-orders/{workOrder}/approval-requests/{approvalRequest}/comments/{comment}', [PortalApprovalRequestController::class, 'updateComment'])->name('work-orders.approval-requests.comments.update');
+    Route::delete('work-orders/{workOrder}/approval-requests/{approvalRequest}/comments/{comment}', [PortalApprovalRequestController::class, 'destroyComment'])->name('work-orders.approval-requests.comments.destroy');
+    Route::delete('work-orders/{workOrder}/approval-requests/{approvalRequest}/comments/{comment}/media/{media}', [PortalApprovalRequestController::class, 'destroyCommentMedia'])->name('work-orders.approval-requests.comments.media.destroy');
     Route::post('work-orders/{workOrder}/discussion/messages', [PortalWorkOrderDiscussionController::class, 'store'])->name('work-orders.discussion.messages.store');
     Route::get('work-orders/{workOrder}/discussion/poll', [PortalWorkOrderDiscussionController::class, 'poll'])->name('work-orders.discussion.poll');
     Route::get('tickets', [PortalTicketController::class, 'index'])->name('tickets.index');
     Route::post('tickets', [PortalTicketController::class, 'store'])->name('tickets.store');
     Route::get('tickets/{ticket}', [PortalTicketController::class, 'show'])->name('tickets.show');
     Route::post('tickets/{ticket}/comments', [PortalTicketController::class, 'addComment'])->name('tickets.comments.store');
+    Route::put('tickets/{ticket}/comments/{comment}', [PortalTicketController::class, 'updateComment'])->name('tickets.comments.update');
+    Route::delete('tickets/{ticket}/comments/{comment}', [PortalTicketController::class, 'destroyComment'])->name('tickets.comments.destroy');
+    Route::delete('tickets/{ticket}/comments/{comment}/media/{media}', [PortalTicketController::class, 'destroyCommentMedia'])->name('tickets.comments.media.destroy');
     Route::get('invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
 });
